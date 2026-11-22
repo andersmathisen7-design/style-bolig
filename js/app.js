@@ -1,18 +1,20 @@
 import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, LEVELS } from './data.js';
 import {
   newState, roomsFromHome, roomLabel, roomM2, sizeFromM2, sizeRange, instances, defaultMax, maxOf,
-  parseLife, wishOf, searchText, finnUrl, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget,
-  newHint, layoutPlan, totalM2, encodeState, decodeState, normalize, kr,
+  parseLife, wishOf, searchText, finnUrl, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
+  newHint, layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
 } from './logic.js';
+import { scene } from './scenes.js';
+import { ai, initAI, readPlan, readLife } from './ai.js';
 
 const KEY = 'brukthjem.v1';
 const app = document.getElementById('app');
-const STEPS = ['Bolig', 'Stil', 'Hverdag', 'Lista'];
+const STEPS = ['Bolig', 'Stil', 'Ønsker', 'Lista'];
 const canShare = !window.__noShare; // forhåndsvisninger uten egen adresse kan ikke dele lenker
 const SIZE_NAME = { S: 'Lite', M: 'Middels', L: 'Stort' };
 
 let state = load();
-const ui = { open: null, room: null, round: false, shared: null, copied: '', sure: false };
+const ui = { open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null };
 
 function load() {
   let saved = null;
@@ -64,6 +66,7 @@ function viewHome() {
     }).join('')}
   </div>
   <p class="plan-sum">Omtrent ${totalM2(state.rooms)} m² fordelt på ${state.rooms.length} rom. Tegningen viser størrelser, ikke hvordan rommene ligger.</p>
+  ${uploadPanel()}
   ${sel ? roomEditor(sel) : ''}
   <div class="field">
     <label for="addroom">Mangler det et rom?</label>
@@ -74,6 +77,24 @@ function viewHome() {
     <label for="area">Hvor vil du lete?</label>
     <select id="area" data-ch="area">${AREAS.map((a) => `<option value="${a.id}" ${state.area === a.id ? 'selected' : ''}>${a.name}</option>`).join('')}</select>
   </div>`;
+}
+
+function status(where) {
+  if (ui.busy === where) return `<p class="status" role="status">${where === 'plan' ? 'Claude leser tegningen. Det tar gjerne et halvt minutt.' : 'Claude leser teksten.'}</p>`;
+  if (ui.msg?.where === where) return `<p class="status ${ui.msg.bad ? 'bad' : ''}" role="status">${esc(ui.msg.text)}</p>`;
+  return '';
+}
+
+function uploadPanel() {
+  if (!ai.images) return '';
+  return `
+  <section class="panel">
+    <h2>Har du en plantegning?</h2>
+    <p>Last opp et bilde, så leser Claude av rom og kvadratmeter. Et skjermbilde fra boligannonsen holder.</p>
+    <label class="btn ghost small filebtn ${ui.busy ? 'off' : ''}">Velg bilde av plantegning
+      <input class="vh" type="file" id="planfile" accept="${esc(ai.types)}" data-ch="planfile" ${ui.busy ? 'disabled' : ''}></label>
+    ${status('plan')}
+  </section>`;
 }
 
 function roomEditor(r) {
@@ -95,10 +116,10 @@ function roomEditor(r) {
 function viewStyle() {
   return `
   <h1>Hvilken stil liker du?</h1>
-  <p class="lead">Stilen gir deg forslag til søkeord på hver ting. Du kan bytte når som helst.</p>
+  <p class="lead">Samme stue i åtte stiler. Velg den du ville bodd i. Du kan bytte når som helst.</p>
   <div class="styles">
     ${STYLES.map((s) => `<button class="style ${state.style === s.id ? 'on' : ''}" data-act="style" data-v="${s.id}">
-      <span class="swatch" aria-hidden="true">${s.colors.map((c) => `<i style="background:${c}"></i>`).join('')}</span>
+      ${scene(s.id)}<span class="swatch" aria-hidden="true">${s.colors.map((c) => `<i style="background:${c}"></i>`).join('')}</span>
       <span class="style-name">${s.name}</span><span class="style-desc">${s.desc}</span></button>`).join('')}
   </div>`;
 }
@@ -107,12 +128,13 @@ function viewLife() {
   const got = Object.entries(state.autoWish);
   const all = instances(state);
   return `
-  <h1>Hvordan bruker du hjemmet?</h1>
-  <p class="lead">Skriv med egne ord, trykk på det som passer, eller begge deler.</p>
+  <h1>Hva ser du etter?</h1>
+  <p class="lead">Beskriv hva du vil ha og hvordan du bor, med egne ord. Du kan også bare trykke på det som passer.</p>
   <div class="field">
-    <label for="life">Fortell litt</label>
-    <textarea id="life" rows="4" data-ch="life" placeholder="F.eks. «Jeg jobber hjemmefra og har ofte venner på middag. Vil ikke ha rundt bord, og sofaen bør være grønn.»">${esc(state.lifeText)}</textarea>
-    <button class="btn small" data-act="read">Les teksten</button>
+    <label for="life">Beskriv hva du vil ha</label>
+    <textarea id="life" rows="4" data-ch="life" placeholder="F.eks. «Jeg har seng og sofa fra før. Jobber hjemmefra og har ofte venner på middag. Vil ikke ha rundt bord, og gjerne en grønn lenestol.»">${esc(state.lifeText)}</textarea>
+    <button class="btn small" data-act="read" ${ui.busy ? 'disabled' : ''}>Les teksten</button>
+    ${status('life')}
   </div>
   <div class="chips" role="group" aria-label="Hverdagen din">
     ${LIFE.map((l) => `<button class="chip ${state.life.includes(l.id) ? 'on' : ''}" data-act="life" data-v="${l.id}" aria-pressed="${state.life.includes(l.id)}">${l.label}</button>`).join('')}
@@ -124,7 +146,9 @@ function viewLife() {
       const parts = [w.search.length ? `søker etter ${w.search.join(', ')}` : '', w.avoid.length ? `unngår ${w.avoid.join(', ')}` : '', w.notes.length ? `ser etter ${w.notes.join(', ')}` : ''].filter(Boolean);
       return `<li><strong>${esc(ITEMS[itemId].name)}:</strong> ${esc(parts.join('. '))}. <button class="link" data-act="dropWish" data-v="${itemId}">Fjern</button></li>`;
     }).join('')}</ul></section>` : ''}
-  <p class="hint">Teksten leses av enkle regler i nettleseren din, ikke av en AI. Ord vi ikke kjenner igjen, hopper vi over. På hver ting i lista kan du rette og legge til.</p>`;
+  <p class="hint">${ai.ready
+    ? 'Når du trykker «Les teksten», tolker Claude den. Det bruker litt av Claude-kvoten din. På hver ting i lista kan du rette og legge til.'
+    : 'Teksten leses av enkle regler i nettleseren din, ikke av en AI. Ord vi ikke kjenner igjen, hopper vi over. På hver ting i lista kan du rette og legge til.'}</p>`;
 }
 
 function budgetPanel(sum) {
@@ -197,18 +221,18 @@ function itemBody(inst, sum) {
     <div class="pair">
       <div class="field"><label for="max-${k}">Makspris, kr</label><input id="max-${k}" inputmode="numeric" data-ch="max" data-v="${k}" value="${max ?? ''}" placeholder="ingen grense"></div>
       <div class="field end">${max === null
-        ? `<button class="link" data-act="maxreset" data-v="${k}">Bruk anslaget, ${kr(defaultMax(inst, state))}</button>`
+        ? (inst.item.custom ? '' : `<button class="link" data-act="maxreset" data-v="${k}">Bruk anslaget, ${kr(defaultMax(inst, state))}</button>`)
         : `<button class="link" data-act="nomax" data-v="${k}">Ingen prisgrense</button>`}</div>
     </div>
-    <div class="new ${hint === 'finish' ? 'hot' : ''}">
+    ${inst.item.custom ? '' : `<div class="new ${hint === 'finish' ? 'hot' : ''}">
       <p>${hint === 'finish' ? 'Du har nesten alt. Det kan lønne seg å kjøpe ny og bli ferdig.' : 'Finner du ingenting brukt?'}
       Ny koster fra ca. ${kr(inst.v.n)}${hint === 'fits' ? ', og det er innenfor maksprisen din' : ''}.</p>
       <a class="link" href="${esc(ikeaUrl(inst, state))}" target="_blank" rel="noopener">Se nye hos IKEA</a>
-    </div>
+    </div>`}
     <div class="done">
       <div class="field"><label for="paid-${k}">Fant du en? Skriv prisen</label><input id="paid-${k}" inputmode="numeric" placeholder="kr"></div>
       <button class="btn small" data-act="bought" data-v="${k}">Merk som kjøpt</button>
-      <button class="link" data-act="status" data-v="${k}" data-st="off">Trenger ikke</button>
+      <button class="link" data-act="status" data-v="${k}" data-st="off">${inst.item.custom ? 'Fjern fra lista' : 'Trenger ikke'}</button>
     </div>
   </div>`;
 }
@@ -222,6 +246,8 @@ function viewRound(need) {
       ${need.map((i) => `<li><a href="${esc(finnUrl(i, state, 'today'))}" target="_blank" rel="noopener" data-act="seen" data-v="${i.key}">${esc(i.item.name)}<small>${esc(roomLabel(state.rooms, i.room))}</small></a>
         <span class="seen ${i.saved.seen === today() ? 'yes' : ''}">${i.saved.seen === today() ? 'sett i dag' : 'ikke sett'}</span></li>`).join('')}
     </ul>
+    <h2>Pynt lagt ut i dag</h2>
+    <div class="chips">${decorLinks(state, 'today').map((d) => `<a class="chip mini" href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.label)}</a>`).join('')}</div>
     <button class="btn ghost small" data-act="round">Tilbake til lista</button>
   </section>`;
 }
@@ -236,7 +262,9 @@ function viewList() {
   <h1>Lista di</h1>
   <p class="lead">${sum.need === 0 ? 'Ingenting igjen å finne. Legg til ting under rommene, eller nyt et ferdig hjem.' : `${sum.need} ting igjen å finne.`}
     ${sum.have ? ` ${sum.have} har du fra før.` : ''}${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Huk av det du har. Trykk på en ting for å søke.</p>
-  ${!style ? `<p class="hint">Du har ikke valgt stil ennå. <button class="link" data-act="step" data-v="1">Velg stil</button></p>` : ''}
+  ${style
+    ? `<div class="mystyle">${scene(style.id)}<p><strong>${style.name}</strong><br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
+    : `<p class="hint">Du har ikke valgt stil ennå. <button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
   ${budgetPanel(sum)}
   ${need.length ? `<button class="btn wide" data-act="round">Dagens runde: se hva som er nytt på Finn</button>` : ''}
   ${state.rooms.map((room) => {
@@ -247,8 +275,16 @@ function viewList() {
       <h2>${esc(roomLabel(state.rooms, room))}<small>${roomM2(room)} m²</small></h2>
       <ul class="items">${on.map((i) => itemRow(i, sum)).join('')}</ul>
       ${off.length ? `<div class="more"><span class="q-label">Legg til</span><div class="chips">${off.map((i) => `<button class="chip mini add" data-act="status" data-v="${i.key}" data-st="need">+ ${esc(i.item.name)}</button>`).join('')}</div></div>` : ''}
+      <div class="own"><div class="field"><label for="own-${room.id}">Noe annet? Beskriv hva du ser etter</label>
+        <input id="own-${room.id}" data-enter="own" data-v="${room.id}" maxlength="60" placeholder="f.eks. grønn fløyelspuff"></div>
+        <button class="btn ghost small" data-act="own" data-v="${room.id}">Legg til</button></div>
     </section>`;
   }).join('')}
+  <section class="roomlist decor">
+    <h2>Pynt som passer stilen</h2>
+    <p>Bilder, veggpynt og småting${style && style.id !== 'fri' ? ` i stilen ${style.name.toLowerCase()}` : ''}. Verdt en titt når du likevel er inne på Finn.</p>
+    <div class="chips">${decorLinks(state).map((d) => `<a class="chip mini" href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.label)}</a>`).join('')}</div>
+  </section>
   <section class="panel">
     <h2>Ta med deg lista</h2>
     <p>Lista lagres bare i denne nettleseren.${canShare ? ' Med en lenke kan du åpne den på en annen enhet eller sende den til noen.' : ''}</p>
@@ -278,7 +314,7 @@ function render() {
   const fsig = !fid && active?.dataset?.act ? sig(active) : '';
   const views = [viewHome, viewStyle, viewLife, viewList];
   app.innerHTML = `${header()}<main>${sharedBanner()}${views[state.step]()}</main>${footerNav()}
-    <footer class="foot"><p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. Ingenting sendes fra nettleseren din.</p></footer>`;
+    <footer class="foot"><p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
   if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
   else if (fsig) [...app.querySelectorAll('[data-act]')].find((el) => sig(el) === fsig)?.focus({ preventScroll: true });
 }
@@ -295,12 +331,37 @@ const instByKey = (key) => instances(state).find((i) => i.key === key);
 // ---------- Hendelser ----------
 
 const actions = {
-  read() { const el = document.getElementById('life'); if (el) { changes.life(el); commit(); } },
+  async read() {
+    const el = document.getElementById('life');
+    if (!el || ui.busy) return;
+    changes.life(el); // ordlistene først, så det alltid kommer noe
+    ui.msg = null;
+    if (!ai.ready || !state.lifeText.trim()) { commit(); return; }
+    ui.busy = 'life'; commit();
+    try {
+      const r = await readLife(state.lifeText);
+      state.life = [...new Set([...state.life, ...r.life])];
+      state.autoWish = r.wishes;
+      const all = instances(state);
+      for (const id of r.have) for (const i of all.filter((x) => x.itemId === id)) state.items[i.key] = { ...state.items[i.key], st: 'have' };
+      for (const id of r.need) {
+        if (all.some((x) => x.itemId === id && x.st === 'need')) continue;
+        const i = all.find((x) => x.itemId === id);
+        if (i) state.items[i.key] = { ...state.items[i.key], st: 'need' };
+      }
+      const n = (list) => list.map((id) => ITEMS[id].name.toLowerCase()).join(', ');
+      const parts = [r.have.length ? `Har fra før: ${n(r.have)}.` : '', r.need.length ? `Lagt til: ${n(r.need)}.` : ''].filter(Boolean);
+      ui.msg = { where: 'life', text: parts.join(' ') || 'Lest. Se hva vi fikk med oss under.' };
+    } catch (e) {
+      if (e.message) ui.msg = { where: 'life', bad: true, text: `${e.message} Vi brukte de enkle reglene i stedet.` };
+    }
+    ui.busy = ''; commit();
+  },
   step(v) { state.step = Math.min(3, Math.max(0, Number(v))); ui.round = false; ui.room = null; commit(); window.scrollTo(0, 0); },
-  home(v) { state.home = v; state.rooms = roomsFromHome(v); ui.room = null; commit(); },
+  home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; ui.room = null; ui.msg = null; commit(); },
   room(v) { ui.room = ui.room === v ? null : v; later(); },
   size(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r) { r.size = v; r.m2 = null; commit(); } },
-  delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); ui.room = null; commit(); },
+  delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.custom = state.custom.filter((c) => c.room !== ui.room); ui.room = null; commit(); },
   style(v) { state.style = v; commit(); },
   life(v) { state.life = state.life.includes(v) ? state.life.filter((x) => x !== v) : [...state.life, v]; commit(); },
   dropWish(v) { delete state.autoWish[v]; commit(); },
@@ -309,7 +370,24 @@ const actions = {
   round() { ui.round = !ui.round; later(); window.scrollTo(0, 0); },
   open(v) { ui.open = ui.open === v ? null : v; later(); },
   have(v) { const i = instByKey(v); if (i) setItem(v, { st: i.st === 'have' ? 'need' : 'have' }); },
-  status(v, el) { setItem(v, { st: el.dataset.st }); if (el.dataset.st === 'off') ui.open = null; },
+  status(v, el) {
+    const [rid, id] = v.split(':');
+    if (el.dataset.st === 'off') ui.open = null;
+    if (el.dataset.st === 'off' && state.custom.some((c) => c.id === id && c.room === rid)) {
+      state.custom = state.custom.filter((c) => !(c.id === id && c.room === rid));
+      delete state.items[v];
+      commit();
+    } else setItem(v, { st: el.dataset.st });
+  },
+  own(v) {
+    const el = document.getElementById(`own-${v}`);
+    const name = (el?.value || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+    if (!name || !state.rooms.some((r) => r.id === v) || state.custom.length >= 40) return;
+    const id = 'c' + (state.seq = (state.seq || 100) + 1);
+    state.custom = [...state.custom, { id, room: v, name: name[0].toUpperCase() + name.slice(1) }];
+    ui.open = `${v}:${id}`;
+    commit();
+  },
   kw(v, el) { const i = instByKey(v); const w = el.dataset.w; const kw = i.saved.kw || []; setItem(v, { kw: kw.includes(w) ? kw.filter((x) => x !== w) : [...kw, w] }); },
   pick(v, el) { const i = instByKey(v); const picks = { ...(i.saved.picks || {}) }; const n = Number(el.dataset.i); if (picks[el.dataset.q] === n) delete picks[el.dataset.q]; else picks[el.dataset.q] = n; setItem(v, { picks }); },
   nomax(v) { setItem(v, { max: null }); },
@@ -327,7 +405,25 @@ const actions = {
   dropShared() { ui.shared = null; history.replaceState(null, '', location.pathname); later(); },
 };
 
+async function loadPlan(file) {
+  if (!file || ui.busy) return;
+  ui.busy = 'plan'; ui.msg = null; later();
+  try {
+    const r = await readPlan(file);
+    state.rooms = r.rooms.map((x) => {
+      const id = 'r' + (state.seq = (state.seq || 100) + 1);
+      return { id, type: x.type, size: x.m2 ? sizeFromM2(x.type, x.m2) : 'M', m2: x.m2, wall: null };
+    });
+    state.home = ''; state.custom = []; ui.room = null;
+    ui.msg = { where: 'plan', text: `Fant ${r.rooms.length} rom. Tallene er lest eller anslått fra tegningen, så se over dem. ${r.note}`.trim() };
+  } catch (e) {
+    if (e.message) ui.msg = { where: 'plan', bad: true, text: e.message };
+  }
+  ui.busy = ''; commit();
+}
+
 const changes = {
+  planfile(el) { loadPlan(el.files?.[0]); },
   area(el) { state.area = el.value; },
   addroom(el) {
     if (!ROOMS[el.value]) return;
@@ -354,6 +450,11 @@ app.addEventListener('click', (e) => {
   if (el.tagName !== 'A') e.preventDefault();
   actions[el.dataset.act]?.(el.dataset.v, el);
 });
+app.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !e.target.dataset?.enter) return;
+  e.preventDefault();
+  actions[e.target.dataset.enter]?.(e.target.dataset.v, e.target);
+});
 app.addEventListener('change', (e) => {
   const fn = changes[e.target.dataset.ch];
   if (!fn) return;
@@ -370,3 +471,4 @@ if (hash) {
   else if (shared) ui.shared = shared;
 }
 render();
+initAI().then((ok) => { if (ok) later(); });

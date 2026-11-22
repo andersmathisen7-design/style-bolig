@@ -7,13 +7,24 @@ const FINN_FURNITURE = '0.78'; // Møbler og interiør
 export function newState() {
   return {
     v: 1, step: 0, area: '', home: 'toroms', style: null, level: 'vanlig', total: null,
-    rooms: roomsFromHome('toroms'), life: [], lifeText: '', autoWish: {}, items: {}, seq: 100,
+    rooms: roomsFromHome('toroms'), life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
   };
 }
 
 export function roomsFromHome(homeId) {
   const home = HOMES.find((h) => h.id === homeId) || HOMES[2];
   return home.rooms.map(([type, size], i) => ({ id: 'r' + (i + 1), type, size, m2: null, wall: null }));
+}
+
+// Fjerner lagrede valg for rom som er borte eller har byttet type.
+export function pruneItems(items, oldRooms, newRooms) {
+  const out = {};
+  for (const [key, v] of Object.entries(items)) {
+    const rid = key.split(':')[0];
+    const a = oldRooms.find((r) => r.id === rid), b = newRooms.find((r) => r.id === rid);
+    if (a && b && a.type === b.type) out[key] = v;
+  }
+  return out;
 }
 
 export function roomLabel(rooms, room) {
@@ -78,6 +89,16 @@ export function instances(state) {
         st: saved.st || dflt, saved,
       });
     }
+    // Egne ting brukeren har skrevet inn. Ingen prisanslag, så de holdes utenfor summene.
+    for (const c of state.custom || []) {
+      if (c.room !== room.id) continue;
+      const key = `${room.id}:${c.id}`;
+      const saved = state.items[key] || {};
+      out.push({
+        key, itemId: c.id, room, item: { name: c.name, kind: 'deco', cat: false, custom: true },
+        v: { label: '', q: c.name.toLowerCase(), u: 0, n: 0 }, st: saved.st || 'need', saved,
+      });
+    }
   }
   return out;
 }
@@ -92,7 +113,8 @@ export function defaultMax(inst, state) {
 // undefined = bruk anslaget, null = ingen prisgrense
 export function maxOf(inst, state) {
   const m = inst.saved.max;
-  return m === undefined ? defaultMax(inst, state) : m;
+  if (m === undefined) return inst.item.custom ? null : defaultMax(inst, state);
+  return m;
 }
 
 // ---------- Fritekst ----------
@@ -157,11 +179,29 @@ export function parseLife(raw) {
   return { life, wishes };
 }
 
+// Rydder et ønske som kommer ferdig oppdelt (fra AI eller en delt lenke).
+const word = (s) => (typeof s === 'string' ? s.toLowerCase().trim() : '');
+
+export function cleanWish(w) {
+  if (!w || typeof w !== 'object') return null;
+  const list = (v, rx, max) => (Array.isArray(v) ? v : []).map(word).filter((s) => rx.test(s)).slice(0, max);
+  const out = {
+    search: list(w.search, /^[a-zæøåé0-9-]{2,25}( [a-zæøåé0-9-]{1,15})?$/, 3),
+    avoid: list(w.avoid, /^.{2,40}$/, 5),
+    notes: list(w.notes, /^.{2,60}$/, 5),
+  };
+  return out.search.length + out.avoid.length + out.notes.length ? out : null;
+}
+
 // Alt vi vet om hva brukeren vil ha for én ting.
+// autoWish er enten en setning (tolket av ordlistene) eller et ferdig oppdelt ønske (tolket av AI).
 export function wishOf(inst, state) {
   const auto = state.autoWish[inst.itemId] || '';
   const own = inst.saved.wish || '';
-  const w = parseWish([auto, own].filter(Boolean).join(', '));
+  const w = parseWish([typeof auto === 'string' ? auto : '', own].filter(Boolean).join(', '));
+  if (auto && typeof auto === 'object') {
+    for (const k of ['search', 'avoid', 'notes']) for (const x of auto[k] || []) if (!w[k].includes(x)) w[k].push(x);
+  }
   let replace = null;
   for (const [qid, idx] of Object.entries(inst.saved.picks || {})) {
     const opt = QUESTIONS[qid]?.options[idx];
@@ -205,6 +245,18 @@ export function ikeaUrl(inst, state) {
   return 'https://www.ikea.com/no/no/search/?q=' + encodeURIComponent(q);
 }
 
+// Pynt og veggpynt i valgt stil, som ferdige Finn-søk.
+export function decorLinks(state, mode = 'all') {
+  const style = STYLES.find((s) => s.id === state.style) || STYLES[STYLES.length - 1];
+  return style.decor.map(([label, q]) => {
+    const p = new URLSearchParams({ q });
+    if (state.area) p.set('location', state.area);
+    if (mode === 'today') p.set('published', '1');
+    p.set('sort', 'PUBLISHED_DESC');
+    return { label, q, url: `${FINN}?${p.toString()}` };
+  });
+}
+
 // Hvor bred tingen kan være når brukeren har målt veggen.
 export function wallNote(inst) {
   if (!inst.room.wall || !['sofa', 'sovesofa', 'tvbenk', 'garderobe', 'skrivebord'].includes(inst.itemId)) return '';
@@ -228,7 +280,7 @@ export function summary(state) {
   const need = all.filter((i) => i.st === 'need');
   const bought = all.filter((i) => i.st === 'bought');
   const sum = (arr, f) => arr.reduce((a, i) => a + (f(i) || 0), 0);
-  const level = (f) => sum(need, (i) => round50(i.v.u * f));
+  const level = (f) => sum(need, (i) => (i.item.custom ? 0 : round50(i.v.u * f)));
   const paid = sum(bought, (i) => i.saved.paid);
   const maxSum = sum(need, (i) => maxOf(i, state));
   const noLimit = need.filter((i) => maxOf(i, state) === null).length;
@@ -257,6 +309,7 @@ export function fitBudget(state) {
 
 // 'finish' = lista er nesten ferdig og en ny er innenfor rekkevidde. 'fits' = maksprisen dekker en ny.
 export function newHint(inst, state, sum) {
+  if (inst.item.custom) return '';
   const max = maxOf(inst, state);
   const fits = max === null || max >= inst.v.n;
   const afford = sum.left === null ? fits : sum.left >= sum.newSum;
@@ -321,7 +374,7 @@ export function normalize(s) {
   if (!validState(s)) return null;
   const n = (v, max) => (typeof v === 'number' && v > 0 && v <= max ? Math.round(v) : null);
   const out = { ...newState(), step: [0, 1, 2, 3].includes(s.step) ? s.step : 0, area: s.area };
-  out.home = HOMES.some((h) => h.id === s.home) ? s.home : out.home;
+  out.home = HOMES.some((h) => h.id === s.home) ? s.home : '';
   out.style = STYLES.some((x) => x.id === s.style) ? s.style : null;
   out.level = LEVELS.some((x) => x.id === s.level) ? s.level : 'vanlig';
   out.total = n(s.total, 1e7);
@@ -331,11 +384,19 @@ export function normalize(s) {
   out.life = s.life.filter((id) => LIFE.some((l) => l.id === id));
   out.lifeText = typeof s.lifeText === 'string' ? s.lifeText.slice(0, 2000) : '';
   out.autoWish = {};
-  for (const [k, v] of Object.entries(s.autoWish || {})) if (ITEMS[k] && typeof v === 'string') out.autoWish[k] = v.slice(0, 500);
+  for (const [k, v] of Object.entries(s.autoWish || {})) {
+    if (!ITEMS[k]) continue;
+    if (typeof v === 'string') out.autoWish[k] = v.slice(0, 500);
+    else if (cleanWish(v)) out.autoWish[k] = cleanWish(v);
+  }
+  out.custom = (Array.isArray(s.custom) ? s.custom : [])
+    .filter((c) => c && /^c\d{1,6}$/.test(c.id) && out.rooms.some((r) => r.id === c.room) && typeof c.name === 'string' && c.name.trim())
+    .slice(0, 40).map((c) => ({ id: c.id, room: c.room, name: c.name.trim().slice(0, 60) }));
   out.items = {};
   for (const [k, v] of Object.entries(s.items)) {
     const [rid, itemId] = k.split(':');
-    if (!v || typeof v !== 'object' || !ITEMS[itemId] || !out.rooms.some((r) => r.id === rid)) continue;
+    const known = ITEMS[itemId] || out.custom.some((c) => c.id === itemId && c.room === rid);
+    if (!v || typeof v !== 'object' || !known || !out.rooms.some((r) => r.id === rid)) continue;
     const it = {};
     if (['need', 'have', 'bought', 'off'].includes(v.st)) it.st = v.st;
     if (v.max === null) it.max = null; else if (n(v.max, 1e6)) it.max = n(v.max, 1e6);

@@ -156,3 +156,30 @@ test('deling og rydding', () => {
   assert.deepEqual(n.autoWish, {});
   assert.equal(maxOf(get(n, 'sofa'), n), 3000);
 });
+
+test('egne ting og pynt', async () => {
+  const { decorLinks, cleanWish } = await import('../js/logic.js');
+  const { STYLES } = await import('../js/data.js');
+  STYLES.forEach((s) => assert.ok(s.decor.length >= 4, s.id));
+  const s = newState();
+  s.custom = [{ id: 'c101', room: 'r1', name: 'Grønn fløyelspuff' }];
+  const own = instances(s).find((i) => i.itemId === 'c101');
+  assert.equal(own.st, 'need');
+  assert.equal(maxOf(own, s), null);
+  const u = new URL(finnUrl(own, s));
+  assert.equal(u.searchParams.get('q'), 'grønn fløyelspuff');
+  assert.equal(u.searchParams.get('price_to'), null);
+  assert.equal(summary(s).mid, summary(newState()).mid);
+  assert.equal(newHint(own, s, summary(s)), '');
+  const back = decodeState(encodeState(s));
+  assert.equal(back.custom[0].name, 'Grønn fløyelspuff');
+  s.custom.push({ id: 'x', room: 'r1', name: '<b>' }, { id: 'c5', room: 'finnesikke', name: 'a' });
+  assert.equal(normalize(JSON.parse(JSON.stringify(s))).custom.length, 1);
+  s.style = 'retro'; s.area = '0.20061';
+  const d = decorLinks(s, 'today');
+  assert.equal(new URL(d[0].url).searchParams.get('q'), 'retro plakat');
+  assert.equal(new URL(d[0].url).searchParams.get('published'), '1');
+  assert.deepEqual(cleanWish({ search: ['Eik', '<x>', 'hev senk'], avoid: ['rundt'], notes: [5] }), { search: ['eik', 'hev senk'], avoid: ['rundt'], notes: [] });
+  s.autoWish = { spisebord: { search: ['eik'], avoid: ['rundt'], notes: ['firkantet'] } };
+  assert.equal(searchText(get(s, 'spisebord'), s), 'spisebord eik');
+});

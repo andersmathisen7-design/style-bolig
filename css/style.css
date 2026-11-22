@@ -97,8 +97,12 @@ textarea { resize: vertical; line-height: 1.4; }
 .styles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .style { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 0 0 10px; background: var(--surface); border: var(--wall) solid var(--ink); border-radius: 6px; overflow: hidden; text-align: left; }
 .style.on { box-shadow: 0 0 0 4px var(--teal); border-color: var(--teal); }
-.swatch { display: grid; grid-template-columns: 3fr 2fr 2fr 1fr; height: 64px; border-bottom: var(--wall) solid var(--ink); }
-.style.on .swatch { border-bottom-color: var(--teal); }
+.scene { display: block; width: 100%; aspect-ratio: 16 / 10; }
+.swatch { display: grid; grid-template-columns: 3fr 2fr 2fr 1fr; height: 10px; border-top: var(--wall) solid var(--ink); border-bottom: var(--wall) solid var(--ink); }
+.style.on .swatch { border-color: var(--teal); }
+.mystyle { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; margin: 0 0 4px; }
+.mystyle .scene { border: var(--wall) solid var(--ink); border-radius: 6px; }
+.mystyle p { margin: 0; line-height: 1.3; }
 .style-name { font-weight: 800; padding: 6px 10px 0; line-height: 1.15; }
 .style-desc { font-size: 0.8125rem; color: var(--muted); padding: 0 10px; line-height: 1.3; }
 
@@ -179,3 +183,17 @@ textarea { resize: vertical; line-height: 1.4; }
 }
 
 .sure { font-weight: 700; }
+
+/* Opplasting og AI-status */
+.vh { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; margin: -1px; border: 0; overflow: hidden; clip-path: inset(50%); }
+.filebtn { position: relative; cursor: pointer; }
+.filebtn:focus-within { outline: 3px solid var(--teal); outline-offset: 2px; }
+.filebtn.off, .btn:disabled { opacity: 0.5; cursor: default; }
+.status { margin: 10px 0 0; padding: 8px 12px; border-radius: 6px; background: var(--teal-soft); font-size: 0.9375rem; font-weight: 600; }
+.status.bad { background: var(--amber-soft); color: var(--amber); }
+
+.own { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; padding-top: 12px; }
+.own .field { margin: 0; }
+.decor p { margin: 10px 0; }
+a.chip { text-decoration: none; color: var(--ink); }
+.panel h2:not(:first-child) { margin-top: 18px; }

@@ -7,15 +7,21 @@ Brukthjem er ikke tilknyttet FINN.no eller IKEA.
 ## Slik virker det
 
 1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre. Rommene tegnes opp, og du kan endre størrelse, skrive inn kvadratmeter eller legge inn lengste ledige vegg.
-2. **Stil.** Åtte stiler. Stilen gir forslag til søkeord på hver ting.
+2. **Stil.** Åtte stiler, tegnet som samme stue. Stilen gir forslag til søkeord og pynt.
 3. **Hverdag.** Skriv fritt («vil ikke ha rundt bord, sofaen bør være grønn») eller trykk på ferdige valg. Teksten tolkes av enkle regler i nettleseren.
-4. **Lista.** Huk av det du har. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk.
+4. **Lista.** Huk av det du har, og legg til egne ting med en kort beskrivelse. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk.
 
 Alt lagres i nettleseren (`localStorage`). Ingenting sendes noe sted. Lista kan deles som en lenke.
 
+## Med og uten AI
+
+Når siden vises inne i Claude (som en publisert artifact), kan den be Claude om to ting: lese av rom og kvadratmeter fra et bilde av en plantegning, og tolke friteksten din. Hvert kall bruker av kvoten til den som ser på siden. Koden ligger i `js/ai.js`.
+
+På en vanlig nettside, som GitHub Pages, finnes ikke dette. Da skjules opplastingen, og friteksten tolkes av ordlistene.
+
 ## Hva appen ikke gjør ennå
 
-- **Ingen AI.** GitHub Pages serverer bare filer. En AI trenger en liten server som holder på API-nøkkelen. Fritekst tolkes derfor med ordlister i `js/data.js` (`WISH_WORDS`, `LIFE`).
+- **Ingen AI på åpen nettside.** GitHub Pages serverer bare filer. En AI der trenger en liten server som holder på API-nøkkelen. Fritekst tolkes derfor med ordlister i `js/data.js` (`WISH_WORDS`, `LIFE`).
 - **Ingen automatisk overvåking av Finn.** Finns vilkår begrenser automatisert tilgang, og det offisielle API-et gir bare tilgang til egne annonser. Appen lager derfor lenker som du selv åpner. Varsler får du ved å trykke «Lagre søk» inne på Finn.
 
 ## Kjør lokalt
@@ -34,6 +40,8 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `js/data.js` | Fylker, stiler, rom, ting, priser og ordlister. Endre priser og ting her. |
 | `js/logic.js` | Ren logikk: lista, Finn-lenker, tolkning av tekst, budsjett. |
 | `js/app.js` | Skjermbildene og knappene. |
+| `js/scenes.js` | Tegningene av hver stil. |
+| `js/ai.js` | Valgfri AI: plantegning og fritekst. |
 | `test/logic.test.mjs` | Tester for logikken. |
 
 ## Om tallene

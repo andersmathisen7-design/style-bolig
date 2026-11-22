@@ -26,41 +26,49 @@ export const STYLES = [
   {
     id: 'skandi', name: 'Skandinavisk', desc: 'Lyst treverk, hvitt og rolige farger.',
     colors: ['#F4F1EA', '#D9C7A8', '#9FB0A6', '#3C4A4B'],
+    decor: [["Plakater og bilder", "plakat ramme"], ["Vaser", "vase keramikk"], ["Lysestaker", "lysestake"], ["Speil", "speil eik"], ["Pledd", "pledd ull"]],
     kw: { wood: ['eik', 'hvit', 'bjørk'], soft: ['beige', 'grå', 'lys'], light: ['hvit', 'messing'], deco: ['ull', 'hvit'] },
   },
   {
     id: 'japandi', name: 'Japandi', desc: 'Lave møbler, eik og bambus, lite pynt.',
     colors: ['#EFE8DC', '#C9B79A', '#7C7A6B', '#2B2B28'],
+    decor: [["Keramikk", "keramikk vase"], ["Rislamper", "rislampe"], ["Kurver", "kurv flettet"], ["Bilder", "plakat ramme eik"], ["Skåler og fat", "keramikk fat"]],
     kw: { wood: ['eik', 'bambus', 'svart'], soft: ['beige', 'lin'], light: ['rispapir', 'bambus'], deco: ['jute', 'keramikk'] },
   },
   {
     id: 'retro', name: 'Retro og teak', desc: '50- og 60-tall, teak og tydelige farger.',
     colors: ['#E3B23C', '#B5651D', '#3F6C6A', '#3A2A20'],
+    decor: [["Plakater", "retro plakat"], ["Speil", "teak speil"], ["Keramikk", "keramikk retro"], ["Ryer og vegg-tepper", "rya"], ["Veggklokker", "veggklokke retro"], ["Lysestaker", "lysestake messing"]],
     kw: { wood: ['teak', 'retro', 'palisander'], soft: ['retro', 'ull', 'fløyel'], light: ['retro', 'messing'], deco: ['retro', 'rya'] },
   },
   {
     id: 'industri', name: 'Industriell', desc: 'Metall, mørkt tre, skinn og sort.',
     colors: ['#B9B4AA', '#7A5C3E', '#4A4F54', '#1E1F21'],
+    decor: [["Bilder", "plakat sort ramme"], ["Veggklokker", "veggklokke industriell"], ["Skilt", "emaljeskilt"], ["Lamper", "lampe industriell"], ["Hyller", "vegghylle metall"]],
     kw: { wood: ['industriell', 'metall', 'sort'], soft: ['skinn', 'grå'], light: ['industriell', 'metall'], deco: ['sort', 'metall'] },
   },
   {
     id: 'landlig', name: 'Landlig', desc: 'Furu, malte møbler og lune tekstiler.',
     colors: ['#F1EADB', '#C8B08A', '#8FA08A', '#6B4F3A'],
+    decor: [["Malerier", "maleri"], ["Veggtallerkener", "veggtallerken"], ["Broderte bilder", "brodert bilde"], ["Lysestaker", "lysestake messing"], ["Krukker", "krukke"]],
     kw: { wood: ['furu', 'landlig', 'antikk'], soft: ['landlig', 'beige'], light: ['landlig', 'messing'], deco: ['landlig', 'fillerye'] },
   },
   {
     id: 'boho', name: 'Boho', desc: 'Rotting, planter, mønstre og varme farger.',
     colors: ['#F0D9B5', '#C96F4A', '#7F9B76', '#5A3E36'],
+    decor: [["Makramé", "makrame"], ["Kurver til vegg", "kurv vegg"], ["Puter", "kelim pute"], ["Speil", "rotting speil"], ["Plantehengere", "plantehenger"]],
     kw: { wood: ['rotting', 'bambus', 'kurv'], soft: ['fløyel', 'grønn'], light: ['rotting', 'bambus'], deco: ['kelim', 'rotting'] },
   },
   {
     id: 'varm', name: 'Varm minimalisme', desc: 'Få ting, myke former og jordfarger.',
     colors: ['#EEE3D3', '#CDB59A', '#A77E62', '#4B3B32'],
+    decor: [["Keramikk", "keramikk vase"], ["Skulpturer", "skulptur"], ["Malerier", "maleri abstrakt"], ["Lysestaker", "lysestake"], ["Puter", "pute bouclé"]],
     kw: { wood: ['eik', 'valnøtt', 'rund'], soft: ['bouclé', 'beige'], light: ['keramikk', 'opal'], deco: ['ull', 'beige'] },
   },
   {
     id: 'fri', name: 'Blander fritt', desc: 'Ingen bestemt stil. Vi søker bredt.',
     colors: ['#E83E8C', '#0E6B5C', '#F2B705', '#1B2430'],
+    decor: [["Malerier", "maleri"], ["Plakater", "plakat"], ["Vaser", "vase"], ["Speil", "speil"], ["Lysestaker", "lysestake"]],
     kw: { wood: [], soft: [], light: [], deco: [] },
   },
 ];
