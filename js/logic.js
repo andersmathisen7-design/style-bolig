@@ -1,5 +1,5 @@
 // Ren logikk uten DOM, slik at den kan testes i Node.
-import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS, FOOT } from './data.js';
+import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS, FOOT, PRIOS, COMFORT } from './data.js';
 import { wallFor, letter } from './plan.js';
 
 const FINN = 'https://www.finn.no/recommerce/forsale/search';
@@ -7,7 +7,7 @@ const FINN_FURNITURE = '0.78'; // Møbler og interiør
 
 export function newState() {
   return {
-    v: 1, step: 0, area: '', home: 'toroms', style: null, sub: null, level: 'vanlig', total: null,
+    v: 1, step: 0, area: '', home: 'toroms', style: null, sub: null, prio: null, level: 'vanlig', total: null,
     rooms: roomsFromHome('toroms'), drawn: false, floors: ['1. etasje'], furn: [], life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
   };
 }
@@ -85,8 +85,10 @@ export function instances(state) {
       const item = ITEMS[itemId];
       const saved = state.items[key] || {};
       const dflt = def.ess.includes(itemId) || adds.has(key) ? 'need' : 'off';
+      const size = 'SML'.includes(saved.size || '?') ? saved.size : room.size; // egen størrelse går foran rommets
+      const dq = typeof item.qty === 'object' ? item.qty[size] : item.qty || 1;
       out.push({
-        key, itemId, room, item, v: variant(item, room.size),
+        key, itemId, room, item, size, v: variant(item, size), qty: saved.qty || dq,
         st: saved.st || dflt, saved,
       });
     }
@@ -97,6 +99,7 @@ export function instances(state) {
       const saved = state.items[key] || {};
       out.push({
         key, itemId: c.id, room, item: { name: c.name, kind: 'deco', cat: false, custom: true },
+        size: room.size, qty: saved.qty || 1,
         v: { label: '', q: c.name.toLowerCase(), u: 0, n: 0 }, st: saved.st || 'need', saved,
       });
     }
@@ -212,10 +215,17 @@ export function wishOf(inst, state) {
     if (opt.note && !w.notes.includes(opt.note)) w.notes.push(opt.note);
     if (opt.avoid && !w.avoid.includes(opt.avoid)) w.avoid.push(opt.avoid);
   }
-  for (const k of inst.saved.kw || []) if (!w.search.includes(k)) w.search.push(k);
+  // Er stil viktigst, er første stilord med i søket til brukeren selv velger noe annet.
+  const kw = inst.saved.kw ?? (prioOf(inst, state) === 'stil' ? styleWords(inst, state).slice(0, 1) : []);
+  for (const k of kw) if (!w.search.includes(k)) w.search.push(k);
+  if (inst.saved.maxw) w.notes.push(`maks ${inst.saved.maxw} cm bred`);
   w.search = w.search.filter((s) => !w.avoid.includes(s));
   return { ...w, replace };
 }
+
+export const prioOf = (inst, state) => inst.saved.prio || state.prio || null;
+export const kwOf = (inst, state) => inst.saved.kw ?? (prioOf(inst, state) === 'stil' ? styleWords(inst, state).slice(0, 1) : []);
+export const comfortFor = (inst, state) => (prioOf(inst, state) === 'komfort' ? COMFORT[inst.itemId] || null : null);
 
 export function searchText(inst, state) {
   const w = wishOf(inst, state);
@@ -292,15 +302,15 @@ export function summary(state) {
   const need = all.filter((i) => i.st === 'need');
   const bought = all.filter((i) => i.st === 'bought');
   const sum = (arr, f) => arr.reduce((a, i) => a + (f(i) || 0), 0);
-  const level = (f) => sum(need, (i) => (i.item.custom ? 0 : round50(i.v.u * f)));
+  const level = (f) => sum(need, (i) => (i.item.custom ? 0 : round50(i.v.u * f) * i.qty));
   const paid = sum(bought, (i) => i.saved.paid);
-  const maxSum = sum(need, (i) => maxOf(i, state));
+  const maxSum = sum(need, (i) => (maxOf(i, state) || 0) * i.qty);
   const noLimit = need.filter((i) => maxOf(i, state) === null).length;
   const left = state.total ? state.total - paid : null;
   return {
     need: need.length, have: all.filter((i) => i.st === 'have').length, bought: bought.length,
     low: level(LEVELS[0].f), mid: level(LEVELS[1].f), high: level(LEVELS[2].f),
-    newSum: sum(need, (i) => i.v.n), maxSum, noLimit, paid, left,
+    newSum: sum(need, (i) => i.v.n * i.qty), maxSum, noLimit, paid, left,
     over: left !== null ? Math.max(0, maxSum - left) : 0,
   };
 }
@@ -376,6 +386,21 @@ export function placedWall(state, roomId, itemId) {
   return w ? { ...w, letter: letter(w.e) } : null;
 }
 
+// Lager en enkel tegning av rommene fra «Velg bolig», lagt inntil hverandre, som et utgangspunkt å flytte på.
+export function withDrawing(rooms) {
+  const total = rooms.reduce((a, r) => a + roomM2(r), 0) || 1;
+  const W = Math.sqrt((total * 4) / 3) * 100, H = (total * 10000) / W;
+  const snap = (v) => Math.round(v / 10) * 10;
+  const lay = layoutPlan(rooms);
+  return rooms.map((r) => {
+    const p = lay.find((x) => x.id === r.id);
+    const x0 = 50 + snap((p.x / 100) * W), y0 = 50 + snap((p.y / 100) * H), x1 = 50 + snap(((p.x + p.w) / 100) * W), y1 = 50 + snap(((p.y + p.h) / 100) * H);
+    const poly = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+    const m2 = Math.max(1, Math.round(((x1 - x0) * (y1 - y0)) / 10000));
+    return { ...r, poly, doors: [], fixed: [], floor: 0, m2, size: sizeFromM2(r.type, m2), wall: Math.max(x1 - x0, y1 - y0) };
+  });
+}
+
 export function totalM2(rooms) {
   return Math.round(rooms.reduce((s, r) => s + roomM2(r), 0));
 }
@@ -406,6 +431,7 @@ export function normalize(s) {
   out.style = STYLES.some((x) => x.id === s.style) ? s.style : null;
   out.sub = out.style && [0, 1, 2].includes(s.sub) ? s.sub : null;
   out.level = LEVELS.some((x) => x.id === s.level) ? s.level : 'vanlig';
+  out.prio = PRIOS.some((x) => x[0] === s.prio) ? s.prio : null;
   out.total = n(s.total, 1e7);
   out.seq = n(s.seq, 1e6) || 100;
   const pt = (q) => Array.isArray(q) && q.length === 2 && q.every((v) => Number.isFinite(v) && v >= -500 && v <= 3000);
@@ -450,6 +476,10 @@ export function normalize(s) {
     if (['need', 'have', 'bought', 'off'].includes(v.st)) it.st = v.st;
     if (v.max === null) it.max = null; else if (n(v.max, 1e6)) it.max = n(v.max, 1e6);
     if (typeof v.wish === 'string') it.wish = v.wish.slice(0, 300);
+    if (Number.isInteger(v.qty) && v.qty >= 1 && v.qty <= 12) it.qty = v.qty;
+    if (v.size === 'S' || v.size === 'M' || v.size === 'L') it.size = v.size;
+    if (PRIOS.some((x) => x[0] === v.prio)) it.prio = v.prio;
+    if (n(v.maxw, 600)) it.maxw = n(v.maxw, 600);
     if (n(v.paid, 1e6)) it.paid = n(v.paid, 1e6);
     if (typeof v.seen === 'string' && /^\d{4}-\d\d-\d\d$/.test(v.seen)) it.seen = v.seen;
     if (Array.isArray(v.kw)) it.kw = v.kw.filter((x) => typeof x === 'string' && /^[a-zæøåé]{2,20}$/.test(x)).slice(0, 6);

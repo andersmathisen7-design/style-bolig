@@ -1,8 +1,9 @@
-import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, LEVELS, GROUPS } from './data.js';
+import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, LEVELS, GROUPS, PRIOS } from './data.js';
 import {
   newState, roomsFromHome, roomLabel, roomM2, sizeFromM2, sizeRange, instances, defaultMax, maxOf,
   parseLife, wishOf, searchText, finnUrl, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
   newHint, layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
+  prioOf, kwOf, comfortFor, footprint, withDrawing, placedWall,
 } from './logic.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
 import { drawView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
@@ -187,6 +188,11 @@ function viewLife() {
   <div class="chips" role="group" aria-label="Hverdagen din">
     ${LIFE.map((l) => `<button class="chip ${state.life.includes(l.id) ? 'on' : ''}" data-act="life" data-v="${l.id}" aria-pressed="${state.life.includes(l.id)}">${l.label}</button>`).join('')}
   </div>
+  <div class="q"><span class="q-label">Hva er viktigst når du velger?</span>
+    <div class="chips" role="group" aria-label="Viktigst">
+      ${PRIOS.map(([id, name]) => `<button class="chip ${state.prio === id ? 'on' : ''}" data-act="prio" data-v="${id}" aria-pressed="${state.prio === id}">${name}</button>`).join('')}
+    </div>
+    <p class="hint">${state.prio ? esc(PRIOS.find((x) => x[0] === state.prio)[2]) + ' Du kan velge noe annet for enkeltting i lista.' : 'Valgfritt. Du kan også velge dette for hver enkelt ting i lista.'}</p></div>
   ${got.length ? `<section class="panel"><h2>Dette fikk vi med oss</h2><ul class="got">
     ${got.map(([itemId, text]) => {
       const inst = all.find((i) => i.itemId === itemId) || { itemId, saved: {}, v: {}, item: ITEMS[itemId] };
@@ -220,7 +226,7 @@ function budgetPanel(sum) {
 function itemRow(inst, sum) {
   const open = ui.open === inst.key;
   const max = maxOf(inst, state);
-  const tag = inst.st === 'bought' ? `kjøpt ${inst.saved.paid ? kr(inst.saved.paid) : ''}` : inst.st === 'have' ? 'ikke med' : max === null ? 'ingen grense' : `inntil ${kr(max)}`;
+  const tag = inst.st === 'bought' ? `kjøpt ${inst.saved.paid ? kr(inst.saved.paid) : ''}` : inst.st === 'have' ? 'ikke med' : `${inst.qty > 1 ? `${inst.qty} × ` : ''}${max === null ? 'ingen grense' : `inntil ${kr(max)}`}`;
   return `
   <li class="item is-${inst.st} ${open ? 'open' : ''}">
     <div class="item-head">
@@ -244,8 +250,12 @@ function itemBody(inst, sum) {
   const area = AREAS.find((a) => a.id === state.area)?.name || 'Hele Norge';
   const hint = newHint(inst, state, sum);
   const words = styleWords(inst, state);
-  const kw = inst.saved.kw || [];
+  const kw = kwOf(inst, state);
   const picks = inst.saved.picks || {};
+  const prio = prioOf(inst, state), comfort = comfortFor(inst, state);
+  const canPlace = !inst.item.custom && footprint(inst.itemId, inst.size);
+  const pw = canPlace ? placedWall(state, inst.room.id, inst.itemId) : null;
+  const isPlaced = canPlace && state.furn.some((f) => f.room === inst.room.id && f.item === inst.itemId);
   const notes = [...w.avoid.map((a) => `ikke ${a}`), ...w.notes];
   return `
   <div class="item-body">
@@ -255,7 +265,25 @@ function itemBody(inst, sum) {
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'today'))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Lagt ut i dag</a>
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'free'))}" target="_blank" rel="noopener">Gis bort</a>
     </div>
-    <p class="hint">Søker etter «${esc(searchText(inst, state))}» i ${esc(area)}${max ? `, inntil ${kr(max)}` : ''}.</p>
+    <p class="hint">Søker etter «${esc(searchText(inst, state))}» i ${esc(area)}${max ? `, inntil ${kr(max)}${inst.qty > 1 ? ' per stk' : ''}` : ''}.${inst.qty > 1 ? ` Du skal ha ${inst.qty}. Like møbler selges ofte samlet, så prøv også å legge til «par» eller «2 stk».` : ''}</p>
+    ${prio === 'pris' ? '<p class="tip">Pris er viktigst: sjekk «Gis bort» først.</p>' : ''}
+    ${comfort ? `<p class="tip">Komfort er viktigst: ${esc(comfort.tip)}</p>` : ''}
+
+    <div class="twocol">
+      <div class="q"><span class="q-label">Antall</span>
+        <div class="stepper"><button data-act="qty" data-v="${k}" data-d="-1" aria-label="Færre" ${inst.qty <= 1 ? 'disabled' : ''}>−</button><span aria-live="polite">${inst.qty}</span><button data-act="qty" data-v="${k}" data-d="1" aria-label="Flere">+</button></div></div>
+      <div class="field"><label for="maxw-${k}">Maks bredde, cm</label><input id="maxw-${k}" inputmode="numeric" data-ch="maxw" data-v="${k}" value="${inst.saved.maxw ?? ''}" placeholder="valgfritt"></div>
+    </div>
+    ${inst.item.size ? `<div class="q"><span class="q-label">Størrelse</span><div class="chips">
+      ${['S', 'M', 'L'].map((z) => `<button class="chip mini ${inst.size === z ? 'on' : ''}" data-act="isize" data-v="${k}" data-s="${z}" aria-pressed="${inst.size === z}">${esc(inst.item.size[z].label)}</button>`).join('')}</div>
+      ${inst.saved.size ? '' : '<p class="hint">Foreslått ut fra størrelsen på rommet.</p>'}</div>` : ''}
+    ${canPlace ? `<div class="q"><span class="q-label">Plassering</span>
+      <p class="hint">${pw ? `Står mot vegg ${pw.letter} på tegningen.` : isPlaced ? 'Står fritt i rommet på tegningen.' : 'Ikke satt ut ennå. Sett den ut på tegningen, så regner vi ut hvor stor den kan være.'}</p>
+      <button class="btn ghost small" data-act="place" data-v="${k}">${isPlaced ? 'Flytt på tegningen' : 'Bestem hvor den skal stå'}</button></div>` : ''}
+    <div class="q"><span class="q-label">Viktigst for denne</span><div class="chips">
+      ${PRIOS.map(([id, name]) => `<button class="chip mini ${prio === id ? 'on' : ''}" data-act="iprio" data-v="${k}" data-p="${id}" aria-pressed="${prio === id}">${name}</button>`).join('')}</div></div>
+    ${comfort && comfort.words.length ? `<div class="q"><span class="q-label">Søkeord for komfort</span><div class="chips">
+      ${comfort.words.map((x) => `<button class="chip mini ${kw.includes(x) ? 'on' : ''}" data-act="kw" data-v="${k}" data-w="${esc(x)}" aria-pressed="${kw.includes(x)}">${esc(x)}</button>`).join('')}</div></div>` : ''}
     ${notes.length ? `<p class="look">Se etter selv i annonsen: ${esc(notes.join(', '))}.</p>` : ''}
 
     ${words.length ? `<div class="q"><span class="q-label">Søkeord i stilen din</span><div class="chips">
@@ -468,7 +496,25 @@ const actions = {
     ui.open = `${v}:${id}`;
     commit();
   },
-  kw(v, el) { const i = instByKey(v); const w = el.dataset.w; const kw = i.saved.kw || []; setItem(v, { kw: kw.includes(w) ? kw.filter((x) => x !== w) : [...kw, w] }); },
+  kw(v, el) { const i = instByKey(v); const w = el.dataset.w; const kw = kwOf(i, state); setItem(v, { kw: kw.includes(w) ? kw.filter((x) => x !== w) : [...kw, w] }); },
+  qty(v, el) { const i = instByKey(v); if (i) setItem(v, { qty: Math.min(12, Math.max(1, i.qty + Number(el.dataset.d))) }); },
+  isize(v, el) { const i = instByKey(v); if (!i) return; const it = { ...state.items[v] }; if (i.saved.size === el.dataset.s) delete it.size; else it.size = el.dataset.s; state.items[v] = it; commit(); },
+  iprio(v, el) { const i = instByKey(v); if (!i) return; const it = { ...state.items[v] }; if (i.saved.prio === el.dataset.p) delete it.prio; else it.prio = el.dataset.p; state.items[v] = it; commit(); },
+  prio(v) { state.prio = state.prio === v ? null : v; commit(); },
+  usepreset() { if (!state.drawn) { state.rooms = withDrawing(state.rooms); state.drawn = true; ui.sheet = sheetFor(state, ui.sheet); commit(); } },
+  // Fra lista og rett til tegningen: lager en tegning av rommene om den mangler, og setter ut møbelet.
+  place(v) {
+    const i = instByKey(v);
+    if (!i) return;
+    if (!state.drawn) { state.rooms = withDrawing(state.rooms); state.drawn = true; }
+    const room = state.rooms.find((r) => r.id === i.room.id);
+    state.step = 0; ui.tab = 'draw'; ui.open = null; ui.round = false; ui.furn = null; ui.note = '';
+    ui.sheet = sheetFor(state, ui.sheet);
+    if (!room.poly) { ui.tool = 'draw'; ui.room = null; ui.note = `${roomLabel(state.rooms, room)} er ikke tegnet ennå. Tegn rommet først, så kan du sette ut møbler i det.`; commit(); window.scrollTo(0, 0); return; }
+    ui.tool = 'move'; ui.floor = room.floor || 0; ui.room = room.id;
+    actions.addfurn(i.itemId);
+    commit(); window.scrollTo(0, 0);
+  },
   pick(v, el) { const i = instByKey(v); const picks = { ...(i.saved.picks || {}) }; const n = Number(el.dataset.i); if (picks[el.dataset.q] === n) delete picks[el.dataset.q]; else picks[el.dataset.q] = n; setItem(v, { picks }); },
   nomax(v) { setItem(v, { max: null }); },
   maxreset(v) { const it = { ...state.items[v] }; delete it.max; state.items[v] = it; commit(); },
@@ -522,6 +568,7 @@ const changes = {
   total(el) { state.total = num(el.value); },
   wish(el) { state.items[el.dataset.v] = { ...state.items[el.dataset.v], wish: el.value.slice(0, 300) }; },
   max(el) { state.items[el.dataset.v] = { ...state.items[el.dataset.v], max: num(el.value) }; },
+  maxw(el) { const it = { ...state.items[el.dataset.v] }; const n = num(el.value); if (n && n <= 600) it.maxw = n; else delete it.maxw; state.items[el.dataset.v] = it; },
 };
 
 app.addEventListener('click', (e) => {

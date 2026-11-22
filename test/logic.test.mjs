@@ -235,3 +235,38 @@ test('retninger innenfor en stil', async () => {
   assert.equal(normalize(JSON.parse(JSON.stringify({ ...s, sub: 7 }))).sub, null);
   assert.equal(normalize(JSON.parse(JSON.stringify(s))).sub, 2);
 });
+
+test('antall, egen størrelse og hva som er viktigst', async () => {
+  const { prioOf, kwOf, comfortFor, withDrawing } = await import('../js/logic.js');
+  const s = newState();
+  const nb = get(s, 'nattbord'), stoler = get(s, 'spisestoler');
+  assert.equal(nb.qty, 2);                   // soverom M: ett på hver side
+  assert.equal(stoler.qty, 2);               // lite kjøkken
+  const base = summary(s);
+  s.items[nb.key] = { qty: 3 };
+  assert.equal(summary(s).mid - base.mid, 400);
+  assert.equal(summary(s).maxSum - base.maxSum, 400);
+  const sofa = get(s, 'sofa');
+  s.items[sofa.key] = { size: 'L', maxw: 240 };
+  assert.equal(get(s, 'sofa').v.q, 'hjørnesofa');
+  assert.equal(maxOf(get(s, 'sofa'), s), 5000);
+  assert.match(new URL(finnUrl(get(s, 'sofa'), s)).searchParams.get('q'), /^hjørnesofa/);
+  s.style = 'retro'; s.prio = 'stil';
+  assert.deepEqual(kwOf(get(s, 'sofa'), s), ['retro']);
+  assert.equal(searchText(get(s, 'sofa'), s), 'hjørnesofa retro');
+  s.items[sofa.key] = { ...s.items[sofa.key], kw: [] };                 // brukeren fjernet ordet selv
+  assert.equal(searchText(get(s, 'sofa'), s), 'hjørnesofa');
+  s.items[sofa.key] = { ...s.items[sofa.key], prio: 'komfort' };
+  assert.equal(prioOf(get(s, 'sofa'), s), 'komfort');
+  assert.ok(comfortFor(get(s, 'sofa'), s).tip);
+  assert.equal(comfortFor(get(s, 'nattbord'), s), null);
+  const n = normalize(JSON.parse(JSON.stringify({ ...s, items: { ...s.items, [nb.key]: { qty: 99, size: 'X', prio: 'tull', maxw: 9999 } } })));
+  assert.deepEqual(n.items[nb.key], {});
+  assert.equal(n.prio, 'stil'); assert.equal(n.items[sofa.key].maxw, 240);
+  // tegning fra «Velg bolig»
+  const d = withDrawing(newState().rooms);
+  assert.equal(d.length, 5);
+  d.forEach((r) => { assert.equal(r.poly.length, 4); assert.ok(r.m2 >= 1); r.poly.flat().forEach((v) => assert.equal(v % 10, 0)); });
+  const total = d.reduce((a, r) => a + r.m2, 0);
+  assert.ok(Math.abs(total - 42) <= 4, String(total));
+});

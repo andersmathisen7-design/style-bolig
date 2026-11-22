@@ -209,18 +209,11 @@ export const ITEMS = {
       L: { label: '6–8 personer, ca. 180–220 cm', q: 'spisebord', u: 2500, n: 3600 },
     },
   },
-  spisestoler: {
-    name: 'Spisestoler', kind: 'wood', ask: ['tre'],
-    size: {
-      S: { label: '2 stoler', q: 'spisestoler', u: 500, n: 600 },
-      M: { label: '4 stoler', q: 'spisestoler', u: 1200, n: 1200 },
-      L: { label: '6 stoler', q: 'spisestoler', u: 2000, n: 1800 },
-    },
-  },
+  spisestoler: { name: 'Spisestoler', kind: 'wood', ask: ['tre'], q: 'spisestoler', u: 300, n: 300, qty: { S: 2, M: 4, L: 6 } },
   servise: { name: 'Servise og glass', kind: 'deco', cat: false, q: 'servise', u: 400, n: 500 },
   bestikk: { name: 'Bestikk', kind: 'deco', cat: false, q: 'bestikk', u: 200, n: 200 },
   gryter: { name: 'Gryter og panner', kind: 'deco', cat: false, q: 'gryter', u: 300, n: 500 },
-  barkrakker: { name: 'Barkrakker', kind: 'wood', q: 'barkrakker', u: 600, n: 600 },
+  barkrakker: { name: 'Barkrakker', kind: 'wood', q: 'barkrakker', u: 300, n: 300, qty: 2 },
   kjokkentralle: { name: 'Kjøkkentralle', kind: 'wood', q: 'kjøkkentralle', u: 500, n: 600 },
   barnestol: { name: 'Barnestol', kind: 'wood', cat: false, q: 'barnestol', u: 900, n: 500 },
 
@@ -233,7 +226,7 @@ export const ITEMS = {
     },
   },
   gjesteseng: { name: 'Gjesteseng', kind: 'soft', q: 'gjesteseng', u: 500, n: 800 },
-  nattbord: { name: 'Nattbord', kind: 'wood', ask: ['tre'], q: 'nattbord', u: 400, n: 300 },
+  nattbord: { name: 'Nattbord', kind: 'wood', ask: ['tre'], q: 'nattbord', u: 400, n: 300, qty: { S: 1, M: 2, L: 2 } }, // ett på hver side av en dobbeltseng
   garderobe: {
     name: 'Garderobeskap', kind: 'wood', ask: ['tre'], wall: 10,
     size: {
@@ -475,4 +468,23 @@ export const FOOT = {
   skohylle: [80, 30], benk: [100, 35],
   skrivebord: { S: [100, 60], M: [130, 65], L: [160, 80] }, kontorstol: [60, 60],
   badhylle: [40, 30], barneseng: [70, 140], lekekasse: [80, 40], utemobler: [120, 70],
+};
+
+// Hva som er viktigst når man velger. Kan settes for alt under Ønsker, og overstyres per ting.
+export const PRIOS = [
+  ['stil', 'Stil', 'Vi legger stilens søkeord inn i søket.'],
+  ['komfort', 'Komfort', 'Du får råd om hva du bør kjenne etter, og merker som er kjent for å sitte og ligge godt.'],
+  ['pris', 'Pris', 'Vi minner deg på å sjekke «Gis bort» først.'],
+];
+
+// Råd og søkeord når komfort er viktigst. Merkene er vanlige i norske bruktannonser.
+export const COMFORT = {
+  sofa: { tip: 'Sitt i den før du kjøper. Kjenn etter om rygg og sete holder formen, og spør om trekket kan tas av.', words: ['bolia', 'ekornes', 'dyp'] },
+  sovesofa: { tip: 'Legg deg nedpå. Det er madrassen du skal sove på som teller, ikke sitteputene.', words: ['pocketfjær', 'innovation'] },
+  seng: { tip: 'Madrassen betyr mest. Mange kjøper madrass eller overmadrass ny og resten brukt.', words: ['jensen', 'wonderland', 'svane'] },
+  lenestol: { tip: 'Prøv stolen. Regulerbare stoler holder seg godt og er billige brukt.', words: ['stressless', 'ekornes'] },
+  kontorstol: { tip: 'Se etter justerbar rygg, setehøyde og armlener.', words: ['håg', 'kinnarps'] },
+  spisestoler: { tip: 'Polstret sete gjør lange middager bedre. Sjekk at stolene ikke vakler.', words: ['polstret'] },
+  gjesteseng: { tip: 'Sjekk at madrassen er hel og tørr.', words: ['madrass'] },
+  barneseng: { tip: 'Kjøp gjerne madrassen ny.', words: [] },
 };

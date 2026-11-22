@@ -1,7 +1,7 @@
 // Plantegningen: tegn rom på frihånd, rett dem opp, sett mål, dører, vinduer og møbler.
 // Mens man drar, endres bare det som vises. Tilstanden lagres når man slipper.
 import { ROOMS, ITEMS } from './data.js';
-import { roomLabel, sizeFromM2, footprint } from './logic.js';
+import { roomLabel, sizeFromM2, footprint, instances } from './logic.js';
 import {
   straighten, straightenLine, isLine, splitPoly, moveWall, moveCorner, dragAlong, valid, remapDoor, remapDoors, alignTo, fitSheet, canonical,
   area, areaM2, edges, letter, setEdgeLength, nearestEdge, labelPoint, pointInPoly, moved, opening, wallFor,
@@ -83,6 +83,20 @@ function roomSvg(state, ui, r, k) {
     ${furn}<g class="marks">${marks}</g></g>`;
 }
 
+// Plass til et nattbord ved hodeenden av senga. Hodeenden er den enden som står nærmest en vegg.
+function besideBed(poly, bed, fp, taken) {
+  const lengthwise = bed.r === 90 ? [1, 0] : [0, 1], across = bed.r === 90 ? [0, 1] : [1, 0];
+  const end = (sign) => [bed.x + lengthwise[0] * sign * bed.d / 2, bed.y + lengthwise[1] * sign * bed.d / 2];
+  const head = nearestEdge(poly, end(-1)).d <= nearestEdge(poly, end(1)).d ? -1 : 1;
+  const h = end(head);
+  for (const side of [-1, 1]) {
+    const x = Math.round(h[0] - lengthwise[0] * head * fp[1] / 2 + across[0] * side * (bed.w / 2 + fp[0] / 2 + 5));
+    const y = Math.round(h[1] - lengthwise[1] * head * fp[1] / 2 + across[1] * side * (bed.w / 2 + fp[0] / 2 + 5));
+    if (!taken.some((f) => Math.hypot(f.x - x, f.y - y) < 30)) return { x, y, r: bed.r };
+  }
+  return null;
+}
+
 // Etter at et rom har fått ny form: la naborommenes vegger følge med, og sørg for at alt får plass på arket.
 function settle(state, ui, room, before, raw) {
   for (const o of state.rooms) {
@@ -120,6 +134,7 @@ export function drawView(state, ui, canUndo) {
   </div>
   <p class="hint tool-hint">${HINTS[ui.tool]}</p>
   <div class="row undo-row"><button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
+    ${state.drawn ? '' : '<button class="btn ghost small" data-act="usepreset">Start med rommene fra «Velg bolig»</button>'}
     ${ui.room && rooms.some((r) => r.id === ui.room) ? '<button class="link danger" data-act="delroom">Fjern valgt rom</button>' : ''}</div>
   <div class="sheet"><svg class="draw tool-${ui.tool}" id="draw" viewBox="0 0 ${S} ${S}" role="img" aria-label="Plantegning av ${esc(state.floors[ui.floor])}">
     <defs>
@@ -159,8 +174,12 @@ function furnPanel(state, ui) {
 }
 
 export function roomPanel(state, ui, r) {
-  const placeable = [...ROOMS[r.type].ess, ...ROOMS[r.type].extra].filter((id) => footprint(id, r.size));
-  const placed = (id) => (state.furn || []).find((f) => f.room === r.id && f.item === id);
+  const mine = instances(state).filter((i) => i.room.id === r.id);
+  const info = (id) => mine.find((i) => i.itemId === id);
+  const placeable = [...new Set([...mine.filter((i) => i.st === 'need' || i.st === 'bought').map((i) => i.itemId), ...ROOMS[r.type].ess, ...ROOMS[r.type].extra])]
+    .filter((id) => ITEMS[id] && footprint(id, info(id)?.size || r.size));
+  const count = (id) => (state.furn || []).filter((f) => f.room === r.id && f.item === id).length;
+  const want = (id) => info(id)?.qty || 1;
   return `
   <section class="panel" aria-label="Valgt rom">
     <h2>${esc(roomLabel(state.rooms, r))}<small>${r.m2} m²</small></h2>
@@ -177,7 +196,7 @@ export function roomPanel(state, ui, r) {
     <span class="q-label">Sett ut møbler</span>
     <p class="hint">Sett ut det viktigste omtrent der det skal stå. Da vet lista hvilken vegg sofaen har og hvor bred den kan være.</p>
     <div class="chips" role="group" aria-label="Møbler">
-      ${placeable.map((id) => `<button class="chip mini ${placed(id) ? 'on' : 'add'}" data-act="addfurn" data-v="${id}">${placed(id) ? '' : '+ '}${ITEMS[id].name}</button>`).join('')}
+      ${placeable.map((id) => { const c = count(id), q = want(id); return `<button class="chip mini ${c ? 'on' : 'add'}" data-act="addfurn" data-v="${id}">${c >= q ? '' : '+ '}${ITEMS[id].name}${q > 1 ? ` ${c}/${q}` : ''}</button>`; }).join('')}
     </div>
     <button class="link danger" data-act="delroom">Fjern rommet</button>
   </section>`;
@@ -394,13 +413,20 @@ export function editorActions(ctx) {
       addfurn(v) {
         const s = ctx.state(), r = sel();
         if (!r?.poly || !ITEMS[v]) return;
-        const have = s.furn.find((f) => f.room === r.id && f.item === v);
-        if (have) { ui.furn = have.id; ui.room = null; ui.tool = 'move'; ctx.later(); return; }
-        const fp = footprint(v, r.size);
+        const inst = instances(s).find((i) => i.room.id === r.id && i.itemId === v);
+        const have = s.furn.filter((f) => f.room === r.id && f.item === v);
+        if (have.length >= (inst?.qty || 1)) { // alle er satt ut: velg neste, så man kan flytte dem etter tur
+          const at = have.findIndex((f) => f.id === ui.furn);
+          ui.furn = have[(at + 1) % have.length].id; ui.room = null; ui.tool = 'move'; ctx.later(); return;
+        }
+        const fp = footprint(v, inst?.size || r.size);
         if (!fp || s.furn.length >= 80) return;
         const c = labelPoint(r.poly);
+        let spot = { x: Math.round(c[0] / 5) * 5 + have.length * 30, y: Math.round(c[1] / 5) * 5 + have.length * 30, r: 0 };
+        const bed = v === 'nattbord' ? s.furn.find((f) => f.room === r.id && f.item === 'seng') : null;
+        if (bed) spot = besideBed(r.poly, bed, fp, have) || spot; // nattbord havner ved hodeenden, ett på hver side
         const id = 'f' + (s.seq = (s.seq || 100) + 1);
-        s.furn = [...s.furn, { id, room: r.id, item: v, x: Math.round(c[0] / 5) * 5, y: Math.round(c[1] / 5) * 5, w: fp[0], d: fp[1], r: 0 }];
+        s.furn = [...s.furn, { id, room: r.id, item: v, x: spot.x, y: spot.y, w: fp[0], d: fp[1], r: spot.r }];
         ui.furn = id; ui.room = null; ui.tool = 'move';
         ctx.commit();
       },

@@ -265,3 +265,10 @@ a.chip { text-decoration: none; color: var(--ink); }
 .bulk { gap: 18px; margin: -4px 0 6px; }
 .more .q-label { display: block; margin-top: 10px; }
 .more .chips { margin: 6px 0 4px; }
+
+.twocol { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; }
+.stepper { display: inline-grid; grid-template-columns: 44px 40px 44px; align-items: center; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; margin-top: 6px; background: var(--surface); }
+.stepper button { height: 42px; border: 0; background: none; font-size: 1.25rem; font-weight: 700; }
+.stepper button:disabled { opacity: 0.3; }
+.stepper span { text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+.item-body .q .btn { margin: 2px 0 12px; }
