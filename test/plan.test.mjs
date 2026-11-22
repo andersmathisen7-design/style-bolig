@@ -73,6 +73,11 @@ test('sette lengde på en vegg', () => {
   assert.equal(L2.length, 6);
   edges(L2).forEach((e) => assert.ok(e.a[0] === e.b[0] || e.a[1] === e.b[1]));
   assert.deepEqual(setEdgeLength(rect, 0, 400), rect);
+  // fra starten: venstre vegg flyttes i stedet for høyre
+  assert.deepEqual(setEdgeLength(rect, 0, 620, true), [[-120, 100], [500, 100], [500, 400], [-120, 400]]);
+  const L3 = setEdgeLength(L, 2, 400, true); // vegg C i vinkelrommet, uten å røre vegg E
+  assert.equal(Math.round(edges(L3)[2].len), 400); assert.equal(edges(L3)[4].len, edges(L)[4].len);
+  edges(L3).forEach((e) => assert.ok(e.a[0] === e.b[0] || e.a[1] === e.b[1]));
 });
 
 test('nærmeste vegg, punkt i rom og navnepunkt', () => {

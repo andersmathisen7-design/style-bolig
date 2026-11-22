@@ -137,34 +137,39 @@ function roomEditor(r) {
 
 const photo = (id, n, small) => `photos/${id}-${n}${small ? 's' : ''}.webp`;
 
+const subName = () => { const st = STYLES.find((x) => x.id === state.style); return st && Number.isInteger(state.sub) ? st.photos[state.sub].name : ''; };
+
 function viewStyle() {
   const open = STYLES.find((s) => s.id === ui.style);
   if (open) return styleDetail(open);
   return `
   <h1>Hvilken stil liker du?</h1>
-  <p class="lead">Trykk på en stil for å se flere bilder og hva som kjennetegner den.</p>
+  <p class="lead">Trykk på en stil for å se retningene innenfor den og velge den som ligner mest på deg.</p>
   <div class="styles">
     ${STYLES.map((s) => `<button class="style ${state.style === s.id ? 'on' : ''}" data-act="styleopen" data-v="${s.id}">
-      <img src="${photo(s.id, 1, true)}" alt="" width="480" height="360" loading="lazy">
-      <span class="style-name">${s.name}${state.style === s.id ? '<span class="picked">Valgt</span>' : ''}</span><span class="style-desc">${s.desc}</span></button>`).join('')}
+      <img src="${photo(s.id, state.style === s.id && Number.isInteger(state.sub) ? state.sub + 1 : 1, !(state.style === s.id && state.sub))}" alt="" width="480" height="360" loading="lazy">
+      <span class="style-name">${s.name}${state.style === s.id ? '<span class="picked">Valgt</span>' : ''}</span>
+      <span class="style-desc">${state.style === s.id && subName() ? esc(subName()) : s.desc}</span></button>`).join('')}
   </div>`;
 }
 
 function styleDetail(s) {
-  const words = [...new Set(Object.values(s.kw).flat())].slice(0, 8);
+  const mine = state.style === s.id;
   return `
   <button class="link back" data-act="styleopen" data-v="">Alle stiler</button>
   <h1>${s.name}</h1>
-  <p class="lead">${s.desc}</p>
-  <div class="row"><button class="btn" data-act="style" data-v="${s.id}">${state.style === s.id ? 'Dette er stilen din' : 'Velg denne stilen'}</button></div>
+  <p class="lead">${s.desc} Velg retningen som passer best, eller ta hele stilen.</p>
   <ul class="traits">${s.traits.map((t) => `<li>${t}</li>`).join('')}</ul>
   <div class="gallery">
-    ${s.photos.map((p, i) => `<figure><img src="${photo(s.id, i + 1)}" alt="${esc(p.alt)}" width="900" height="675" ${i ? 'loading="lazy"' : ''}>
-      <figcaption>${esc(p.alt)}. <a href="${esc(p.url)}" target="_blank" rel="noopener">Foto: ${esc(p.by)}, Unsplash</a></figcaption></figure>`).join('')}
+    ${s.photos.map((p, i) => { const on = mine && state.sub === i; const words = [...new Set([...p.wood, ...p.soft])]; return `<figure class="${on ? 'on' : ''}">
+      <img src="${photo(s.id, i + 1)}" alt="${esc(p.alt)}" width="900" height="675" ${i ? 'loading="lazy"' : ''}>
+      <figcaption><h2>${esc(p.name)}${on ? '<span class="picked">Valgt</span>' : ''}</h2>
+        <p>${esc(p.alt)}. Vi søker gjerne etter ${esc(words.join(', '))}.</p>
+        <button class="btn small ${on ? 'ghost' : ''}" data-act="style" data-v="${s.id}" data-i="${i}">${on ? 'Dette er retningen din' : `Velg ${esc(p.name.toLowerCase())}`}</button>
+        <a class="credit" href="${esc(p.url)}" target="_blank" rel="noopener">Foto: ${esc(p.by)}, Unsplash</a></figcaption></figure>`; }).join('')}
   </div>
-  ${words.length ? `<p class="hint">Søkeord vi foreslår på Finn i denne stilen: ${words.join(', ')}.</p>` : ''}
-  <div class="row"><button class="btn" data-act="style" data-v="${s.id}">${state.style === s.id ? 'Dette er stilen din' : 'Velg denne stilen'}</button>
-    <button class="btn ghost" data-act="styleopen" data-v="">Se de andre</button></div>`;
+  <div class="row"><button class="btn ghost" data-act="style" data-v="${s.id}">${mine && state.sub === null ? 'Du har valgt hele stilen' : `Velg hele stilen ${esc(s.name.toLowerCase())}`}</button>
+    <button class="link" data-act="styleopen" data-v="">Se de andre stilene</button></div>`;
 }
 
 function viewLife() {
@@ -306,7 +311,7 @@ function viewList() {
   <p class="lead">${sum.need === 0 ? 'Ingenting igjen å finne. Legg til ting under rommene, eller nyt et ferdig hjem.' : `${sum.need} ting igjen å finne.`}
     ${sum.have ? ` ${sum.have} har du fra før.` : ''}${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Huk av det du har. Trykk på en ting for å søke.</p>
   ${style
-    ? `<div class="mystyle"><img src="${photo(style.id, 1, true)}" alt="" width="480" height="360"><p><strong>${style.name}</strong><br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
+    ? `<div class="mystyle"><img src="${Number.isInteger(state.sub) ? photo(style.id, state.sub + 1) : photo(style.id, 1, true)}" alt="" width="480" height="360"><p><strong>${style.name}</strong>${subName() ? `<br>${esc(subName())}` : ''}<br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
     : `<p class="hint">Du har ikke valgt stil ennå. <button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
   ${budgetPanel(sum)}
   ${need.length ? `<button class="btn wide" data-act="round">Dagens runde: se hva som er nytt på Finn</button>` : ''}
@@ -417,7 +422,7 @@ const actions = {
   room(v) { ui.room = ui.room === v ? null : v; ui.furn = null; later(); },
   size(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r) { r.size = v; r.m2 = null; commit(); } },
   delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.furn = state.furn.filter((f) => f.room !== ui.room); state.drawn = state.rooms.some((r) => r.poly); state.custom = state.custom.filter((c) => c.room !== ui.room); ui.room = null; commit(); },
-  style(v) { state.style = v; ui.style = null; commit(); window.scrollTo(0, 0); },
+  style(v, el) { state.style = v; state.sub = el?.dataset.i !== undefined ? Number(el.dataset.i) : null; ui.style = null; commit(); window.scrollTo(0, 0); },
   styleopen(v) { ui.style = v || null; later(); window.scrollTo(0, 0); },
   life(v) { state.life = state.life.includes(v) ? state.life.filter((x) => x !== v) : [...state.life, v]; commit(); },
   dropWish(v) { delete state.autoWish[v]; commit(); },

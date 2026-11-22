@@ -220,3 +220,18 @@ test('stilbilder finnes', async () => {
     assert.ok(fs.existsSync(new URL(`../photos/${s.id}-1s.webp`, import.meta.url)));
   }
 });
+
+test('retninger innenfor en stil', async () => {
+  const { STYLES } = await import('../js/data.js');
+  const { styleWords } = await import('../js/logic.js');
+  STYLES.forEach((s) => s.photos.forEach((p) => assert.ok(p.name && p.wood.length && p.soft.length, s.id)));
+  const s = newState();
+  s.style = 'retro';
+  assert.deepEqual(styleWords(get(s, 'sofa'), s), ['retro', 'ull', 'fløyel']);
+  s.sub = 2; // 70-talls farger
+  assert.deepEqual(styleWords(get(s, 'sofa'), s), ['oransje', 'fløyel', 'retro', 'ull']);
+  assert.deepEqual(styleWords(get(s, 'sofabord'), s).slice(0, 2), ['retro', 'glass']);
+  assert.deepEqual(styleWords(get(s, 'gulvlampe'), s), ['retro', 'messing']); // lamper følger hovedstilen
+  assert.equal(normalize(JSON.parse(JSON.stringify({ ...s, sub: 7 }))).sub, null);
+  assert.equal(normalize(JSON.parse(JSON.stringify(s))).sub, 2);
+});

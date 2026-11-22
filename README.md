@@ -6,9 +6,9 @@ Brukthjem er ikke tilknyttet FINN.no eller IKEA.
 
 ## Slik virker det
 
-1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn boligen selv: tegn rundt hvert rom på frihånd, så rettes strekene opp til rette vegger. Rom kan ha vinkler og skrå vegger, og boligen kan ha flere etasjer. Etterpå setter du riktige veggmål, dører, vinduer og møbler. Møbler du setter inntil en vegg, gir lista største bredde for den tingen.
-2. **Stil.** Åtte stiler med bilder. Trykk på en stil for flere eksempler og kjennetegn. Stilen gir forslag til søkeord og pynt.
-3. **Hverdag.** Skriv fritt («vil ikke ha rundt bord, sofaen bør være grønn») eller trykk på ferdige valg. Teksten tolkes av enkle regler i nettleseren.
+1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn boligen selv. Tegn rundt boligen eller et rom på frihånd, så rettes strekene opp til rette vegger. Dra en strek tvers over et rom for å dele det i to; streken kan ha en knekk. Rom kan ha vinkler og skrå vegger, og boligen kan ha flere etasjer. Dra i hjørner og vegger for å endre formen, og skriv inn mål bare på de veggene du har mål på. Sett inn dører, vinduer og møbler. Møbler du setter inntil en vegg, gir lista største bredde for den tingen.
+2. **Stil.** Åtte stiler med bilder. Hver stil har tre retninger du kan velge mellom, med egne søkeord. Stilen gir også forslag til pynt.
+3. **Ønsker.** Skriv fritt («vil ikke ha rundt bord, sofaen bør være grønn») eller trykk på ferdige valg. Teksten tolkes av enkle regler i nettleseren.
 4. **Lista.** Huk av det du har, og legg til egne ting med en kort beskrivelse. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk.
 
 Alt lagres i nettleseren (`localStorage`). Ingenting sendes noe sted. Lista kan deles som en lenke.

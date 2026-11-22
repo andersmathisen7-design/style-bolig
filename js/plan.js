@@ -61,32 +61,21 @@ function crosses(poly) {
   return false;
 }
 
-// Gjør en håndtegnet runde om til et rom med rette vegger.
-// Leser retningen fingeren beveger seg i, ikke enkeltpunkter: lange strekk samme vei blir vegger,
-// mens avrundede hjørner, kroker i start og slutt og små rykk blir borte. Er streken uklar, blir
-// rommet en firkant rundt det som ble tegnet. tol = hvor unøyaktig en finger er, i cm.
-// Gir en liste med hjørner, eller null når streken er for liten til å være et rom.
-export function straighten(raw, tol = 40) {
-  if (!raw || raw.length < 4) return null;
+// Leser en strek som en rekke strekk med hver sin retning (R, L, U, D eller X for skrå).
+// Korte strekk fjernes, korteste først. Skrå strekk må være lange for å telle som skråvegg.
+function strokeRuns(raw, tol, axisFrac, diagFrac) {
+  if (!raw || raw.length < 3) return null;
   const pts = [raw[0]];
   for (const p of raw) if (dist(p, pts[pts.length - 1]) > 1) pts.push(p);
   let len = 0;
   for (let i = 1; i < pts.length; i++) len += dist(pts[i - 1], pts[i]);
   const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
   const box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-  if (len < 300 || box[2] - box[0] < 100 || box[3] - box[1] < 100) return null;
-  const fallback = () => {
-    const [x0, y0, x1, y1] = box.map(snap);
-    return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
-  };
-
   const step = Math.min(20, Math.max(4, len / 160));
   const P = resample(pts, step);
   const n = P.length - 1;
-  if (n < 8) return fallback();
-
-  // Retning for hvert lille stykke, målt over et vindu så skjelving ikke teller.
-  const k = Math.max(1, Math.round(tol / step / 2));
+  if (n < 4) return { len, box, P, n, step, runs: [] };
+  const k = Math.max(1, Math.round(tol / step / 2)); // retning måles over et vindu, så skjelving ikke teller
   const cls = [];
   for (let i = 0; i < n; i++) {
     const a = P[Math.max(0, i - k)], b = P[Math.min(n, i + 1 + k)];
@@ -94,11 +83,9 @@ export function straighten(raw, tol = 40) {
     const deg = (Math.atan2(Math.abs(dy), Math.abs(dx)) * 180) / Math.PI;
     cls.push(deg < 30 ? (dx > 0 ? 'R' : 'L') : deg > 60 ? (dy > 0 ? 'D' : 'U') : 'X');
   }
-  let runs = [];
+  const runs = [];
   cls.forEach((c, i) => { const last = runs[runs.length - 1]; if (last && last.c === c) last.b = i; else runs.push({ c, a: i, b: i }); });
-
-  // Fjern korte strekk, korteste først. Skrå strekk må være lange for å telle som skråvegg.
-  const minAxis = Math.max(tol * 1.5, len * 0.035), minDiag = Math.max(tol * 3.5, len * 0.12);
+  const minAxis = Math.max(tol * 1.5, len * axisFrac), minDiag = Math.max(tol * 3.5, len * diagFrac);
   const ratio = (r) => ((r.b - r.a + 1) * step) / (r.c === 'X' ? minDiag : minAxis);
   while (runs.length > 1) {
     let w = 0;
@@ -107,6 +94,174 @@ export function straighten(raw, tol = 40) {
     runs.splice(w, 1);
     if (w > 0 && w < runs.length && runs[w - 1].c === runs[w].c) { runs[w - 1].b = runs[w].b; runs.splice(w, 1); }
   }
+  return { len, box, P, n, step, runs };
+}
+
+const axisOf = (c) => (c === 'R' || c === 'L' ? 'H' : c === 'X' ? 'X' : 'V');
+const middle = (P, q) => { const m = Math.floor((q.b - q.a + 1) * 0.15); return P.slice(q.a + m, q.b + 2 - m); };
+
+// Er streken en linje (for å dele et rom) og ikke en runde rundt et rom?
+// Lengden måles mellom punkter med litt avstand, så skjelving ikke får streken til å virke lengre.
+export function isLine(raw, tol = 40) {
+  if (!raw || raw.length < 2) return false;
+  let len = 0, last = raw[0];
+  for (const p of raw) if (dist(p, last) >= tol * 0.6) { len += dist(p, last); last = p; }
+  len += dist(last, raw[raw.length - 1]);
+  return len > 0 && dist(raw[0], raw[raw.length - 1]) > len * 0.55;
+}
+
+// Gjør en håndtegnet strek om til en rett eller knekt linje. Gir hjørnepunktene, eller null.
+export function straightenLine(raw, tol = 40) {
+  const st = strokeRuns(raw, tol, 0.1, 0.35);
+  if (!st || st.len < 80 || !st.runs.length) return null;
+  const { P, n } = st;
+  // Slå sammen strekk langs samme akse (fram og tilbake teller som ett).
+  const runs = [];
+  for (const r of st.runs) {
+    const last = runs[runs.length - 1];
+    if (last && last.o === axisOf(r.c) && last.o !== 'X') last.parts.push(r); else runs.push({ o: axisOf(r.c), parts: [r] });
+  }
+  const segs = runs.map((r) => {
+    const sm = r.parts.flatMap((q) => middle(P, q));
+    return { o: r.o, c: r.o === 'H' ? snap(median(sm.map((q) => q[1]))) : r.o === 'V' ? snap(median(sm.map((q) => q[0]))) : null, a: r.parts[0].a, b: r.parts[r.parts.length - 1].b };
+  });
+  const onSeg = (sg, p) => (sg.o === 'H' ? [p[0], sg.c] : sg.o === 'V' ? [sg.c, p[1]] : [p[0], p[1]]);
+  const out = [onSeg(segs[0], P[0])];
+  for (let i = 0; i < segs.length - 1; i++) {
+    const A = segs[i], B = segs[i + 1];
+    const p = P[Math.round((A.b + 1 + B.a) / 2)];
+    const x = A.o === 'V' ? A.c : B.o === 'V' ? B.c : snap(p[0]);
+    const y = A.o === 'H' ? A.c : B.o === 'H' ? B.c : snap(p[1]);
+    out.push([x, y]);
+  }
+  out.push(onSeg(segs[segs.length - 1], P[n]));
+  return out.length >= 2 && dist(out[0], out[out.length - 1]) > 30 ? out : null;
+}
+
+// Der en stråle fra o i retning d treffer veggene i rommet. Gir treffet nærmest ønsket avstand.
+function hitWall(poly, o, d, want) {
+  let best = null;
+  edges(poly).forEach((e, i) => {
+    const ex = e.b[0] - e.a[0], ey = e.b[1] - e.a[1];
+    const den = d[0] * ey - d[1] * ex;
+    if (Math.abs(den) < 1e-9) return;
+    const t = ((e.a[0] - o[0]) * ey - (e.a[1] - o[1]) * ex) / den;
+    const u = ((e.a[0] - o[0]) * d[1] - (e.a[1] - o[1]) * d[0]) / den;
+    if (t <= 1 || u < -1e-6 || u > 1 + 1e-6) return;
+    const score = Math.abs(t - want);
+    if (!best || score < best.score) best = { i, u: Math.min(1, Math.max(0, u)), p: [o[0] + d[0] * t, o[1] + d[1] * t], score };
+  });
+  return best;
+}
+
+// Deler et rom i to langs en linje. Linja forlenges til den treffer veggene.
+// Gir de to nye rommene, eller null når linja ikke deler rommet.
+export function splitPoly(poly, line) {
+  if (!line || line.length < 2) return null;
+  const n = poly.length, m = line.length;
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const o1 = m === 2 ? mid(line[0], line[1]) : line[1], o2 = m === 2 ? o1 : line[m - 2];
+  if (!pointInPoly(o1, poly) || !pointInPoly(o2, poly)) return null;
+  const ray = (o, to) => { const l = dist(o, to) || 1; return hitWall(poly, o, [(to[0] - o[0]) / l, (to[1] - o[1]) / l], l); };
+  const S = ray(o1, line[0]), E = ray(o2, line[m - 1]);
+  if (!S || !E) return null;
+  const Pp = S.p.map(snap), Qp = E.p.map(snap), inner = line.slice(1, -1);
+  if (dist(Pp, Qp) < 30 && !inner.length) return null;
+  // Går langs veggene fra kanten etter «from» til og med hjørnet på kanten «to».
+  const walk = (from, to, full) => {
+    const out = [];
+    if (from.i === to.i && !full) return out;
+    for (let k = (from.i + 1) % n, c = 0; c < n; k = (k + 1) % n, c++) { out.push(poly[k]); if (k === to.i) break; }
+    return out;
+  };
+  const same = S.i === E.i;
+  const A = tidy([Pp, ...walk(S, E, same && S.u > E.u), Qp, ...[...inner].reverse()]);
+  const B = tidy([Qp, ...walk(E, S, same && E.u > S.u), Pp, ...inner]);
+  const total = area(poly);
+  const ok = A.length >= 3 && B.length >= 3 && area(A) >= 10000 && area(B) >= 10000
+    && Math.abs(area(A) + area(B) - total) <= Math.max(400, total * 0.01) && !crosses(A) && !crosses(B);
+  return ok ? [A, B] : null;
+}
+
+// Flytter en vegg ut eller inn. Naboveggene blir lengre eller kortere.
+export function moveWall(poly, i, dx, dy) {
+  const out = poly.map((p) => p.slice());
+  const a = poly[i], b = at(poly, i + 1);
+  let mx = snap(dx), my = snap(dy);
+  if (a[1] === b[1]) mx = 0; else if (a[0] === b[0]) my = 0;
+  else { // skrå vegg: flytt den rett ut fra seg selv
+    const l = dist(a, b), nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l, d = dx * nx + dy * ny;
+    mx = snap(nx * d); my = snap(ny * d);
+  }
+  for (const k of [i, (i + 1) % poly.length]) { out[k][0] += mx; out[k][1] += my; }
+  return out;
+}
+
+// Flytter et hjørne. Rette vegger inn mot hjørnet følger med, så vinklene holder seg rette.
+export function moveCorner(poly, i, dx, dy) {
+  const n = poly.length, out = poly.map((p) => p.slice());
+  const v = poly[i], nv = [snap(v[0] + dx), snap(v[1] + dy)];
+  for (const k of [(i - 1 + n) % n, (i + 1) % n]) {
+    if (poly[k][1] === v[1] && poly[k][0] !== v[0]) out[k][1] = nv[1];
+    else if (poly[k][0] === v[0] && poly[k][1] !== v[1]) out[k][0] = nv[0];
+  }
+  out[i] = nv;
+  return out;
+}
+
+// Når en rett vegg flyttes, følger veggen til naborommet med der de to ligger inntil hverandre.
+// oldPoly og newPoly må ha samme hjørner i samme rekkefølge. Gir naborommets nye form (eller den gamle).
+export function dragAlong(oldPoly, newPoly, other) {
+  if (oldPoly.length !== newPoly.length) return other;
+  let out = other.map((p) => p.slice()), touched = false;
+  for (let i = 0; i < oldPoly.length; i++) {
+    const j = (i + 1) % oldPoly.length;
+    const a = oldPoly[i], b = oldPoly[j], da = [newPoly[i][0] - a[0], newPoly[i][1] - a[1]], db = [newPoly[j][0] - b[0], newPoly[j][1] - b[1]];
+    const k = a[1] === b[1] ? 1 : a[0] === b[0] ? 0 : -1; // k = aksen veggen flyttes langs
+    if (k < 0 || !da[k] || da[k] !== db[k]) continue;
+    const lo = Math.min(a[1 - k], b[1 - k]) - 1, hi = Math.max(a[1 - k], b[1 - k]) + 1;
+    // Naborommet må ha en hel vegg på samme linje som overlapper, ikke bare et hjørne som tilfeldigvis ligger der.
+    other.forEach((q, idx) => {
+      const jdx = (idx + 1) % other.length, r = other[jdx];
+      if (Math.abs(q[k] - a[k]) > 1 || Math.abs(r[k] - a[k]) > 1) return;
+      const overlap = Math.min(hi, Math.max(q[1 - k], r[1 - k])) - Math.max(lo, Math.min(q[1 - k], r[1 - k]));
+      if (overlap > 5) { out[idx][k] = q[k] + da[k]; out[jdx][k] = r[k] + da[k]; touched = true; }
+    });
+  }
+  if (!touched) return other;
+  out = tidy(out);
+  return out.length === other.length && area(out) >= 10000 && !crosses(out) ? out : other;
+}
+
+// Er formen fortsatt et gyldig rom etter en endring? Gir den ryddede formen, eller null.
+export function valid(poly) {
+  const p = tidy(poly);
+  return p.length >= 3 && area(p) >= 10000 && !crosses(p) ? p : null;
+}
+
+// Setter dører og vinduer på plass igjen etter at formen på rommet er endret.
+export function remapDoor(oldPoly, d, newPoly) {
+  const o = opening(oldPoly, d);
+  const e = o && nearestEdge(newPoly, o.p);
+  return e && e.d < 8 && e.len >= d.w ? { ...d, e: e.i, t: e.t } : null;
+}
+export const remapDoors = (oldPoly, doors, newPoly) => (doors || []).map((d) => remapDoor(oldPoly, d, newPoly)).filter(Boolean);
+
+// Gjør en håndtegnet runde om til et rom med rette vegger.
+// Lange strekk samme vei blir vegger, mens avrundede hjørner, kroker i start og slutt og små rykk
+// blir borte. Er streken uklar, blir rommet en firkant rundt det som ble tegnet.
+// tol = hvor unøyaktig en finger er, i cm. Gir en liste med hjørner, eller null når streken er for liten.
+export function straighten(raw, tol = 40) {
+  const st = strokeRuns(raw, tol, 0.035, 0.12);
+  if (!st || raw.length < 4) return null;
+  const { len, box, P, n } = st;
+  let { runs } = st;
+  if (len < 300 || box[2] - box[0] < 100 || box[3] - box[1] < 100) return null;
+  const fallback = () => {
+    const [x0, y0, x1, y1] = box.map(snap);
+    return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  };
+  if (n < 8) return fallback();
   // Runden slutter der den begynte: første og siste strekk kan være samme vegg.
   if (runs.length > 2 && runs[0].c === runs[runs.length - 1].c) {
     const last = runs.pop();
@@ -115,11 +270,8 @@ export function straighten(raw, tol = 40) {
   if (runs.length < 2) return fallback();
 
   // Hver vegg får én linje: medianen av punktene midt på strekket.
-  const axis = (c) => (c === 'R' || c === 'L' ? 'H' : c === 'X' ? 'X' : 'V');
-  const samples = (r) => {
-    const take = (q) => { const m = Math.floor((q.b - q.a + 1) * 0.15); return P.slice(q.a + m, q.b + 2 - m); };
-    return r.wrap ? [...take(r), ...take(r.wrap)] : take(r);
-  };
+  const axis = axisOf;
+  const samples = (r) => (r.wrap ? [...middle(P, r), ...middle(P, r.wrap)] : middle(P, r));
   let es = runs.map((r) => {
     const o = axis(r.c), sm = samples(r);
     return { o, c: o === 'H' ? snap(median(sm.map((q) => q[1]))) : o === 'V' ? snap(median(sm.map((q) => q[0]))) : null, r };
@@ -203,23 +355,25 @@ export function edges(poly) {
 
 export const letter = (i) => String.fromCharCode(65 + (i % 26));
 
-// Setter lengden på en vegg ved å skyve neste vegg. Rette hjørner forblir rette.
-export function setEdgeLength(poly, i, len) {
+// Setter lengden på en vegg ved å skyve naboveggen i enden (eller i starten når fromStart er satt).
+// Rette hjørner forblir rette, og veggen på motsatt side får ny lengde av seg selv.
+export function setEdgeLength(poly, i, len, fromStart = false) {
   const n = poly.length;
-  const a = poly[i], b = at(poly, i + 1), c = at(poly, i + 2);
+  const a = poly[i], b = at(poly, i + 1);
   const cur = dist(a, b);
   const L = Math.min(3000, Math.max(30, snap(len)));
   if (!cur || L === snap(cur)) return poly;
   const u = [(b[0] - a[0]) / cur, (b[1] - a[1]) / cur];
-  const d = L - cur;
-  const nl = dist(b, c) || 1;
-  const perp = Math.abs(u[0] * ((c[0] - b[0]) / nl) + u[1] * ((c[1] - b[1]) / nl)) < 0.05;
+  const d = (L - cur) * (fromStart ? -1 : 1);
   const out = poly.map((p) => p.slice());
   const move = (k) => { const p = at(out, k); p[0] = snap(p[0] + u[0] * d); p[1] = snap(p[1] + u[1] * d); };
-  move(i + 1);
-  if (perp && n >= 4) move(i + 2);
+  const [near, far] = fromStart ? [i, i - 1] : [i + 1, i + 2]; // hjørnet som flyttes, og det neste langs naboveggen
+  const p0 = at(poly, near), p1 = at(poly, far), nl = dist(p0, p1) || 1;
+  const perp = Math.abs(u[0] * ((p1[0] - p0[0]) / nl) + u[1] * ((p1[1] - p0[1]) / nl)) < 0.05;
+  move(near);
+  if (perp && n >= 4) move(far);
   const res = tidy(out);
-  return res.length >= 3 && area(res) >= 10000 ? res : poly;
+  return res.length >= 3 && area(res) >= 10000 && !crosses(res) ? res : poly;
 }
 
 export function pointInPoly(p, poly) {

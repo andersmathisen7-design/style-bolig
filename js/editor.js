@@ -3,14 +3,15 @@
 import { ROOMS, ITEMS } from './data.js';
 import { roomLabel, sizeFromM2, footprint } from './logic.js';
 import {
-  straighten, alignTo, fitSheet, canonical, areaM2, edges, letter, setEdgeLength, nearestEdge, labelPoint, pointInPoly, moved, opening, wallFor,
+  straighten, straightenLine, isLine, splitPoly, moveWall, moveCorner, dragAlong, valid, remapDoor, remapDoors, alignTo, fitSheet, canonical,
+  area, areaM2, edges, letter, setEdgeLength, nearestEdge, labelPoint, pointInPoly, moved, opening, wallFor,
 } from './plan.js';
 
 export const SHEETS = [1000, 1500, 2500];
 const TOOLS = [['draw', 'Tegn rom'], ['move', 'Velg og flytt'], ['door', 'Dør'], ['window', 'Vindu']];
 const HINTS = {
-  draw: 'Tegn rundt rommet med fingeren eller musa, slik veggene går. Skjeve streker rettes opp når du slipper.',
-  move: 'Trykk på et rom eller et møbel for å velge det. Dra for å flytte.',
+  draw: 'Tegn rundt boligen eller et rom, slik veggene går. Dra en strek tvers over et rom for å dele det i to.',
+  move: 'Trykk på et rom for å velge det. Dra rommet for å flytte, eller dra i et hjørne eller en bokstav for å endre formen.',
   door: 'Trykk på en vegg for å sette inn en dør. Trykk på døra for å fjerne den.',
   window: 'Trykk på en vegg for å sette inn et vindu. Trykk på vinduet for å fjerne det.',
 };
@@ -51,14 +52,18 @@ function roomSvg(state, ui, r, k) {
     const sweep = o.u[0] * o.n[1] - o.u[1] * o.n[0] > 0 ? 0 : 1;
     return `${gap}<path class="door" d="M${a[0]} ${a[1]}L${tip[0]} ${tip[1]}A${w} ${w} 0 0 ${sweep} ${b[0]} ${b[1]}" stroke-width="${2 * k}"/>`;
   }).join('');
+  const shape = on && ui.tool === 'move';
   const marks = on ? edges(r.poly).map((e, i) => {
     const mid = [(e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2];
     const u = [(e.b[0] - e.a[0]) / (e.len || 1), (e.b[1] - e.a[1]) / (e.len || 1)];
     let n = [-u[1], u[0]];
     if (pointInPoly([mid[0] + n[0] * 12, mid[1] + n[1] * 12], r.poly)) n = [u[1], -u[0]]; // bokstaven står på utsiden, så den ikke dekker møbler
     const p = [mid[0] + n[0] * 30 * k, mid[1] + n[1] * 30 * k];
-    return `<circle class="mark" cx="${p[0]}" cy="${p[1]}" r="${19 * k}"/><text class="mark-t" x="${p[0]}" y="${p[1]}" font-size="${23 * k}" dy="${8 * k}">${letter(i)}</text>`;
-  }).join('') : '';
+    const q = [mid[0] - n[0] * 26 * k, mid[1] - n[1] * 26 * k]; // lengden står på innsiden
+    return `${e.len >= 90 * k ? `<text class="wlen ${(r.fixed || []).includes(i) ? 'set' : ''}" x="${q[0]}" y="${q[1]}" font-size="${21 * k}" dy="${7 * k}">${m(e.len)} m</text>` : ''}
+      <circle class="mark" cx="${p[0]}" cy="${p[1]}" r="${19 * k}"/><text class="mark-t" x="${p[0]}" y="${p[1]}" font-size="${23 * k}" dy="${8 * k}">${letter(i)}</text>
+      ${shape ? `<circle class="hit" data-wall="${i}" cx="${p[0]}" cy="${p[1]}" r="${40 * k}"/>` : ''}`;
+  }).join('') + (shape ? r.poly.map((c2, i) => `<circle class="handle" cx="${c2[0]}" cy="${c2[1]}" r="${12 * k}" stroke-width="${4 * k}"/><circle class="hit" data-corner="${i}" cx="${c2[0]}" cy="${c2[1]}" r="${40 * k}"/>`).join('') : '') : '';
   const furn = (state.furn || []).filter((f) => f.room === r.id).map((f) => {
     const sel = ui.furn === f.id;
     const fs = clamp(Math.min(f.w, f.d) * 0.34, 17 * k, 26 * k);
@@ -75,7 +80,23 @@ function roomSvg(state, ui, r, k) {
     ${doors}
     <text class="pname" x="${c[0]}" y="${c[1]}" font-size="${32 * k}">${esc(roomLabel(state.rooms, r))}</text>
     <text class="pm2" x="${c[0]}" y="${c[1] + 34 * k}" font-size="${26 * k}">${r.m2} m²</text>
-    ${furn}${marks}</g>`;
+    ${furn}<g class="marks">${marks}</g></g>`;
+}
+
+// Etter at et rom har fått ny form: la naborommenes vegger følge med, og sørg for at alt får plass på arket.
+function settle(state, ui, room, before, raw) {
+  for (const o of state.rooms) {
+    if (o === room || !o.poly || (o.floor || 0) !== (room.floor || 0)) continue;
+    const next = dragAlong(before, raw, o.poly);
+    if (next !== o.poly) { o.doors = remapDoors(o.poly, o.doors, next); o.poly = next; o.fixed = []; refit(o); }
+  }
+  const all = state.rooms.filter((r) => r.poly);
+  const minX = Math.min(0, ...all.flatMap((r) => r.poly.map((p) => p[0]))), minY = Math.min(0, ...all.flatMap((r) => r.poly.map((p) => p[1])));
+  if (minX < 0 || minY < 0) { // noe havnet utenfor venstre eller øvre kant: skyv hele tegningen inn
+    for (const r of all) r.poly = r.poly.map(([x, y]) => [x - minX, y - minY]);
+    for (const f of state.furn) { f.x -= minX; f.y -= minY; }
+  }
+  ui.sheet = Math.max(ui.sheet, sheetFor(state, ui.sheet));
 }
 
 // Minste ark som rommer alt som er tegnet.
@@ -107,7 +128,7 @@ export function drawView(state, ui, canUndo) {
     </defs>
     <rect width="${S}" height="${S}" fill="url(#g50)"/><rect width="${S}" height="${S}" fill="url(#g100)"/>
     ${sorted.map((r) => roomSvg(state, ui, r, k)).join('')}
-    ${rooms.length ? '' : `<text class="empty" x="${S / 2}" y="${S / 2}" font-size="${36 * k}">Tegn rundt det første rommet her</text>`}
+    ${rooms.length ? '' : `<text class="empty" x="${S / 2}" y="${S / 2}" font-size="${36 * k}">Tegn rundt boligen eller et rom her</text>`}
     <polyline id="ink" fill="none" stroke-width="${5 * k}" points=""/>
   </svg></div>
   ${ui.note ? `<p class="status bad" role="status">${esc(ui.note)}</p>` : ''}
@@ -143,6 +164,12 @@ export function roomPanel(state, ui, r) {
   return `
   <section class="panel" aria-label="Valgt rom">
     <h2>${esc(roomLabel(state.rooms, r))}<small>${r.m2} m²</small></h2>
+    <span class="q-label">Mål på veggene, i cm</span>
+    <p class="hint">Fyll bare inn de veggene du har mål på. Resten regnes ut fra tegningen. Trykk på en bokstav på tegningen for å hoppe til riktig felt.</p>
+    <div class="walls">
+      ${edges(r.poly).map((e, i) => { const set = (r.fixed || []).includes(i); return `<div class="field"><label for="edge-${i}">Vegg ${letter(i)}${set ? ' <span class="setmark">satt</span>' : ''}</label>
+        <input id="edge-${i}" inputmode="numeric" data-ch="edgelen" data-v="${i}" value="${set ? Math.round(e.len) : ''}" placeholder="${Math.round(e.len)}"></div>`; }).join('')}
+    </div>
     <span class="q-label">Hva slags rom er det?</span>
     <div class="chips" role="group" aria-label="Type rom">
       ${Object.entries(ROOMS).map(([id, t]) => `<button class="chip mini ${r.type === id ? 'on' : ''}" data-act="rtype" data-v="${id}" aria-pressed="${r.type === id}">${t.name}</button>`).join('')}
@@ -152,11 +179,6 @@ export function roomPanel(state, ui, r) {
     <div class="chips" role="group" aria-label="Møbler">
       ${placeable.map((id) => `<button class="chip mini ${placed(id) ? 'on' : 'add'}" data-act="addfurn" data-v="${id}">${placed(id) ? '' : '+ '}${ITEMS[id].name}</button>`).join('')}
     </div>
-    <span class="q-label">Vegger, i cm</span>
-    <p class="hint">Bokstavene står på tegningen. Skriv inn det riktige målet, så flytter vi veggen.</p>
-    <div class="walls">
-      ${edges(r.poly).map((e, i) => `<div class="field"><label for="edge-${i}">Vegg ${letter(i)}</label><input id="edge-${i}" inputmode="numeric" data-ch="edgelen" data-v="${i}" value="${Math.round(e.len)}"></div>`).join('')}
-    </div>
     <button class="link danger" data-act="delroom">Fjern rommet</button>
   </section>`;
 }
@@ -164,6 +186,7 @@ export function roomPanel(state, ui, r) {
 // ---------- Hendelser ----------
 
 let drag = null;
+let focusEdge = null;
 // En tegning som ikke har fått bevegelse på tre sekunder regnes som avbrutt, så appen aldri blir stående låst.
 export const isDragging = () => !!drag && performance.now() - drag.t < 3000;
 
@@ -192,7 +215,14 @@ export function bindEditor(app, ctx) {
       drag.ink = svg.querySelector('#ink');
     } else if (ui.tool === 'move') {
       const fEl = e.target.closest('[data-furn]'), rEl = e.target.closest('[data-room]');
-      if (fEl) {
+      const hEl = e.target.closest('[data-corner], [data-wall]');
+      const cur = state.rooms.find((r) => r.id === ui.room);
+      if (hEl && cur?.poly) {
+        drag.room = cur; drag.poly0 = cur.poly;
+        drag.shape = hEl.dataset.corner !== undefined ? { kind: 'corner', i: Number(hEl.dataset.corner) } : { kind: 'wall', i: Number(hEl.dataset.wall) };
+        drag.el = svg.querySelector(`[data-room="${cur.id}"]`);
+        drag.g = svg.querySelector(`[data-g="${cur.id}"]`);
+      } else if (fEl) {
         const f = state.furn.find((x) => x.id === fEl.dataset.furn);
         drag.furn = f; drag.el = fEl; drag.pos = [f.x, f.y];
       } else if (rEl) {
@@ -218,11 +248,44 @@ export function bindEditor(app, ctx) {
       const f = drag.furn;
       drag.pos = [clamp(Math.round((f.x + p[0] - drag.start[0]) / 5) * 5, 0, ui.sheet), clamp(Math.round((f.y + p[1] - drag.start[1]) / 5) * 5, 0, ui.sheet)];
       drag.el.setAttribute('transform', `translate(${drag.pos[0]} ${drag.pos[1]}) rotate(${f.r})`);
+    } else if (drag.shape && drag.far) {
+      const dx = p[0] - drag.start[0], dy = p[1] - drag.start[1];
+      drag.np = drag.shape.kind === 'corner' ? moveCorner(drag.poly0, drag.shape.i, dx, dy) : moveWall(drag.poly0, drag.shape.i, dx, dy);
+      drag.el.setAttribute('points', pts(drag.np));
+      drag.g.classList.add('shaping');
     } else if (drag.room && drag.far) {
       drag.delta = [Math.round((p[0] - drag.start[0]) / 10) * 10, Math.round((p[1] - drag.start[1]) / 10) * 10];
       drag.el.setAttribute('transform', `translate(${drag.delta[0]} ${drag.delta[1]})`);
     }
   });
+
+  // Deler rommet streken går gjennom. Den største delen beholder navn, type og valg på lista.
+  const splitWith = (state, raw, tol) => {
+    let room = null, most = 0;
+    for (const r of floorRooms()) { const c = raw.filter((q) => pointInPoly(q, r.poly)).length; if (c > most) { most = c; room = r; } }
+    let line = room && straightenLine(raw, tol);
+    if (!line) { ui.note = 'Tegn rundt et rom, eller dra en strek tvers over et rom for å dele det.'; return; }
+    // Legg streken på linje med hjørner som ligger like ved, for eksempel knekken i et vinkelrom.
+    const corners = floorRooms().flatMap((r) => r.poly);
+    const near = (v, k2) => { let best = v, dmin = tol * 0.6; for (const q of corners) if (Math.abs(q[k2] - v) < dmin) { dmin = Math.abs(q[k2] - v); best = q[k2]; } return best; };
+    line = line.map(([x, y]) => [near(x, 0), near(y, 1)]);
+    const parts = splitPoly(room.poly, line);
+    if (!parts) { ui.note = 'Streken delte ikke rommet. Dra den tvers over, fra vegg til vegg.'; return; }
+    const [A, B] = parts.map(canonical);
+    const big = area(A) >= area(B) ? A : B, small = big === A ? B : A;
+    const old = room.poly, bigDoors = [], smallDoors = [];
+    for (const o of room.doors || []) {
+      const x = remapDoor(old, o, big);
+      if (x) bigDoors.push(x); else { const y = remapDoor(old, o, small); if (y) smallDoors.push(y); }
+    }
+    const id = 'r' + (state.seq = (state.seq || 100) + 1);
+    room.poly = big; room.doors = bigDoors; room.fixed = []; refit(room);
+    const piece = refit({ id, type: room.type, size: 'M', m2: null, wall: null, floor: room.floor || 0, poly: small, doors: smallDoors });
+    piece.type = guessType(state.rooms, piece.m2); refit(piece);
+    for (const f of state.furn) if (f.room === room.id && pointInPoly([f.x, f.y], small)) f.room = id;
+    state.rooms = [...state.rooms, piece];
+    ui.room = id; ui.furn = null;
+  };
 
   const finish = (cancelled) => {
     if (!drag) return;
@@ -234,6 +297,7 @@ export function bindEditor(app, ctx) {
 
     if (d.tool === 'draw') {
       const tol = clamp(14 * (d.slop / 8), 25, 90); // en finger treffer omtrent innenfor 14 piksler
+      if (d.far && isLine(d.pts, tol)) { splitWith(state, d.pts, tol); ctx.save(); ctx.render(); return; }
       let poly = d.far ? straighten(d.pts, tol) : null;
       if (poly) {
         poly = canonical(fitSheet(alignTo(poly, floorRooms().map((r) => r.poly), tol), ui.sheet));
@@ -246,7 +310,16 @@ export function bindEditor(app, ctx) {
         ui.room = id; ui.furn = null;
       } else if (d.far) ui.note = 'Det ble for lite til å være et rom. Tegn en større runde, minst én meter hver vei.';
     } else if (d.tool === 'move') {
-      if (d.furn) {
+      if (d.shape) {
+        const next = d.far && d.np ? valid(d.np) : null;
+        if (next) {
+          d.room.doors = remapDoors(d.poly0, d.room.doors, next); // dørene står der de sto
+          d.room.poly = next; d.room.fixed = []; refit(d.room);
+          settle(state, ui, d.room, d.poly0, d.np);
+        } else if (d.far) ui.note = 'Rommet ble for lite eller vrengt. Prøv en mindre endring.';
+        else if (d.shape.kind === 'wall') focusEdge = d.shape.i; // et trykk på bokstaven: gå til feltet for den veggen
+        ui.room = d.room.id; ui.furn = null;
+      } else if (d.furn) {
         if (d.far) { d.furn.x = d.pos[0]; d.furn.y = d.pos[1]; }
         ui.furn = d.furn.id; ui.room = null;
       } else if (d.room) {
@@ -281,6 +354,11 @@ export function bindEditor(app, ctx) {
       }
     }
     ctx.save(); ctx.render();
+    if (focusEdge !== null) {
+      const input = document.getElementById(`edge-${focusEdge}`);
+      focusEdge = null;
+      if (input) { input.scrollIntoView({ block: 'center', behavior: 'smooth' }); input.focus({ preventScroll: true }); }
+    }
   };
   window.addEventListener('pointerup', (e) => { if (drag && e.pointerId === drag.id) finish(false); });
   window.addEventListener('pointercancel', (e) => { if (drag && e.pointerId === drag.id) finish(true); });
@@ -330,7 +408,21 @@ export function editorActions(ctx) {
       delfurn() { const s = ctx.state(); s.furn = s.furn.filter((f) => f.id !== ui.furn); ui.furn = null; ctx.commit(); },
     },
     changes: {
-      edgelen(el) { const r = sel(), n = num(el.value); if (r?.poly && n) { r.poly = setEdgeLength(r.poly, Number(el.dataset.v), n); refit(r); } },
+      // Veggen du setter mål på, låses. Naboveggen flyttes på den siden som ikke rokker ved et mål du alt har satt.
+      edgelen(el) {
+        const r = sel(), len = num(el.value), i = Number(el.dataset.v);
+        if (!r?.poly || !(i >= 0 && i < r.poly.length)) return;
+        const fixed = new Set(r.fixed || []);
+        if (!len) { fixed.delete(i); r.fixed = [...fixed]; return; }
+        const n = r.poly.length, old = r.poly;
+        const fromStart = fixed.has((i + 2) % n) && !fixed.has((i - 2 + n) % n);
+        const next = setEdgeLength(old, i, len, fromStart);
+        r.doors = remapDoors(old, r.doors, next);
+        r.poly = next;
+        if (next.length === n) { fixed.add(i); r.fixed = [...fixed]; } else r.fixed = [];
+        refit(r);
+        settle(ctx.state(), ui, r, old, next);
+      },
       furnw(el) { const f = selFurn(), n = num(el.value); if (f && n) f.w = clamp(n, 20, 600); },
       furnd(el) { const f = selFurn(), n = num(el.value); if (f && n) f.d = clamp(n, 20, 600); },
     },

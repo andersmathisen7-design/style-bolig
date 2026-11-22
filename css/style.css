@@ -227,7 +227,11 @@ a.chip { text-decoration: none; color: var(--ink); }
 .proom { fill: rgba(255, 255, 255, 0.86); stroke: var(--ink); stroke-linejoin: miter; }
 .proom.on { fill: var(--teal-soft); stroke: var(--teal); }
 .tool-move .proom, .tool-move .furn { cursor: move; }
-.pname, .pm2, .mark, .mark-t, .gap, .win, .door, .empty, #ink, .furn text { pointer-events: none; }
+.pname, .pm2, .mark, .mark-t, .wlen, .handle, .gap, .win, .door, .empty, #ink, .furn text { pointer-events: none; }
+.wlen { text-anchor: middle; font-weight: 700; fill: var(--teal); paint-order: stroke; stroke: var(--teal-soft); stroke-width: 0.3em; stroke-linejoin: round; }
+.handle { fill: #fff; stroke: var(--teal); }
+.hit { fill: transparent; cursor: grab; }
+.shaping .marks, .shaping .pname, .shaping .pm2, .shaping .gap, .shaping .win, .shaping .door { display: none; }
 .pname { text-anchor: middle; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 0.22em; stroke-linejoin: round; }
 .pm2 { text-anchor: middle; fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 0.22em; stroke-linejoin: round; }
 .gap { stroke: var(--surface); }
@@ -246,3 +250,13 @@ a.chip { text-decoration: none; color: var(--ink); }
 .walls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
 
 .undo-row { margin-bottom: 8px; min-height: 40px; }
+
+.wlen { opacity: 0.75; }
+.wlen.set { opacity: 1; fill: var(--ink); }
+.setmark { margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--teal); color: #fff; font-size: 0.6875rem; font-weight: 700; }
+.walls input::placeholder { color: var(--muted); opacity: 0.8; }
+
+.gallery figure.on img { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal); }
+.gallery figcaption h2 { margin: 10px 0 4px; font-size: 1.125rem; }
+.gallery figcaption p { margin: 0 0 10px; color: var(--ink); font-size: 0.9375rem; }
+.gallery .credit { display: block; margin-top: 8px; font-size: 0.75rem; }

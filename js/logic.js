@@ -7,7 +7,7 @@ const FINN_FURNITURE = '0.78'; // Møbler og interiør
 
 export function newState() {
   return {
-    v: 1, step: 0, area: '', home: 'toroms', style: null, level: 'vanlig', total: null,
+    v: 1, step: 0, area: '', home: 'toroms', style: null, sub: null, level: 'vanlig', total: null,
     rooms: roomsFromHome('toroms'), drawn: false, floors: ['1. etasje'], furn: [], life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
   };
 }
@@ -279,7 +279,10 @@ export function tipsFor(inst, state) {
 
 export function styleWords(inst, state) {
   const style = STYLES.find((s) => s.id === state.style);
-  return style ? style.kw[inst.item.kind] || [] : [];
+  if (!style) return [];
+  const sub = Number.isInteger(state.sub) ? style.photos[state.sub] : null; // valgt retning innenfor stilen
+  const own = (sub && sub[inst.item.kind]) || [];
+  return [...new Set([...own, ...(style.kw[inst.item.kind] || [])])].slice(0, 4);
 }
 
 // ---------- Budsjett ----------
@@ -401,6 +404,7 @@ export function normalize(s) {
   const out = { ...newState(), step: [0, 1, 2, 3].includes(s.step) ? s.step : 0, area: s.area };
   out.home = HOMES.some((h) => h.id === s.home) ? s.home : '';
   out.style = STYLES.some((x) => x.id === s.style) ? s.style : null;
+  out.sub = out.style && [0, 1, 2].includes(s.sub) ? s.sub : null;
   out.level = LEVELS.some((x) => x.id === s.level) ? s.level : 'vanlig';
   out.total = n(s.total, 1e7);
   out.seq = n(s.seq, 1e6) || 100;
@@ -418,7 +422,8 @@ export function normalize(s) {
     const doors = (Array.isArray(r.doors) ? r.doors : [])
       .filter((d) => d && Number.isInteger(d.e) && d.e >= 0 && d.e < poly.length && d.t >= 0 && d.t <= 1 && d.w >= 40 && d.w <= 300)
       .slice(0, 12).map((d) => ({ e: d.e, t: Number(d.t), w: Math.round(d.w), kind: d.kind === 'window' ? 'window' : 'door' }));
-    return { ...room, poly, doors, floor: Number.isInteger(r.floor) && r.floor >= 0 && r.floor < nFloors ? r.floor : 0 };
+    const fixed = (Array.isArray(r.fixed) ? r.fixed : []).filter((i) => Number.isInteger(i) && i >= 0 && i < poly.length);
+    return { ...room, poly, doors, fixed: [...new Set(fixed)], floor: Number.isInteger(r.floor) && r.floor >= 0 && r.floor < nFloors ? r.floor : 0 };
   });
   out.drawn = out.rooms.some((r) => r.poly);
   out.furn = (Array.isArray(s.furn) ? s.furn : [])
