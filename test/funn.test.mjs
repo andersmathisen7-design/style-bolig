@@ -218,11 +218,11 @@ test('panelet: skjult uten database, ærlig tekst, og riktig melding i hver tils
   const base = { ready: true, on: false, busy: false, late: false, err: '' };
   assert.equal(checkPanel({ ...base, ready: false }, null, '2026-11-23'), '');
   const off = checkPanel(base, null, '2026-11-23');
-  assert.ok(off.includes('Daglig sjekk på Finn') && off.includes('La Claude se etter tingene mine hver morgen'));
+  assert.ok(off.includes('Daglig sjekk på Finn') && off.includes('La Claude se etter tingene mine hver kveld'));
   assert.ok(!off.includes('checked'));
   assert.ok(off.includes('én gang om dagen') && off.includes('Bildene ser den ikke på') && off.includes('Claude-kvoten'));
   const on = checkPanel({ ...base, on: true }, null, '2026-11-23');
-  assert.ok(on.includes('checked') && on.includes('Ingen funn ennå. Første sjekk kjøres i morgen tidlig.'));
+  assert.ok(on.includes('checked') && on.includes('Ingen funn ennå. Sjekken kjøres hver kveld rundt kl. 21.'));
   const f = cleanFinds(finds({ 'r1:sofa': [pick(100001)] }, { skipped: ['r1:bord'] }), ['r1:sofa', 'r1:bord']);
   const full = checkPanel({ ...base, on: true }, f, '2026-11-23');
   assert.ok(full.includes('Sist sjekket i dag 06:45 – 1 nytt funn'));

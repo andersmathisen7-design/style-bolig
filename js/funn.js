@@ -1,6 +1,6 @@
 // Daglig sjekk på Finn.
 // Siden skriver en «profil» (hva brukeren leter etter) til databasen som følger med siden. En planlagt Claude-økt
-// leser profilen hver morgen, ser på det som er lagt ut på Finn i dag, og skriver «funn» tilbake. Siden viser funnene.
+// leser profilen hver kveld, ser på det som er lagt ut på Finn i dag, og skriver «funn» tilbake. Siden viser funnene.
 // Alt som leses fra databasen, regnes som fremmed tekst: formen sjekkes, teksten vaskes, og bare Finn-lenker slipper gjennom.
 // Jobben er beskrevet i docs/finn-jobb.md. Endres formatet her, må den fila endres samtidig.
 import { AREAS, STYLES } from './data.js';
@@ -182,10 +182,10 @@ export function checkPanel(view, finds, today) {
     : !view.on ? ''
     : finds ? `<p class="status" role="status">${esc(summaryText(finds, today))}</p>${finds.skipped.length ? `<p class="hint">${finds.skipped.length === 1 ? 'Én ting ble ikke sjekket sist. Den tas først neste gang.' : `${finds.skipped.length} ting ble ikke sjekket sist. De tas først neste gang.`}</p>` : ''}`
     : view.late ? '<p class="status bad" role="status">Får ikke hentet funnene akkurat nå.</p>'
-    : '<p class="status" role="status">Ingen funn ennå. Første sjekk kjøres i morgen tidlig.</p>';
+    : '<p class="status" role="status">Ingen funn ennå. Sjekken kjøres hver kveld rundt kl. 21.</p>';
   return `<section class="panel funnpanel">
     <h2>Daglig sjekk på Finn</h2>
-    <label class="funn-switch"><input type="checkbox" id="funn-on" data-ch="funnOn" ${view.on ? 'checked' : ''} ${view.busy ? 'disabled' : ''}><span>La Claude se etter tingene mine hver morgen</span></label>
+    <label class="funn-switch"><input type="checkbox" id="funn-on" data-ch="funnOn" ${view.on ? 'checked' : ''} ${view.busy ? 'disabled' : ''}><span>La Claude se etter tingene mine hver kveld</span></label>
     ${note}
     <p class="hint">Claude sjekker én gang om dagen og leser titler, priser og steder. Bildene ser den ikke på. ${view.on
       ? 'Lista di ligger lagret hos Claude så lenge sjekken er på, og den som eier siden kan lese den. Slår du av, slettes både lista og funnene.'
