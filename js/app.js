@@ -11,7 +11,7 @@ const STEPS = ['Bolig', 'Stil', 'Hverdag', 'Lista'];
 const SIZE_NAME = { S: 'Lite', M: 'Middels', L: 'Stort' };
 
 let state = load();
-const ui = { open: null, room: null, round: false, shared: null, copied: '' };
+const ui = { open: null, room: null, round: false, shared: null, copied: '', sure: false };
 
 function load() {
   let saved = null;
@@ -251,7 +251,9 @@ function viewList() {
   <section class="panel">
     <h2>Ta med deg lista</h2>
     <p>Lista lagres bare i denne nettleseren. Med en lenke kan du åpne den på en annen enhet eller sende den til noen.</p>
-    <div class="row"><button class="btn ghost small" data-act="share">Kopier lenke til lista</button><button class="link danger" data-act="reset">Start på nytt</button></div>
+    <div class="row"><button class="btn ghost small" data-act="share">Kopier lenke til lista</button>${ui.sure
+      ? `<span class="sure">Slette hele lista?</span><button class="btn small" data-act="reset">Ja, slett</button><button class="link" data-act="unsure">Avbryt</button>`
+      : `<button class="link danger" data-act="sure">Start på nytt</button>`}</div>
     ${ui.copied ? `<div class="field"><label for="sharelink">${ui.copied === 'ok' ? 'Lenken er kopiert' : 'Kopier lenken herfra'}</label><input id="sharelink" readonly value="${esc(shareUrl())}"></div>` : ''}
   </section>`;
 }
@@ -317,7 +319,9 @@ const actions = {
     try { await navigator.clipboard.writeText(shareUrl()); ui.copied = 'ok'; } catch { ui.copied = 'manual'; }
     later();
   },
-  reset() { if (confirm('Vil du slette lista og starte på nytt?')) { state = newState(); ui.open = ui.room = null; commit(); window.scrollTo(0, 0); } },
+  sure() { ui.sure = true; later(); },
+  unsure() { ui.sure = false; later(); },
+  reset() { state = newState(); ui.open = ui.room = null; ui.sure = false; ui.copied = ''; commit(); window.scrollTo(0, 0); },
   useShared() { state = ui.shared; ui.shared = null; history.replaceState(null, '', location.pathname); commit(); },
   dropShared() { ui.shared = null; history.replaceState(null, '', location.pathname); later(); },
 };

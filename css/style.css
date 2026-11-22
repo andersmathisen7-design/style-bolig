@@ -177,3 +177,5 @@ textarea { resize: vertical; line-height: 1.4; }
 @media (prefers-reduced-motion: no-preference) {
   .room, .chip, .level, .style { transition: background-color 120ms ease; }
 }
+
+.sure { font-weight: 700; }
