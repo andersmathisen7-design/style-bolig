@@ -8,6 +8,8 @@ import {
 import { ai, initAI, readPlan, readLife } from './ai.js';
 import { drawView, furnishView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
 import { syncFurniture } from './arrange.js';
+import { areaField, areaActions, bindArea } from './area.js';
+import { areaPhrase } from './areastate.js';
 
 const KEY = 'brukthjem.v2'; // v2: starter med blanke ark etter at tegningen ble lagt om
 const app = document.getElementById('app');
@@ -89,10 +91,7 @@ function viewHome() {
     <select id="addroom" data-ch="addroom"><option value="">Legg til rom</option>
       ${Object.entries(ROOMS).map(([id, r]) => `<option value="${id}">${r.name}</option>`).join('')}</select>
   </div>` : ''}
-  <div class="field">
-    <label for="area">Hvor vil du lete?</label>
-    <select id="area" data-ch="area">${AREAS.map((a) => `<option value="${a.id}" ${state.area === a.id ? 'selected' : ''}>${a.name}</option>`).join('')}</select>
-  </div>`;
+  ${areaField(state)}`;
 }
 
 function pickView() {
@@ -307,7 +306,7 @@ function itemBody(inst, sum) {
   if (inst.st === 'bought') return `<div class="item-body"><p>Kjøpt${inst.saved.paid ? ` for ${kr(inst.saved.paid)}` : ''}.</p><button class="link" data-act="status" data-v="${k}" data-st="need">Angre, jeg leter fortsatt</button></div>`;
   const w = wishOf(inst, state);
   const max = maxOf(inst, state);
-  const area = AREAS.find((a) => a.id === state.area)?.name || 'Hele Norge';
+  const area = areaPhrase(state); // «i Oslo», «innen 15 km fra Ski» eller «i hele Norge»
   const hint = newHint(inst, state, sum);
   const words = styleWords(inst, state);
   const kw = kwOf(inst, state);
@@ -325,7 +324,7 @@ function itemBody(inst, sum) {
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'today'))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Lagt ut i dag</a>
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'free'))}" target="_blank" rel="noopener">Gis bort</a>
     </div>
-    <p class="hint">Søker etter «${esc(searchText(inst, state))}» i ${esc(area)}${max ? `, inntil ${kr(max)}${inst.qty > 1 ? ' per stk' : ''}` : ''}.${inst.qty > 1 ? ` Du skal ha ${inst.qty}. Like møbler selges ofte samlet, så prøv også å legge til «par» eller «2 stk».` : ''}</p>
+    <p class="hint">Søker etter «${esc(searchText(inst, state))}» ${esc(area)}${max ? `, inntil ${kr(max)}${inst.qty > 1 ? ' per stk' : ''}` : ''}.${inst.qty > 1 ? ` Du skal ha ${inst.qty}. Like møbler selges ofte samlet, så prøv også å legge til «par» eller «2 stk».` : ''}</p>
     ${prio === 'pris' ? '<p class="tip">Pris er viktigst: sjekk «Gis bort» først.</p>' : ''}
     ${comfort ? `<p class="tip">Komfort er viktigst: ${esc(comfort.tip)}</p>` : ''}
 
@@ -668,6 +667,10 @@ const ed = editorActions(editorCtx);
 Object.assign(actions, ed.actions);
 Object.assign(changes, ed.changes);
 bindEditor(app, editorCtx);
+const ar = areaActions(editorCtx); // «Hvor vil du lete?» med kart
+Object.assign(actions, ar.actions);
+Object.assign(changes, ar.changes);
+bindArea(app, editorCtx);
 
 app.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.dataset?.enter) return;

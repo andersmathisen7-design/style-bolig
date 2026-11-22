@@ -1,6 +1,7 @@
 // Ren logikk uten DOM, slik at den kan testes i Node.
 import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS, FOOT, PRIOS, COMFORT, CORNER } from './data.js';
 import { wallFor, letter } from './plan.js';
+import { areaParams, cleanNear } from './areastate.js';
 
 const FINN = 'https://www.finn.no/recommerce/forsale/search';
 const FINN_FURNITURE = '0.78'; // Møbler og interiør
@@ -256,7 +257,7 @@ export function finnUrl(inst, state, mode = 'all') {
   const p = new URLSearchParams();
   p.set('q', searchText(inst, state));
   if (inst.item.cat !== false) p.set('category', FINN_FURNITURE);
-  if (state.area) p.set('location', state.area);
+  for (const [k, v] of areaParams(state)) p.append(k, v);
   if (mode === 'free') p.set('trade_type', '2');
   else {
     const max = maxOf(inst, state);
@@ -278,7 +279,7 @@ export function decorLinks(state, mode = 'all') {
   const style = STYLES.find((s) => s.id === state.style) || STYLES[STYLES.length - 1];
   return style.decor.map(([label, q]) => {
     const p = new URLSearchParams({ q });
-    if (state.area) p.set('location', state.area);
+    for (const [k, v] of areaParams(state)) p.append(k, v);
     if (mode === 'today') p.set('published', '1');
     p.set('sort', 'PUBLISHED_DESC');
     return { label, q, url: `${FINN}?${p.toString()}` };
@@ -512,6 +513,7 @@ export function normalize(s) {
     }
     out.items[k] = it;
   }
+  out.near = cleanNear(s.near); // område valgt på kartet
   return out;
 }
 
