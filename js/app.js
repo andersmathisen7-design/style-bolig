@@ -5,7 +5,6 @@ import {
   newHint, layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
   GRID, rectFromLines, dims, areaOf, guessType, drawnRoom,
 } from './logic.js';
-import { scene } from './scenes.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
 
 const KEY = 'brukthjem.v1';
@@ -15,7 +14,7 @@ const canShare = !window.__noShare; // forhåndsvisninger uten egen adresse kan 
 const SIZE_NAME = { S: 'Lite', M: 'Middels', L: 'Stort' };
 
 let state = load();
-const ui = { open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, tab: state.drawn ? 'draw' : 'pick' };
+const ui = { open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, style: null, tab: state.drawn ? 'draw' : 'pick' };
 let drag = null; // pågående tegning eller flytting på tegnearket
 
 function load() {
@@ -149,15 +148,36 @@ function roomEditor(r) {
   </section>`;
 }
 
+const photo = (id, n, small) => `photos/${id}-${n}${small ? 's' : ''}.webp`;
+
 function viewStyle() {
+  const open = STYLES.find((s) => s.id === ui.style);
+  if (open) return styleDetail(open);
   return `
   <h1>Hvilken stil liker du?</h1>
-  <p class="lead">Samme stue i åtte stiler. Velg den du ville bodd i. Du kan bytte når som helst.</p>
+  <p class="lead">Trykk på en stil for å se flere bilder og hva som kjennetegner den.</p>
   <div class="styles">
-    ${STYLES.map((s) => `<button class="style ${state.style === s.id ? 'on' : ''}" data-act="style" data-v="${s.id}">
-      ${scene(s.id)}<span class="swatch" aria-hidden="true">${s.colors.map((c) => `<i style="background:${c}"></i>`).join('')}</span>
-      <span class="style-name">${s.name}</span><span class="style-desc">${s.desc}</span></button>`).join('')}
+    ${STYLES.map((s) => `<button class="style ${state.style === s.id ? 'on' : ''}" data-act="styleopen" data-v="${s.id}">
+      <img src="${photo(s.id, 1, true)}" alt="" width="480" height="360" loading="lazy">
+      <span class="style-name">${s.name}${state.style === s.id ? '<span class="picked">Valgt</span>' : ''}</span><span class="style-desc">${s.desc}</span></button>`).join('')}
   </div>`;
+}
+
+function styleDetail(s) {
+  const words = [...new Set(Object.values(s.kw).flat())].slice(0, 8);
+  return `
+  <button class="link back" data-act="styleopen" data-v="">Alle stiler</button>
+  <h1>${s.name}</h1>
+  <p class="lead">${s.desc}</p>
+  <div class="row"><button class="btn" data-act="style" data-v="${s.id}">${state.style === s.id ? 'Dette er stilen din' : 'Velg denne stilen'}</button></div>
+  <ul class="traits">${s.traits.map((t) => `<li>${t}</li>`).join('')}</ul>
+  <div class="gallery">
+    ${s.photos.map((p, i) => `<figure><img src="${photo(s.id, i + 1)}" alt="${esc(p.alt)}" width="900" height="675" ${i ? 'loading="lazy"' : ''}>
+      <figcaption>${esc(p.alt)}. <a href="${esc(p.url)}" target="_blank" rel="noopener">Foto: ${esc(p.by)}, Unsplash</a></figcaption></figure>`).join('')}
+  </div>
+  ${words.length ? `<p class="hint">Søkeord vi foreslår på Finn i denne stilen: ${words.join(', ')}.</p>` : ''}
+  <div class="row"><button class="btn" data-act="style" data-v="${s.id}">${state.style === s.id ? 'Dette er stilen din' : 'Velg denne stilen'}</button>
+    <button class="btn ghost" data-act="styleopen" data-v="">Se de andre</button></div>`;
 }
 
 function viewLife() {
@@ -299,7 +319,7 @@ function viewList() {
   <p class="lead">${sum.need === 0 ? 'Ingenting igjen å finne. Legg til ting under rommene, eller nyt et ferdig hjem.' : `${sum.need} ting igjen å finne.`}
     ${sum.have ? ` ${sum.have} har du fra før.` : ''}${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Huk av det du har. Trykk på en ting for å søke.</p>
   ${style
-    ? `<div class="mystyle">${scene(style.id)}<p><strong>${style.name}</strong><br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
+    ? `<div class="mystyle"><img src="${photo(style.id, 1, true)}" alt="" width="480" height="360"><p><strong>${style.name}</strong><br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
     : `<p class="hint">Du har ikke valgt stil ennå. <button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
   ${budgetPanel(sum)}
   ${need.length ? `<button class="btn wide" data-act="round">Dagens runde: se hva som er nytt på Finn</button>` : ''}
@@ -393,14 +413,15 @@ const actions = {
     }
     ui.busy = ''; commit();
   },
-  step(v) { state.step = Math.min(3, Math.max(0, Number(v))); ui.round = false; ui.room = null; commit(); window.scrollTo(0, 0); },
+  step(v) { state.step = Math.min(3, Math.max(0, Number(v))); ui.round = false; ui.room = null; ui.style = null; commit(); window.scrollTo(0, 0); },
   home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; state.drawn = false; ui.room = null; ui.msg = null; commit(); },
   tab(v) { ui.tab = v === 'draw' ? 'draw' : 'pick'; ui.room = null; later(); },
   room(v) { ui.room = ui.room === v ? null : v; later(); },
   rtype(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r && ROOMS[v]) { r.type = v; r.size = sizeFromM2(v, roomM2(r)); commit(); } },
   size(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r) { r.size = v; r.m2 = null; commit(); } },
   delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.drawn = state.rooms.some((r) => r.g); state.custom = state.custom.filter((c) => c.room !== ui.room); ui.room = null; commit(); },
-  style(v) { state.style = v; commit(); },
+  style(v) { state.style = v; ui.style = null; commit(); window.scrollTo(0, 0); },
+  styleopen(v) { ui.style = v || null; later(); window.scrollTo(0, 0); },
   life(v) { state.life = state.life.includes(v) ? state.life.filter((x) => x !== v) : [...state.life, v]; commit(); },
   dropWish(v) { delete state.autoWish[v]; commit(); },
   level(v) { state.level = v; commit(); },

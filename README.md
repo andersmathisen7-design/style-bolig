@@ -7,7 +7,7 @@ Brukthjem er ikke tilknyttet FINN.no eller IKEA.
 ## Slik virker det
 
 1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn rommene selv med finger eller mus på et rutenett der hver rute er en halv meter. Du kan også endre størrelse, skrive inn kvadratmeter eller legge inn lengste ledige vegg.
-2. **Stil.** Åtte stiler, tegnet som samme stue. Stilen gir forslag til søkeord og pynt.
+2. **Stil.** Åtte stiler med bilder. Trykk på en stil for flere eksempler og kjennetegn. Stilen gir forslag til søkeord og pynt.
 3. **Hverdag.** Skriv fritt («vil ikke ha rundt bord, sofaen bør være grønn») eller trykk på ferdige valg. Teksten tolkes av enkle regler i nettleseren.
 4. **Lista.** Huk av det du har, og legg til egne ting med en kort beskrivelse. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk.
 
@@ -40,7 +40,7 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `js/data.js` | Fylker, stiler, rom, ting, priser og ordlister. Endre priser og ting her. |
 | `js/logic.js` | Ren logikk: lista, Finn-lenker, tolkning av tekst, budsjett. |
 | `js/app.js` | Skjermbildene og knappene. |
-| `js/scenes.js` | Tegningene av hver stil. |
+| `photos/` | Stilbildene, tre per stil. |
 | `js/ai.js` | Valgfri AI: plantegning og fritekst. |
 | `test/logic.test.mjs` | Tester for logikken. |
 
@@ -51,6 +51,10 @@ Det er ingen byggesteg og ingen avhengigheter.
 - Områdekodene for fylker er sjekket mot finn.no i november 2026.
 
 Prisene endrer seg. Se over `js/data.js` med jevne mellomrom.
+
+## Bilder
+
+Stilbildene er hentet fra [Unsplash](https://unsplash.com) under Unsplash-lisensen, som tillater fri bruk uten krav om kreditering. Fotograf og lenke til originalen står likevel under hvert bilde i appen og i `js/data.js`. Bilder merket Unsplash+ er ikke brukt.
 
 ## Skrift
 

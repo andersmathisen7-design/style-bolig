@@ -205,3 +205,13 @@ test('tegne rom', async () => {
   assert.equal(n.drawn, true);
   assert.match(wallNote(get(n, 'sofa')), /360 cm/);
 });
+
+test('stilbilder finnes', async () => {
+  const { STYLES } = await import('../js/data.js');
+  const fs = await import('node:fs');
+  for (const s of STYLES) {
+    assert.equal(s.photos.length, 3); assert.equal(s.traits.length, 3);
+    s.photos.forEach((p, i) => { assert.ok(p.alt && p.by && p.url.startsWith('https://unsplash.com/photos/')); assert.ok(fs.existsSync(new URL(`../photos/${s.id}-${i + 1}.webp`, import.meta.url))); });
+    assert.ok(fs.existsSync(new URL(`../photos/${s.id}-1s.webp`, import.meta.url)));
+  }
+});
