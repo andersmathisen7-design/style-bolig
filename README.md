@@ -50,6 +50,12 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `js/arrange.js` | «Sett ut alt for meg»: regler for hvor møbler settes. |
 | `test/logic.test.mjs` | Tester for logikken. |
 | `test/variants.test.mjs` | Tester for varianter, kommentarer, bredt søk og U-sofa. |
+| `js/area.js` | «Hvor vil du lete?»: kartet, stedssøket og avstandsvalget. |
+| `js/areastate.js` | Hvordan valgt område lagres og sendes til Finn (`areaParams`). |
+| `js/geo.js` | Kartregning: projeksjon, avstand, punkt i flate, stedssøk. |
+| `geo/` | Kartdata som følger med appen. Lastes først når kartet åpnes. |
+| `tools/build-geodata.mjs` | Lager filene i `geo/` på nytt. |
+| `test/area.test.mjs` | Tester for område, kart og stedssøk. |
 
 ## Om tallene
 
@@ -58,8 +64,30 @@ Det er ingen byggesteg og ingen avhengigheter.
 - Områdekodene for fylker er sjekket mot finn.no i november 2026.
 - Prisene på de nyeste variantene (U-sofa, modulsofa, familieseng, hev/senk-bord og lignende) er grove anslag, og er ikke sjekket mot annonser.
 - «Andre ord folk bruker» (`alt` i `js/data.js`) er satt opp etter skjønn. Det er ikke målt hvilke ord som faktisk gir flest treff på Finn.
+- Søk innenfor en sirkel på kartet er ikke bekreftet hos Finn. Se «Område og kart».
 
 Prisene endrer seg. Se over `js/data.js` med jevne mellomrom.
+
+## Område og kart
+
+På steg 1 velger man hvor man vil lete: hele Norge, ett fylke, eller et punkt med avstand (5, 10, 20, 30, 50 eller 100 km) på et kart. Punktet settes ved å søke etter et sted eller trykke på kartet. Kartet tegnes fra filene i `geo/` og henter ingenting fra andre tjenester.
+
+Alle Finn-lenker får området fra én funksjon, `areaParams` i `js/areastate.js`:
+
+- **Hele Norge:** ingen områdefelt.
+- **Ett fylke:** `location=0.<kode>`. Kodene er sjekket mot finn.no (november 2026).
+- **Punkt og avstand:** ett `location`-felt for hvert fylke sirkelen berører. Finn dokumenterer at `location` kan gjentas ([finn.no/api/doc/search](https://www.finn.no/api/doc/search)). I tillegg sendes `lat`, `lon` og `radius` (meter).
+
+`lat`, `lon` og `radius` er **ikke bekreftet** for Torget-søk. Finn har et filter som heter «Område i kart», men vi har ikke fått sjekket hvilke felt det bruker. Bruker Finn feltene, blir treffene snevret inn til sirkelen. Hvis ikke, gjelder fylkene. Brukeren kan slå av sirkelen i appen, og teksten sier fra om at den ikke er bekreftet. Finn har også kommunekoder (`location=1.<fylke>.<kommune>`), men vi har ingen åpen liste over dem, så de er ikke brukt.
+
+### Kartdata
+
+| Fil | Innhold | Kilde | Lisens | Størrelse |
+| --- | --- | --- | --- | --- |
+| `geo/norge.js` | Grenser for 357 kommuner og 15 fylker (2024), forenklet | Kartverket, via [robhop/fylker-og-kommuner](https://github.com/robhop/fylker-og-kommuner) | CC BY 4.0 | 160 kB |
+| `geo/steder.js` | 4290 byer, tettsteder, bydeler og bygder med koordinater | Kartverket, Sentralt stedsnavnregister ([ws.geonorge.no/stedsnavn](https://ws.geonorge.no/stedsnavn/v1/)) | CC BY 4.0 | 197 kB |
+
+Krediteringen «Kartdata: © Kartverket (CC BY 4.0)» står under kartet i appen. Grensene er forenklet for å bli små, så de er ikke nøyaktige nok til annet enn oversikt. Slik filene lages, står øverst i `tools/build-geodata.mjs`.
 
 ## Bilder
 
