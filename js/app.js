@@ -8,6 +8,7 @@ import {
 const KEY = 'brukthjem.v1';
 const app = document.getElementById('app');
 const STEPS = ['Bolig', 'Stil', 'Hverdag', 'Lista'];
+const canShare = !window.__noShare; // forhåndsvisninger uten egen adresse kan ikke dele lenker
 const SIZE_NAME = { S: 'Lite', M: 'Middels', L: 'Stort' };
 
 let state = load();
@@ -250,8 +251,8 @@ function viewList() {
   }).join('')}
   <section class="panel">
     <h2>Ta med deg lista</h2>
-    <p>Lista lagres bare i denne nettleseren. Med en lenke kan du åpne den på en annen enhet eller sende den til noen.</p>
-    <div class="row"><button class="btn ghost small" data-act="share">Kopier lenke til lista</button>${ui.sure
+    <p>Lista lagres bare i denne nettleseren.${canShare ? ' Med en lenke kan du åpne den på en annen enhet eller sende den til noen.' : ''}</p>
+    <div class="row">${canShare ? '<button class="btn ghost small" data-act="share">Kopier lenke til lista</button>' : ''}${ui.sure
       ? `<span class="sure">Slette hele lista?</span><button class="btn small" data-act="reset">Ja, slett</button><button class="link" data-act="unsure">Avbryt</button>`
       : `<button class="link danger" data-act="sure">Start på nytt</button>`}</div>
     ${ui.copied ? `<div class="field"><label for="sharelink">${ui.copied === 'ok' ? 'Lenken er kopiert' : 'Kopier lenken herfra'}</label><input id="sharelink" readonly value="${esc(shareUrl())}"></div>` : ''}
