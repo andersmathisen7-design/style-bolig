@@ -8,7 +8,7 @@ Brukthjem er ikke tilknyttet FINN.no eller IKEA.
 
 Fem steg:
 
-1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn boligen selv. Tegn rundt boligen eller et rom på frihånd, så rettes strekene opp til rette vegger. Dra en strek tvers over et rom for å dele det i to; streken kan ha en knekk. Rom kan ha vinkler og skrå vegger, og boligen kan ha flere etasjer. Dra i hjørner og vegger for å endre formen, skriv inn mål bare på de veggene du har mål på, og sett inn dører og vinduer.
+1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn boligen selv. Tegningen går i fire steg, og en linje over tegningen sier alltid hva som er neste: (1) tegn en runde rundt hele boligen på frihånd, så rettes streken opp til rette vegger (boligen kan ha vinkler og skrå vegger, og flere etasjer); (2) dra rette streker tvers over for å dele i rom. Én strek deler alle rom den går gjennom, så en strek tvers over hele boligen blir én sammenhengende vegg, og en ny strek på tvers gir fire rom. En kort strek inne i ett rom deler bare det rommet; (3) trykk på hvert rom og velg hva det er; (4) sett inn dører og vinduer. Trykk på en vegg, en dør eller et vindu for å endre det: valgene kommer i en linje rett under tegningen. Vegger får lengde i cm (skriv inn, eller trykk − 10 og + 10). Dører og vinduer får bredde og avstand fra hjørnet, og kan dras bortover veggen. Rom som ligger inntil hverandre, deler veggen: flytter du den, følger naborommet med, og en endring som ville gitt glipe eller overlapp mellom rom, blir ikke gjort. En dør i en vegg mellom to rom er én dør og hører til begge rommene.
 2. **Stil.** Fjorten stiler med bilder. Hver stil har tre retninger du kan velge mellom, med egne søkeord. Stilen gir også forslag til pynt.
 3. **Ting.** Hva vil du ha? En avkrysningsliste per rom, der haken betyr at tingen er med. Det vanlige er huket av på forhånd. Velg antall og størrelse rett på raden, legg til møbler, kjøkkenutstyr, pynt og egne ting, og si om stil, komfort eller pris er viktigst. Du kan også skrive hva du har og hva du vil ha, så huker appen av.
 4. **Plasser.** Hvor skal tingene stå? Sett møblene ut på tegningen og dra dem på plass, eller trykk «Sett ut alt for meg» for et utgangspunkt. Har du ikke tegnet boligen, lages en enkel tegning av rommene. Møbler som står inntil en vegg, gir lista største bredde for den tingen. Steget er valgfritt. Tegningen følger lista: bytter du størrelse, antall eller tar noe bort på lista, endres møblene på tegningen også. Hjørnesofa tegnes som en vinkel og kan speilvendes. Knappene for å snu og ta bort det valgte møbelet ligger rett under tegningen. Et møbel som snus, blir stående inne i rommet: treffer det en vegg, skyves det inntil den.
@@ -46,9 +46,11 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `photos/` | Stilbildene, tre per stil. |
 | `js/ai.js` | Valgfri AI: plantegning og fritekst. |
 | `js/plan.js` | Geometri for tegningen: retting av streker, veggmål, dører. |
+| `js/walls.js` | Vegger som deles av flere rom, deling med rette streker, og dører og vinduer. Tegningen lagrer én mangekant per rom (`rooms[].poly`) og én liste med åpninger per bolig (`openings`: etasje, type, bredde og midtpunkt i cm). `rooms[].doors` regnes ut fra den. Eldre tegninger gjøres om når de lastes. |
 | `js/editor.js` | Tegneflaten og verktøyene, og møbleringen på steg 4. |
 | `js/arrange.js` | «Sett ut alt for meg»: regler for hvor møbler settes. |
 | `test/logic.test.mjs` | Tester for logikken. |
+| `test/walls.test.mjs` | Tester for delte vegger. Egenskapstestene deler en bolig tilfeldig og gjør hundrevis av tilfeldige endringer, og sjekker etter hver at ingen rom overlapper og at det ikke er hull mellom dem. |
 
 ## Om tallene
 

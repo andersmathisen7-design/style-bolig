@@ -1,21 +1,24 @@
-// Plantegningen: tegn rom på frihånd, rett dem opp, sett mål, dører, vinduer og møbler.
+// Plantegningen: tegn omrisset, del det i rom med rette streker, sett mål, dører, vinduer og møbler.
 // Mens man drar, endres bare det som vises. Tilstanden lagres når man slipper.
 import { ROOMS, ITEMS } from './data.js';
 import { roomLabel, sizeFromM2, footprint, instances, isCorner } from './logic.js';
 import {
-  straighten, straightenLine, isLine, splitPoly, moveWall, moveCorner, dragAlong, valid, remapDoor, remapDoors, alignTo, fitSheet, canonical,
-  area, areaM2, edges, letter, setEdgeLength, nearestEdge, labelPoint, pointInPoly, moved, opening, wallFor,
+  straighten, straightenLine, isLine, splitPoly, alignTo, fitSheet, canonical,
+  area, areaM2, edges, letter, nearestEdge, labelPoint, pointInPoly, wallFor,
 } from './plan.js';
+import { planEdit, planLength, applyPlan, splitAlong, hostsOf, placeOn, syncDoors, coverage, neighbourAt } from './walls.js';
 import { arrangeRoom, armOf, localNotch, flipCorner, turned, keepInside } from './arrange.js';
 
 export const SHEETS = [1000, 1500, 2500];
-const TOOLS = [['draw', 'Tegn rom'], ['move', 'Velg og flytt'], ['door', 'Dør'], ['window', 'Vindu']];
+const TOOLS = [['draw', 'Tegn og del'], ['move', 'Flytt'], ['door', 'Dør'], ['window', 'Vindu']];
 const HINTS = {
-  draw: 'Tegn rundt boligen eller et rom, slik veggene går. Dra en strek tvers over et rom for å dele det i to.',
-  move: 'Trykk på et rom for å velge det. Dra rommet for å flytte, eller dra i et hjørne eller en bokstav for å endre formen.',
-  door: 'Trykk på en vegg for å sette inn en dør. Trykk på døra for å fjerne den.',
-  window: 'Trykk på en vegg for å sette inn et vindu. Trykk på vinduet for å fjerne det.',
+  draw: 'Trykk på et rom, en vegg, en dør eller et vindu for å endre det.',
+  move: 'Dra i en vegg, et hjørne eller hele boligen. Trykk for å velge.',
+  door: 'Trykk på en vegg for å sette inn en dør.',
+  window: 'Trykk på en vegg for å sette inn et vindu.',
 };
+const WIDTHS = { door: [70, 80, 90], window: [60, 100, 120, 150, 200] }; // vanlige bredder, i cm
+const KIND = { door: 'Dør', window: 'Vindu' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const m = (cm) => String(Math.round(cm) / 100).replace('.', ',');
@@ -38,23 +41,28 @@ function guessType(rooms, m2) {
   return 'soverom';
 }
 
+const onFloor = (state, floor) => state.rooms.filter((r) => r.poly && (r.floor || 0) === floor);
+// Veggen en dør eller et vindu måles langs: helst en vegg i det valgte rommet.
+const refHost = (rooms, o, prefer) => { const hs = hostsOf(rooms, o); return hs.find((h) => h.id === prefer) || hs[0] || null; };
+
+// Neste steg i tegningen. Gir [steg, tekst]; steg 0 betyr at alt det viktigste er gjort.
+function guide(state, ui, rooms) {
+  const left = rooms.filter((r) => r.guess).length;
+  if (!rooms.length) return [1, 'Tegn en runde rundt hele boligen. Den trenger ikke være firkantet.'];
+  if (rooms.length === 1) return [2, 'Dra en rett strek tvers over boligen for å dele den i rom.'];
+  if (left) return [3, `Trykk på hvert rom og velg hva det er. ${left === 1 ? 'Ett rom' : `${left} rom`} igjen.`];
+  if (!(state.openings || []).some((o) => o.floor === ui.floor)) return [4, 'Velg «Dør» eller «Vindu» og trykk på veggen der den står.'];
+  return [0, 'Trykk på en vegg, en dør eller et vindu for å sette mål.'];
+}
+
 // ---------- Visning ----------
 
 function roomSvg(state, ui, r, k) {
   const picked = (state.furn || []).find((f) => f.id === ui.furn);
   const on = ui.room === r.id || picked?.room === r.id; // rommet til det valgte møbelet viser også veggbokstavene
   const c = labelPoint(r.poly);
-  const doors = (r.doors || []).map((d) => {
-    const o = opening(r.poly, d);
-    if (!o) return '';
-    const a = [o.p[0] - o.u[0] * o.half, o.p[1] - o.u[1] * o.half], b = [o.p[0] + o.u[0] * o.half, o.p[1] + o.u[1] * o.half];
-    const gap = `<line class="gap" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke-width="${9 * k}"/>`;
-    if (d.kind === 'window') return `${gap}<line class="win" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke-width="${3 * k}"/>`;
-    const w = o.half * 2, tip = [a[0] + o.n[0] * w, a[1] + o.n[1] * w];
-    const sweep = o.u[0] * o.n[1] - o.u[1] * o.n[0] > 0 ? 0 : 1;
-    return `${gap}<path class="door" d="M${a[0]} ${a[1]}L${tip[0]} ${tip[1]}A${w} ${w} 0 0 ${sweep} ${b[0]} ${b[1]}" stroke-width="${2 * k}"/>`;
-  }).join('');
   const shape = ui.room === r.id && ui.tool === 'move' && !ui.furnish;
+  const selWall = ui.room === r.id && !ui.furnish && !ui.opening && Number.isInteger(ui.wall) ? ui.wall : -1;
   const marks = on ? edges(r.poly).map((e, i) => {
     const mid = [(e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2];
     const u = [(e.b[0] - e.a[0]) / (e.len || 1), (e.b[1] - e.a[1]) / (e.len || 1)];
@@ -62,10 +70,10 @@ function roomSvg(state, ui, r, k) {
     if (pointInPoly([mid[0] + n[0] * 12, mid[1] + n[1] * 12], r.poly)) n = [u[1], -u[0]]; // bokstaven står på utsiden, så den ikke dekker møbler
     const p = [mid[0] + n[0] * 30 * k, mid[1] + n[1] * 30 * k];
     const q = [mid[0] - n[0] * 26 * k, mid[1] - n[1] * 26 * k]; // lengden står på innsiden
-    return `${e.len >= 90 * k ? `<text class="wlen ${(r.fixed || []).includes(i) ? 'set' : ''}" x="${q[0]}" y="${q[1]}" font-size="${21 * k}" dy="${7 * k}">${m(e.len)} m</text>` : ''}
-      <circle class="mark" cx="${p[0]}" cy="${p[1]}" r="${19 * k}"/><text class="mark-t" x="${p[0]}" y="${p[1]}" font-size="${23 * k}" dy="${8 * k}">${letter(i)}</text>
-      ${shape ? `<circle class="hit" data-wall="${i}" cx="${p[0]}" cy="${p[1]}" r="${40 * k}"/>` : ''}`;
-  }).join('') + (shape ? r.poly.map((c2, i) => `<circle class="handle" cx="${c2[0]}" cy="${c2[1]}" r="${12 * k}" stroke-width="${4 * k}"/><circle class="hit" data-corner="${i}" cx="${c2[0]}" cy="${c2[1]}" r="${40 * k}"/>`).join('') : '') : '';
+    return `${i === selWall ? `<line class="wsel" x1="${e.a[0]}" y1="${e.a[1]}" x2="${e.b[0]}" y2="${e.b[1]}" stroke-width="${10 * k}"/>` : ''}
+      ${e.len >= 90 * k ? `<text class="wlen ${(r.fixed || []).includes(i) ? 'set' : ''}" x="${q[0]}" y="${q[1]}" font-size="${21 * k}" dy="${7 * k}">${m(e.len)} m</text>` : ''}
+      <circle class="mark ${i === selWall ? 'on' : ''}" cx="${p[0]}" cy="${p[1]}" r="${19 * k}"/><text class="mark-t" x="${p[0]}" y="${p[1]}" font-size="${23 * k}" dy="${8 * k}">${letter(i)}</text>`;
+  }).join('') + (shape ? r.poly.map((c2) => `<circle class="handle" cx="${c2[0]}" cy="${c2[1]}" r="${12 * k}" stroke-width="${4 * k}"/>`).join('') : '') : '';
   const furn = (state.furn || []).filter((f) => f.room === r.id).map((f) => {
     const sel = ui.furn === f.id;
     const fs = clamp(Math.min(f.w, f.d) * 0.34, 17 * k, 26 * k);
@@ -79,11 +87,28 @@ function roomSvg(state, ui, r, k) {
       <text font-size="${fs}" dy="${fs * 0.35}" transform="rotate(${-f.r})">${esc(name)}</text></g>`;
   }).join('');
   return `<g data-g="${r.id}">
-    <polygon class="proom ${on ? 'on' : ''}" data-room="${r.id}" points="${pts(r.poly)}" stroke-width="${6 * k}"/>
-    ${doors}
-    <text class="pname" x="${c[0]}" y="${c[1]}" font-size="${32 * k}">${esc(roomLabel(state.rooms, r))}</text>
+    <polygon class="proom ${on ? 'on' : ''} ${r.guess ? 'guess' : ''}" data-room="${r.id}" points="${pts(r.poly)}" stroke-width="${6 * k}"/>
+    <text class="pname" x="${c[0]}" y="${c[1]}" font-size="${32 * k}">${r.guess && !ui.furnish ? 'Rom?' : esc(roomLabel(state.rooms, r))}</text>
     <text class="pm2" x="${c[0]}" y="${c[1] + 34 * k}" font-size="${26 * k}">${r.m2} m²</text>
     ${furn}<g class="marks">${marks}</g></g>`;
+}
+
+// Dører og vinduer tegnes én gang per etasje, også når to rom deler veggen. Tegnes i sin egen ramme med veggen
+// langs x-aksen, så de kan skyves bortover veggen uten å tegnes på nytt.
+function opsSvg(state, ui, rooms, k) {
+  return (state.openings || []).filter((o) => o.floor === ui.floor).map((o) => {
+    const on = ui.opening === o.id && !ui.furnish;
+    const h = refHost(rooms, o, on ? ui.room : null);
+    if (!h) return '';
+    const half = o.w / 2, ang = Math.round((Math.atan2(h.u[1], h.u[0]) * 1800) / Math.PI) / 10;
+    const into = pointInPoly([o.x - h.u[1] * 15, o.y + h.u[0] * 15], rooms[h.ri].poly) ? 1 : -1; // døra slår inn i rommet
+    const body = o.kind === 'window'
+      ? `<rect class="win" x="${-half}" y="${-7 * k}" width="${o.w}" height="${14 * k}" stroke-width="${2.5 * k}"/><line class="win" x1="${-half}" y1="0" x2="${half}" y2="0" stroke-width="${2 * k}"/>`
+      : `<path class="door" d="M${-half} 0L${-half} ${into * o.w}A${o.w} ${o.w} 0 0 ${into > 0 ? 0 : 1} ${half} 0" stroke-width="${2.5 * k}"/>`;
+    // Valgt: vis hvor avstanden måles fra, med en prikk i hjørnet og en strek bort til åpningen.
+    const dim = on ? `<line class="opdim" x1="${-h.s}" y1="0" x2="${-half}" y2="0" stroke-width="${5 * k}" stroke-dasharray="${10 * k} ${8 * k}"/><circle class="opref" cx="${-h.s}" cy="0" r="${9 * k}"/>` : '';
+    return `<g class="op ${o.kind} ${on ? 'on' : ''}" data-op="${o.id}" transform="translate(${o.x} ${o.y}) rotate(${ang})">${dim}<line class="gap" x1="${-half}" y1="0" x2="${half}" y2="0" stroke-width="${9 * k}"/>${body}</g>`;
+  }).join('');
 }
 
 // Hjørnesofa: en vinkel med ryggarm og sidearm. Tegnes i møbelets egen ramme, så den følger med når den dras og snus.
@@ -114,19 +139,17 @@ function besideBed(poly, bed, fp, taken) {
   return null;
 }
 
-// Etter at et rom har fått ny form: la naborommenes vegger følge med, og sørg for at alt får plass på arket.
-function settle(state, ui, room, before, raw) {
-  for (const o of state.rooms) {
-    if (o === room || !o.poly || (o.floor || 0) !== (room.floor || 0)) continue;
-    const next = dragAlong(before, raw, o.poly);
-    if (next !== o.poly) { o.doors = remapDoors(o.poly, o.doors, next); o.poly = next; o.fixed = []; refit(o); }
-  }
+// Etter en endring: sørg for at alt ligger inne på arket, at arket er stort nok, og at dører, vinduer og mål stemmer.
+function settle(state, ui) {
   const all = state.rooms.filter((r) => r.poly);
   const minX = Math.min(0, ...all.flatMap((r) => r.poly.map((p) => p[0]))), minY = Math.min(0, ...all.flatMap((r) => r.poly.map((p) => p[1])));
   if (minX < 0 || minY < 0) { // noe havnet utenfor venstre eller øvre kant: skyv hele tegningen inn
     for (const r of all) r.poly = r.poly.map(([x, y]) => [x - minX, y - minY]);
     for (const f of state.furn) { f.x -= minX; f.y -= minY; }
+    for (const o of state.openings || []) { o.x -= minX; o.y -= minY; }
   }
+  syncDoors(state);
+  for (const r of all) refit(r);
   ui.sheet = Math.max(ui.sheet, sheetFor(state, ui.sheet));
 }
 
@@ -136,7 +159,7 @@ export function sheetFor(state, fallback) {
   return far ? (SHEETS.find((s) => s >= far) || SHEETS[SHEETS.length - 1]) : fallback;
 }
 
-// Selve arket med rutenett, rom, dører og møbler.
+// Selve arket med rutenett, rom, dører, vinduer og møbler.
 function sheetSvg(state, ui, rooms, emptyText) {
   const S = ui.sheet, k = S / 1000;
   const sorted = [...rooms].sort((a, b) => (a.id === ui.room) - (b.id === ui.room));
@@ -148,15 +171,68 @@ function sheetSvg(state, ui, rooms, emptyText) {
     </defs>
     <rect width="${S}" height="${S}" fill="url(#g50)"/><rect width="${S}" height="${S}" fill="url(#g100)"/>
     ${sorted.map((r) => roomSvg(state, ui, r, k)).join('')}
+    <g class="ops">${opsSvg(state, ui, rooms, k)}</g>
     ${rooms.length ? '' : `<text class="empty" x="${S / 2}" y="${S / 2}" font-size="${36 * k}">${emptyText}</text>`}
     <polyline id="ink" fill="none" stroke-width="${5 * k}" points=""/>
   </svg></div>`;
 }
 
+// Linja rett under tegningen: det som er valgt, og det man kan gjøre med det. Den har alltid samme høyde, så
+// ingenting hopper, og den fester seg over «Neste»-knappen så den kan nås mens man ser på tegningen.
+function planBar(state, ui, rooms) {
+  const o = (state.openings || []).find((x) => x.id === ui.opening);
+  const r = rooms.find((x) => x.id === ui.room);
+  if (o) {
+    const h = refHost(rooms, o, ui.room);
+    const where = h ? `vegg ${letter(h.e)} i ${roomLabel(state.rooms, rooms[h.ri]).toLowerCase()}` : '';
+    return `<div class="planbar on" role="group" aria-label="${KIND[o.kind]} i ${esc(where)}">
+      <div class="barrow">
+        <span class="seg" role="group" aria-label="Dør eller vindu">${['door', 'window'].map((kd) => `<button class="segbtn ${o.kind === kd ? 'on' : ''}" data-act="opkind" data-v="${kd}" aria-pressed="${o.kind === kd}">${KIND[kd]}</button>`).join('')}</span>
+        <label class="barfield">Bredde, cm<input id="opw" inputmode="numeric" data-ch="opw" value="${o.w}"></label>
+        <label class="barfield">Fra hjørnet, cm<input id="opd" inputmode="numeric" data-ch="opd" value="${h ? Math.max(0, Math.round(h.s - o.w / 2)) : ''}"></label>
+      </div>
+      <div class="barrow">
+        <span class="barscroll" role="group" aria-label="Vanlige bredder">${WIDTHS[o.kind].map((w) => `<button class="barchip ${o.w === w ? 'on' : ''}" data-act="opwset" data-v="${w}" aria-pressed="${o.w === w}">${w} cm</button>`).join('')}</span>
+        <button class="barbtn danger" data-act="delop">Ta bort</button>
+      </div></div>`;
+  }
+  if (r && Number.isInteger(ui.wall) && ui.wall < r.poly.length) {
+    const e = edges(r.poly)[ui.wall], other = neighbourAt(rooms, r.id, ui.wall);
+    const set = (r.fixed || []).includes(ui.wall);
+    return `<div class="planbar on" role="group" aria-label="Vegg ${letter(ui.wall)} i ${esc(roomLabel(state.rooms, r).toLowerCase())}">
+      <div class="barrow">
+        <span class="planbar-name">Vegg ${letter(ui.wall)}<small>${esc(roomLabel(state.rooms, r))}${other ? ` og ${esc(roomLabel(state.rooms, other).toLowerCase())}` : ''}</small></span>
+        <button class="barbtn light" data-act="addop" data-v="door">+ Dør</button>
+        <button class="barbtn light" data-act="addop" data-v="window">+ Vindu</button>
+      </div>
+      <div class="barrow">
+        <button class="barbtn" data-act="wallnudge" data-v="-10" aria-label="10 cm kortere">− 10</button>
+        <label class="barfield wide">Lengde, cm${set ? ' <span class="setmark">satt</span>' : ''}<input id="walllen" inputmode="numeric" data-ch="walllen" value="${Math.round(e.len)}"></label>
+        <button class="barbtn" data-act="wallnudge" data-v="10" aria-label="10 cm lengre">+ 10</button>
+      </div></div>`;
+  }
+  if (r) {
+    return `<div class="planbar on" role="group" aria-label="Valgt rom">
+      <div class="barrow">
+        <span class="planbar-name">${r.guess ? 'Hva slags rom er dette?' : esc(roomLabel(state.rooms, r))}<small>${r.m2} m²</small></span>
+        <button class="barbtn danger" data-act="delroom">Fjern rommet</button>
+      </div>
+      <div class="barrow"><span class="barscroll" role="group" aria-label="Hva slags rom er det?">
+        ${Object.entries(ROOMS).map(([id, t]) => `<button class="barchip ${r.type === id && !r.guess ? 'on' : ''}" data-act="rtype" data-v="${id}" aria-pressed="${r.type === id && !r.guess}">${t.name}</button>`).join('')}
+      </span></div></div>`;
+  }
+  return `<div class="planbar"><span class="furnbar-hint">${HINTS[ui.tool]}</span></div>`;
+}
+
 export function drawView(state, ui, canUndo) {
   const S = ui.sheet;
-  const rooms = state.rooms.filter((r) => r.poly && (r.floor || 0) === ui.floor);
+  const rooms = onFloor(state, ui.floor);
   const all = state.rooms.filter((r) => r.poly);
+  // Det som er valgt, må finnes på denne etasjen.
+  const sel = rooms.find((r) => r.id === ui.room);
+  if (!sel || !(ui.wall >= 0 && ui.wall < sel.poly.length)) ui.wall = null;
+  if (!(state.openings || []).some((o) => o.id === ui.opening && o.floor === ui.floor)) ui.opening = null;
+  const [step, text] = guide(state, ui, rooms);
   return `
   <div class="floors" role="group" aria-label="Etasje">
     ${state.floors.map((f, i) => `<button class="chip mini ${ui.floor === i ? 'on' : ''}" data-act="floor" data-v="${i}" aria-pressed="${ui.floor === i}">${esc(f)}</button>`).join('')}
@@ -165,15 +241,15 @@ export function drawView(state, ui, canUndo) {
   <div class="tools" role="group" aria-label="Verktøy">
     ${TOOLS.map(([id, name]) => `<button class="tool ${ui.tool === id ? 'on' : ''}" data-act="tool" data-v="${id}" aria-pressed="${ui.tool === id}">${name}</button>`).join('')}
   </div>
-  <p class="hint tool-hint">${HINTS[ui.tool]}</p>
-  <div class="row undo-row"><button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
-    ${state.drawn ? '' : '<button class="btn ghost small" data-act="usepreset">Start med rommene fra «Velg bolig»</button>'}
-    ${ui.room && rooms.some((r) => r.id === ui.room) ? '<button class="link danger" data-act="delroom">Fjern valgt rom</button>' : ''}</div>
-  ${sheetSvg(state, ui, rooms, 'Tegn rundt boligen eller et rom her')}
+  <p class="guide" role="status">${step ? `<b>Steg ${step} av 4</b>` : '<b>Ferdig?</b>'} ${text}</p>
+  <div class="row undo-row"><button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button></div>
+  ${sheetSvg(state, ui, rooms, 'Tegn omrisset av boligen her')}
+  ${planBar(state, ui, rooms)}
   ${ui.note ? `<p class="status bad" role="status">${esc(ui.note)}</p>` : ''}
-  <div class="sheetrow"><span class="plan-sum">${all.length ? `Omtrent ${all.reduce((s, r) => s + r.m2, 0)} m² i ${all.length} rom.` : (state.drawn ? '' : 'Det første rommet du tegner, erstatter rommene fra «Velg bolig».')} Store ruter er 1 meter.</span>
+  <div class="sheetrow"><span class="plan-sum">${all.length ? `Omtrent ${all.reduce((s, r) => s + r.m2, 0)} m² i ${all.length} rom.` : (state.drawn ? '' : 'Det du tegner, erstatter rommene fra «Velg bolig».')} Store ruter er 1 meter.</span>
     <span class="chips" role="group" aria-label="Arkstørrelse">${SHEETS.map((s) => `<button class="chip mini ${S === s ? 'on' : ''}" data-act="sheet" data-v="${s}" aria-pressed="${S === s}">${s / 100} m</button>`).join('')}</span></div>
   ${rooms.length ? `<div class="chips" role="group" aria-label="Rom på denne etasjen">${rooms.map((r) => `<button class="chip mini ${ui.room === r.id ? 'on' : ''}" data-act="room" data-v="${r.id}" aria-pressed="${ui.room === r.id}">${esc(roomLabel(state.rooms, r))}</button>`).join('')}</div>` : ''}
+  ${state.drawn ? '' : '<p><button class="btn ghost small" data-act="usepreset">Start med rommene fra «Velg bolig»</button></p>'}
   ${state.floors.length > 1 && !rooms.length ? '<button class="link danger" data-act="delfloor">Fjern denne etasjen</button>' : ''}`;
 }
 
@@ -216,7 +292,7 @@ export function roomPanel(state, ui, r) {
   <section class="panel" aria-label="Valgt rom">
     <h2>${esc(roomLabel(state.rooms, r))}<small>${r.m2} m²</small></h2>
     <span class="q-label">Mål på veggene, i cm</span>
-    <p class="hint">Fyll bare inn de veggene du har mål på. Resten regnes ut fra tegningen. Trykk på en bokstav på tegningen for å hoppe til riktig felt.</p>
+    <p class="hint">Fyll bare inn de veggene du har mål på. Resten regnes ut fra tegningen. Du kan også trykke på en vegg på tegningen.</p>
     <div class="walls">
       ${edges(r.poly).map((e, i) => { const set = (r.fixed || []).includes(i); return `<div class="field"><label for="edge-${i}">Vegg ${letter(i)}${set ? ' <span class="setmark">satt</span>' : ''}</label>
         <input id="edge-${i}" inputmode="numeric" data-ch="edgelen" data-v="${i}" value="${set ? Math.round(e.len) : ''}" placeholder="${Math.round(e.len)}"></div>`; }).join('')}
@@ -280,7 +356,6 @@ export function furnishView(state, ui, canUndo) {
 // ---------- Hendelser ----------
 
 let drag = null;
-let focusEdge = null;
 // En tegning som ikke har fått bevegelse på tre sekunder regnes som avbrutt, så appen aldri blir stående låst.
 export const isDragging = () => !!drag && performance.now() - drag.t < 3000;
 
@@ -290,11 +365,51 @@ export function bindEditor(app, ctx) {
     const b = svg.getBoundingClientRect();
     return [((e.clientX - b.left) / b.width) * ui.sheet, ((e.clientY - b.top) / b.height) * ui.sheet];
   };
-  const floorRooms = () => ctx.state().rooms.filter((r) => r.poly && (r.floor || 0) === ui.floor);
+  const floorRooms = () => onFloor(ctx.state(), ui.floor);
+  const select = (room = null, wall = null, op = null) => { ui.room = room; ui.wall = wall; ui.opening = op; ui.furn = null; };
 
   // Hindrer at siden ruller eller zoomer mens man tegner. Noen nettlesere overser touch-action på SVG.
   const hold = (e) => { if (e.target.closest?.('#draw')) e.preventDefault(); };
   for (const type of ['touchstart', 'touchmove', 'gesturestart']) app.addEventListener(type, hold, { passive: false });
+
+  // Veggen nærmest et punkt. Deler to rom veggen, velges helst veggen i det valgte rommet, ellers i rommet punktet ligger i.
+  const nearWall = (p, rooms) => {
+    const cur = rooms.find((r) => r.id === ui.room);
+    const inside = rooms.filter((r) => pointInPoly(p, r.poly)), home = inside.find((r) => r === cur) || inside[0];
+    let best = null;
+    for (const r of rooms) {
+      const n = nearestEdge(r.poly, p), score = n.d - (r === cur ? 2 : 0) - (r === home ? 1 : 0);
+      if (!best || score < best.score) best = { r, n, score };
+    }
+    return { best, home };
+  };
+
+  // Hva ligger under fingeren? reach = hvor langt unna en finger kan treffe, i cm.
+  // Rekkefølge: hjørner i det valgte rommet (bare når de kan dras), så dører og vinduer, så vegger, så rom.
+  const pick = (p, reach, corners) => {
+    const rooms = floorRooms(), cur = rooms.find((r) => r.id === ui.room);
+    if (corners && cur) {
+      let bi = -1, bd = reach * 1.5;
+      cur.poly.forEach((q, i) => { const dd = Math.hypot(q[0] - p[0], q[1] - p[1]); if (dd < bd) { bd = dd; bi = i; } });
+      if (bi >= 0) return { kind: 'corner', room: cur, i: bi };
+    }
+    let op = null;
+    for (const o of (ctx.state().openings || [])) {
+      const h = o.floor === ui.floor && hostsOf(rooms, o)[0];
+      if (!h) continue;
+      const s = clamp((p[0] - o.x) * h.u[0] + (p[1] - o.y) * h.u[1], -o.w / 2, o.w / 2);
+      const dd = Math.hypot(p[0] - o.x - h.u[0] * s, p[1] - o.y - h.u[1] * s);
+      if (dd <= reach && (!op || dd < op.d)) op = { o, d: dd };
+    }
+    if (op) return { kind: 'opening', o: op.o };
+    const { best, home } = nearWall(p, rooms);
+    if (best && best.n.d <= reach) {
+      // I et lite rom skal et trykk midt i rommet fortsatt velge rommet, ikke en vegg.
+      const deep = home ? nearestEdge(home.poly, labelPoint(home.poly)).d : Infinity;
+      if (!home || best.n.d <= Math.min(reach, deep * 0.55)) return { kind: 'wall', room: best.r, i: best.n.i };
+    }
+    return home ? { kind: 'room', room: home } : null;
+  };
 
   app.addEventListener('pointerdown', (e) => {
     const svg = e.target.closest?.('#draw');
@@ -304,82 +419,138 @@ export function bindEditor(app, ctx) {
     const p = toCm(e, svg);
     const pxToCm = ui.sheet / svg.getBoundingClientRect().width;
     drag = { tool: ui.tool, svg, id: e.pointerId, start: p, last: p, far: false, slop: 8 * pxToCm, t: performance.now() };
-    if (ui.tool === 'draw') {
-      drag.pts = [p];
-      drag.ink = svg.querySelector('#ink');
-    } else if (ui.tool === 'move') {
-      const fEl = ui.furnish ? e.target.closest('[data-furn]') : null, rEl = e.target.closest('[data-room]'); // møbler flyttes bare på «Plasser»
-      const hEl = e.target.closest('[data-corner], [data-wall]');
-      const cur = state.rooms.find((r) => r.id === ui.room);
-      if (hEl && cur?.poly) {
-        drag.room = cur; drag.poly0 = cur.poly;
-        drag.shape = hEl.dataset.corner !== undefined ? { kind: 'corner', i: Number(hEl.dataset.corner) } : { kind: 'wall', i: Number(hEl.dataset.wall) };
-        drag.el = svg.querySelector(`[data-room="${cur.id}"]`);
-        drag.g = svg.querySelector(`[data-g="${cur.id}"]`);
-      } else if (fEl) {
-        const f = state.furn.find((x) => x.id === fEl.dataset.furn);
-        drag.furn = f; drag.el = fEl; drag.pos = [f.x, f.y];
-      } else if (rEl) {
-        drag.room = state.rooms.find((r) => r.id === rEl.dataset.room);
-        drag.el = svg.querySelector(`[data-g="${rEl.dataset.room}"]`);
-        drag.delta = [0, 0];
-        drag.fixed = !!ui.furnish; // på «Plasser» står rommene i ro: der flytter man bare møbler
-      }
+    if (ui.furnish) { // på «Plasser» står rommene i ro: der flytter man bare møbler
+      const fEl = e.target.closest('[data-furn]'), rEl = e.target.closest('[data-room]');
+      if (fEl) { const f = state.furn.find((x) => x.id === fEl.dataset.furn); drag.furn = f; drag.el = fEl; drag.pos = [f.x, f.y]; }
+      else if (rEl) drag.pickRoom = rEl.dataset.room;
+    } else if (ui.tool === 'draw') {
+      // En dør eller et vindu som alt er valgt, kan dras bortover veggen uten å bytte verktøy. Alt annet er en strek.
+      const hit = ui.opening ? pick(p, drag.slop * 1.75, false) : null;
+      if (hit?.kind === 'opening' && hit.o.id === ui.opening) {
+        drag.op = hit.o; drag.host = refHost(floorRooms(), hit.o, ui.room);
+        drag.el = svg.querySelector(`[data-op="${hit.o.id}"]`);
+      } else { drag.pts = [p]; drag.ink = svg.querySelector('#ink'); }
+    } else {
+      const hit = pick(p, drag.slop * 1.75, ui.tool === 'move');
+      drag.hit = hit;
+      if (hit?.kind === 'opening') {
+        drag.op = hit.o; drag.host = refHost(floorRooms(), hit.o, ui.room);
+        drag.el = svg.querySelector(`[data-op="${hit.o.id}"]`);
+      } else if (ui.tool === 'move' && hit && hit.kind !== 'room') drag.shape = { kind: hit.kind, room: hit.room.id, i: hit.i };
+      else if (ui.tool === 'move' && hit) drag.group = hit.room.id;
     }
     try { svg.setPointerCapture(e.pointerId); } catch { /* går fint uten */ }
     e.preventDefault();
   });
+
+  // Viser endringen mens man drar. Går den ikke an, blir veggen stående der den sist kunne stå.
+  const preview = (plan) => {
+    const d = drag;
+    if (plan.ok) d.plan = plan; else { d.msg = plan.msg; if (plan.why === 'none') d.plan = null; }
+    floorRooms().forEach((r, ri) => {
+      const g = d.svg.querySelector(`[data-g="${r.id}"]`), el = d.svg.querySelector(`[data-room="${r.id}"]`);
+      if (!g || !el) return;
+      if (d.group) g.setAttribute('transform', d.plan?.changed[ri] ? `translate(${d.plan.shift[0]} ${d.plan.shift[1]})` : '');
+      else el.setAttribute('points', pts(d.plan ? d.plan.raw[ri] : r.poly));
+    });
+    d.svg.classList.add(d.group ? 'moving' : 'shaping');
+  };
 
   window.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     drag.t = performance.now();
     const p = toCm(e, drag.svg);
     if (Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) > drag.slop) drag.far = true;
-    if (drag.tool === 'draw') {
+    if (drag.pts) {
       if (Math.hypot(p[0] - drag.last[0], p[1] - drag.last[1]) < drag.slop / 2) return;
       drag.pts.push(p); drag.last = p;
       drag.ink.setAttribute('points', pts(drag.pts.map(([x, y]) => [Math.round(x), Math.round(y)])));
-    } else if (drag.furn && drag.far) {
+    } else if (!drag.far) return;
+    else if (drag.furn) {
       const f = drag.furn;
       drag.pos = [clamp(Math.round((f.x + p[0] - drag.start[0]) / 5) * 5, 0, ui.sheet), clamp(Math.round((f.y + p[1] - drag.start[1]) / 5) * 5, 0, ui.sheet)];
       drag.el.setAttribute('transform', `translate(${drag.pos[0]} ${drag.pos[1]}) rotate(${f.r})`);
-    } else if (drag.shape && drag.far) {
-      const dx = p[0] - drag.start[0], dy = p[1] - drag.start[1];
-      drag.np = drag.shape.kind === 'corner' ? moveCorner(drag.poly0, drag.shape.i, dx, dy) : moveWall(drag.poly0, drag.shape.i, dx, dy);
-      drag.el.setAttribute('points', pts(drag.np));
-      drag.g.classList.add('shaping');
-    } else if (drag.room && drag.far && !drag.fixed) {
-      drag.delta = [Math.round((p[0] - drag.start[0]) / 10) * 10, Math.round((p[1] - drag.start[1]) / 10) * 10];
-      drag.el.setAttribute('transform', `translate(${drag.delta[0]} ${drag.delta[1]})`);
-    }
+    } else if (drag.op && drag.host && drag.el) { // døra eller vinduet glir bortover veggen sin
+      const h = drag.host, o = drag.op;
+      const s = clamp(Math.round(((p[0] - h.a[0]) * h.u[0] + (p[1] - h.a[1]) * h.u[1]) / 5) * 5, o.w / 2, Math.max(o.w / 2, h.len - o.w / 2));
+      drag.pos = [Math.round((h.a[0] + h.u[0] * s) * 10) / 10, Math.round((h.a[1] + h.u[1] * s) * 10) / 10];
+      drag.el.setAttribute('transform', drag.el.getAttribute('transform').replace(/translate\([^)]*\)/, `translate(${drag.pos[0]} ${drag.pos[1]})`));
+      drag.el.classList.add('sliding');
+    } else if (drag.shape) preview(planEdit(floorRooms(), { ...drag.shape, dx: p[0] - drag.start[0], dy: p[1] - drag.start[1] }));
+    else if (drag.group) preview(planEdit(floorRooms(), { kind: 'move', room: drag.group, dx: p[0] - drag.start[0], dy: p[1] - drag.start[1] }));
   });
 
-  // Deler rommet streken går gjennom. Den største delen beholder navn, type og valg på lista.
+  // Deler rommene streken går gjennom. En rett strek deler alle rom den krysser, langs samme linje, så veggen
+  // blir sammenhengende. I hvert rom beholder den største delen navn, type og valg på lista.
   const splitWith = (state, raw, tol) => {
-    let room = null, most = 0;
-    for (const r of floorRooms()) { const c = raw.filter((q) => pointInPoly(q, r.poly)).length; if (c > most) { most = c; room = r; } }
-    let line = room && straightenLine(raw, tol);
-    if (!line) { ui.note = 'Tegn rundt et rom, eller dra en strek tvers over et rom for å dele det.'; return; }
+    const rooms = floorRooms();
+    let line = rooms.length ? straightenLine(raw, tol) : null;
+    if (!line) { ui.note = rooms.length ? 'Dra streken tvers over et rom, fra vegg til vegg.' : 'Tegn først en runde rundt hele boligen.'; return; }
     // Legg streken på linje med hjørner som ligger like ved, for eksempel knekken i et vinkelrom.
-    const corners = floorRooms().flatMap((r) => r.poly);
+    const corners = rooms.flatMap((r) => r.poly);
     const near = (v, k2) => { let best = v, dmin = tol * 0.6; for (const q of corners) if (Math.abs(q[k2] - v) < dmin) { dmin = Math.abs(q[k2] - v); best = q[k2]; } return best; };
     line = line.map(([x, y]) => [near(x, 0), near(y, 1)]);
-    const parts = splitPoly(room.poly, line);
-    if (!parts) { ui.note = 'Streken delte ikke rommet. Dra den tvers over, fra vegg til vegg.'; return; }
-    const [A, B] = parts.map(canonical);
-    const big = area(A) >= area(B) ? A : B, small = big === A ? B : A;
-    const old = room.poly, bigDoors = [], smallDoors = [];
-    for (const o of room.doors || []) {
-      const x = remapDoor(old, o, big);
-      if (x) bigDoors.push(x); else { const y = remapDoor(old, o, small); if (y) smallDoors.push(y); }
+    let cuts = [];
+    if (line.length === 2) cuts = splitAlong(rooms, line).map((f) => ({ room: rooms.find((r) => r.id === f.id), parts: f.parts, inside: f.inside }));
+    else { // knekt strek: deler bare rommet det meste av streken ligger i
+      let room = null, most = 0;
+      for (const r of rooms) { const c = raw.filter((q) => pointInPoly(q, r.poly)).length; if (c > most) { most = c; room = r; } }
+      const parts = room && splitPoly(room.poly, line);
+      if (parts) cuts = [{ room, parts: parts.map(canonical), inside: 1 }];
+    }
+    if (!cuts.length) { ui.note = 'Streken delte ikke noe rom. Dra den tvers over, fra vegg til vegg.'; return; }
+    let chosen = null, most = -1;
+    for (const c of cuts) {
+      const [A, B] = c.parts, big = area(A) >= area(B) ? A : B, small = big === A ? B : A;
+      const id = 'r' + (state.seq = (state.seq || 100) + 1);
+      c.room.poly = big; c.room.fixed = [];
+      const piece = refit({ id, type: c.room.type, size: 'M', m2: null, wall: null, floor: c.room.floor || 0, poly: small, doors: [], fixed: [], guess: true });
+      piece.type = guessType(state.rooms, piece.m2);
+      for (const f of state.furn) if (f.room === c.room.id && pointInPoly([f.x, f.y], small)) f.room = id;
+      state.rooms = [...state.rooms, piece];
+      if (c.inside > most) { most = c.inside; chosen = id; }
+    }
+    settle(state, ui);
+    select(chosen);
+  };
+
+  // En runde blir et nytt rom. Den første runden er omrisset av boligen og erstatter rommene fra «Velg bolig».
+  const addRoom = (state, raw, tol) => {
+    let poly = straighten(raw, tol);
+    if (!poly) { ui.note = 'Det ble for lite til å være et rom. Tegn en større runde, minst én meter hver vei.'; return; }
+    const others = state.drawn ? floorRooms().map((r) => r.poly) : [];
+    poly = canonical(fitSheet(alignTo(poly, others, tol), ui.sheet));
+    if (coverage([...others, poly]).overlap - coverage(others).overlap > area(poly) * 0.3) {
+      ui.note = 'Det ligger et rom der fra før. Dra en rett strek tvers over rommet for å dele det.'; return;
     }
     const id = 'r' + (state.seq = (state.seq || 100) + 1);
-    room.poly = big; room.doors = bigDoors; room.fixed = []; refit(room);
-    const piece = refit({ id, type: room.type, size: 'M', m2: null, wall: null, floor: room.floor || 0, poly: small, doors: smallDoors });
-    piece.type = guessType(state.rooms, piece.m2); refit(piece);
-    for (const f of state.furn) if (f.room === room.id && pointInPoly([f.x, f.y], small)) f.room = id;
-    state.rooms = [...state.rooms, piece];
-    ui.room = id; ui.furn = null;
+    const base = state.drawn ? state.rooms : [];
+    if (!state.drawn) { state.items = {}; state.custom = []; state.furn = []; state.openings = []; state.home = ''; state.drawn = true; }
+    const room = refit({ id, type: 'stue', size: 'M', m2: null, wall: null, floor: ui.floor, poly, doors: [], fixed: [], guess: true });
+    room.type = guessType(base, room.m2);
+    state.rooms = [...base, room];
+    settle(state, ui);
+    select(id);
+  };
+
+  const addOpening = (state, d, kind) => {
+    const rooms = floorRooms(), { best } = nearWall(d.start, rooms);
+    if (!best || best.n.d > Math.max(45, d.slop * 3)) { ui.note = rooms.length ? 'Trykk nærmere en vegg.' : 'Tegn boligen først.'; return; }
+    const pos = placeOn(best.r.poly, best.n.i, Math.round((best.n.t * best.n.len) / 5) * 5, kind === 'door' ? 80 : 120);
+    if (!pos) { ui.note = 'Veggen er for kort.'; return; }
+    const id = 'o' + (state.seq = (state.seq || 100) + 1);
+    state.openings = [...(state.openings || []), { id, floor: ui.floor, kind, ...pos }];
+    settle(state, ui);
+    select(best.r.id, null, id);
+  };
+
+  // Et trykk uten å dra: velg det som ligger under fingeren. Med «Dør» eller «Vindu» settes det inn en ny.
+  const tap = (state, d) => {
+    const hit = d.hit !== undefined ? d.hit : pick(d.start, d.slop * 1.75, false);
+    if (hit?.kind === 'opening') select(refHost(floorRooms(), hit.o, ui.room)?.id ?? null, null, hit.o.id);
+    else if (d.tool === 'door' || d.tool === 'window') addOpening(state, d, d.tool);
+    else if (!hit) select();
+    else select(hit.room.id, hit.kind === 'wall' ? hit.i : null);
   };
 
   const finish = (cancelled) => {
@@ -390,74 +561,22 @@ export function bindEditor(app, ctx) {
     ui.note = ''; ui.info = '';
     if (cancelled) { ctx.render(); return; }
 
-    if (d.tool === 'draw') {
+    if (ui.furnish) {
+      if (d.furn) { if (d.far) { d.furn.x = d.pos[0]; d.furn.y = d.pos[1]; } ui.furn = d.furn.id; ui.room = null; }
+      else { ui.room = d.pickRoom || null; ui.furn = null; }
+    } else if (d.pts && d.far) {
       const tol = clamp(14 * (d.slop / 8), 25, 90); // en finger treffer omtrent innenfor 14 piksler
-      if (d.far && isLine(d.pts, tol)) { splitWith(state, d.pts, tol); ctx.save(); ctx.render(); return; }
-      let poly = d.far ? straighten(d.pts, tol) : null;
-      if (poly) {
-        poly = canonical(fitSheet(alignTo(poly, floorRooms().map((r) => r.poly), tol), ui.sheet));
-        const id = 'r' + (state.seq = (state.seq || 100) + 1);
-        const base = state.drawn ? state.rooms : [];
-        if (!state.drawn) { state.items = {}; state.custom = []; state.furn = []; state.home = ''; state.drawn = true; }
-        const room = refit({ id, type: 'stue', size: 'M', m2: null, wall: null, floor: ui.floor, poly, doors: [] });
-        room.type = guessType(base, room.m2); refit(room);
-        state.rooms = [...base, room];
-        ui.room = id; ui.furn = null;
-      } else if (d.far) ui.note = 'Det ble for lite til å være et rom. Tegn en større runde, minst én meter hver vei.';
-    } else if (d.tool === 'move') {
-      if (d.shape) {
-        const next = d.far && d.np ? valid(d.np) : null;
-        if (next) {
-          d.room.doors = remapDoors(d.poly0, d.room.doors, next); // dørene står der de sto
-          d.room.poly = next; d.room.fixed = []; refit(d.room);
-          settle(state, ui, d.room, d.poly0, d.np);
-        } else if (d.far) ui.note = 'Rommet ble for lite eller vrengt. Prøv en mindre endring.';
-        else if (d.shape.kind === 'wall') focusEdge = d.shape.i; // et trykk på bokstaven: gå til feltet for den veggen
-        ui.room = d.room.id; ui.furn = null;
-      } else if (d.furn) {
-        if (d.far) { d.furn.x = d.pos[0]; d.furn.y = d.pos[1]; }
-        ui.furn = d.furn.id; ui.room = null;
-      } else if (d.room) {
-        if (d.far && !d.fixed && (d.delta[0] || d.delta[1])) {
-          const from = d.room.poly[0];
-          d.room.poly = fitSheet(moved(d.room.poly, d.delta[0], d.delta[1]), ui.sheet);
-          const dx = d.room.poly[0][0] - from[0], dy = d.room.poly[0][1] - from[1];
-          for (const f of state.furn) if (f.room === d.room.id) { f.x += dx; f.y += dy; }
-        }
-        ui.room = d.room.id; ui.furn = null;
-      } else {
-        ui.room = null; ui.furn = null;
-        // En lang strek på tomt ark mens «Velg og flytt» er valgt: brukeren prøver trolig å tegne.
-        if (d.far && !ui.furnish) ui.note = 'Nå er «Velg og flytt» valgt. Trykk «Tegn rom» over tegningen for å tegne.';
-      }
-    } else if (!d.far) {
-      // Dør eller vindu: finn nærmeste vegg på denne etasjen.
-      const kind = d.tool === 'window' ? 'window' : 'door';
-      let best = null;
-      for (const r of floorRooms()) {
-        const n = nearestEdge(r.poly, d.start);
-        if (n && (!best || n.d < best.n.d)) best = { r, n };
-      }
-      const reach = Math.max(45, d.slop * 3);
-      if (!best || best.n.d > reach) ui.note = 'Trykk nærmere en vegg.';
-      else {
-        const { r, n } = best;
-        const along = n.t * n.len;
-        const hit = (r.doors || []).findIndex((o) => o.e === n.i && Math.abs(o.t * n.len - along) < o.w / 2 + 25);
-        if (hit >= 0) r.doors.splice(hit, 1);
-        else {
-          const w = Math.min(kind === 'door' ? 80 : 120, Math.max(40, n.len - 20));
-          r.doors = [...(r.doors || []), { e: n.i, t: n.t, w, kind }];
-        }
-        ui.room = r.id; ui.furn = null;
-      }
-    }
+      if (isLine(d.pts, tol)) splitWith(state, d.pts, tol); else addRoom(state, d.pts, tol);
+    } else if (d.op && d.far) {
+      if (d.pos) { d.op.x = d.pos[0]; d.op.y = d.pos[1]; settle(state, ui); }
+      select(d.host?.id ?? ui.room, null, d.op.id);
+    } else if (d.far && (d.shape || d.group)) {
+      const room = state.rooms.find((r) => r.id === (d.shape?.room || d.group)), n = room?.poly.length;
+      if (d.plan) { applyPlan(state, ui.floor, d.plan, keepInside); settle(state, ui); } else ui.note = d.msg || '';
+      select(room?.id ?? null, d.shape?.kind === 'wall' && room?.poly.length === n ? d.shape.i : null);
+    } else if (!d.far) tap(state, d);
+    else if (d.tool === 'move') { select(); ui.note = 'Nå er «Flytt» valgt. Trykk «Tegn og del» over tegningen for å tegne.'; }
     ctx.save(); ctx.render();
-    if (focusEdge !== null) {
-      const input = document.getElementById(`edge-${focusEdge}`);
-      focusEdge = null;
-      if (input) { input.scrollIntoView({ block: 'center', behavior: 'smooth' }); input.focus({ preventScroll: true }); }
-    }
   };
   window.addEventListener('pointerup', (e) => { if (drag && e.pointerId === drag.id) finish(false); });
   window.addEventListener('pointercancel', (e) => { if (drag && e.pointerId === drag.id) finish(true); });
@@ -474,6 +593,23 @@ export function bindEditor(app, ctx) {
 export function editorActions(ctx) {
   const { ui } = ctx;
   const sel = () => ctx.state().rooms.find((r) => r.id === ui.room);
+  const selOp = () => (ctx.state().openings || []).find((o) => o.id === ui.opening);
+  // Setter lengden på en vegg. Naborommene følger med, og veggen regnes som «satt».
+  const setLen = (r, i, len) => {
+    const s = ctx.state(), floor = r.floor || 0, n = r.poly.length;
+    ui.note = '';
+    const plan = planLength(onFloor(s, floor), r.id, i, len);
+    if (!plan.ok) { ui.note = plan.msg; return; }
+    if (!plan.same) { applyPlan(s, floor, plan, keepInside); settle(s, ui); }
+    if (r.poly.length === n) r.fixed = [...new Set([...(r.fixed || []), i])];
+  };
+  // Flytter eller endrer en dør eller et vindu langs veggen. s = midten, målt fra veggens første hjørne.
+  const setOp = (o, s, w) => {
+    const st = ctx.state(), rooms = onFloor(st, o.floor), h = refHost(rooms, o, ui.room);
+    if (!h) return;
+    const pos = placeOn(rooms[h.ri].poly, h.e, s(h), clamp(Math.round(w), 40, 300));
+    if (pos) { Object.assign(o, pos); settle(st, ui); }
+  };
   const selFurn = () => ctx.state().furn.find((f) => f.id === ui.furn);
   const num = (v) => { const n = Math.round(Number(String(v).replace(/[^\d]/g, ''))); return Number.isFinite(n) && n > 0 ? n : null; };
   // Nye mål skrevet for hånd: møbelet skyves inn igjen hvis det ellers ville stukket gjennom en vegg.
@@ -486,7 +622,7 @@ export function editorActions(ctx) {
     actions: {
       tool(v) { if (HINTS[v]) { ui.tool = v; ui.note = ''; ctx.later(); } },
       sheet(v) { if (SHEETS.includes(Number(v))) { ui.sheet = Number(v); ctx.later(); } },
-      floor(v) { ui.floor = clamp(Number(v) || 0, 0, ctx.state().floors.length - 1); ui.room = null; ui.furn = null; ctx.later(); },
+      floor(v) { ui.floor = clamp(Number(v) || 0, 0, ctx.state().floors.length - 1); ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ctx.later(); },
       addfloor() { const s = ctx.state(); if (s.floors.length < 5) { s.floors = [...s.floors, `${s.floors.length + 1}. etasje`]; ui.floor = s.floors.length - 1; ui.room = null; ui.furn = null; ctx.commit(); } },
       delfloor() {
         const s = ctx.state();
@@ -495,7 +631,24 @@ export function editorActions(ctx) {
         for (const r of s.rooms) if ((r.floor || 0) > ui.floor) r.floor -= 1;
         ui.floor = Math.max(0, ui.floor - 1); ctx.commit();
       },
-      rtype(v) { const r = sel(); if (r && ROOMS[v]) { r.type = v; if (r.poly) refit(r); else r.size = sizeFromM2(v, r.m2 || ROOMS[v].m2[r.size]); ctx.commit(); } },
+      rtype(v) { const r = sel(); if (r && ROOMS[v]) { r.type = v; delete r.guess; if (r.poly) refit(r); else r.size = sizeFromM2(v, r.m2 || ROOMS[v].m2[r.size]); ctx.commit(); } },
+      wallnudge(v) { const r = sel(); if (r?.poly && Number.isInteger(ui.wall) && ui.wall < r.poly.length) { setLen(r, ui.wall, Math.round(edges(r.poly)[ui.wall].len) + (Number(v) || 0)); ctx.commit(); } },
+      // Setter en dør eller et vindu midt på den valgte veggen. Etterpå kan den dras eller få mål.
+      addop(v) {
+        const s = ctx.state(), r = sel(), kind = v === 'window' ? 'window' : 'door';
+        if (!r?.poly || !Number.isInteger(ui.wall)) return;
+        const pos = placeOn(r.poly, ui.wall, edges(r.poly)[ui.wall].len / 2, kind === 'door' ? 80 : 120);
+        ui.note = '';
+        if (!pos) { ui.note = 'Veggen er for kort.'; ctx.later(); return; }
+        const id = 'o' + (s.seq = (s.seq || 100) + 1);
+        s.openings = [...(s.openings || []), { id, floor: r.floor || 0, kind, ...pos }];
+        settle(s, ui);
+        ui.opening = id; ui.wall = null;
+        ctx.commit();
+      },
+      opkind(v) { const o = selOp(); if (o && KIND[v]) { o.kind = v; settle(ctx.state(), ui); ctx.commit(); } },
+      opwset(v) { const o = selOp(); if (o && Number(v)) { setOp(o, (h) => h.s - o.w / 2 + Number(v) / 2, Number(v)); ctx.commit(); } },
+      delop() { const s = ctx.state(); s.openings = (s.openings || []).filter((o) => o.id !== ui.opening); ui.opening = null; settle(s, ui); ctx.commit(); },
       // Setter ut alt på lista som mangler på tegningen, rom for rom. Det som alt står der, blir stående.
       arrange() {
         const s = ctx.state();
@@ -505,10 +658,7 @@ export function editorActions(ctx) {
           const existing = s.furn.filter((f) => f.room === r.id);
           const wants = placeable(s, r).map((x) => { const fp = footprint(x.id, x.size); return { item: x.id, w: fp[0], d: fp[1], qty: Math.max(0, x.qty - x.count), s: x.size, corner: isCorner(x.id, x.size) }; });
           if (!wants.some((w) => w.qty > 0)) continue;
-          // En dør tegnet i naborommet er også en dør her, når den står i veggen de deler.
-          const shared = s.rooms.filter((o) => o !== r && o.poly && (o.floor || 0) === (r.floor || 0))
-            .flatMap((o) => (o.doors || []).map((d) => remapDoor(o.poly, d, r.poly)).filter(Boolean));
-          const res = arrangeRoom({ poly: r.poly, doors: [...(r.doors || []), ...shared] }, wants, existing);
+          const res = arrangeRoom({ poly: r.poly, doors: r.doors || [] }, wants, existing); // en dør i en delt vegg står i begge rommene
           const fresh = res.placed.slice(0, Math.max(0, 80 - s.furn.length)).map((f) => ({ id: 'f' + (s.seq = (s.seq || 100) + 1), room: r.id, ...f }));
           s.furn = [...fresh.filter((f) => f.item === 'teppe'), ...s.furn, ...fresh.filter((f) => f.item !== 'teppe')]; // tepper tegnes underst
           added += fresh.length;
@@ -563,21 +713,17 @@ export function editorActions(ctx) {
       delfurn() { const s = ctx.state(); s.furn = s.furn.filter((f) => f.id !== ui.furn); ui.furn = null; ctx.commit(); },
     },
     changes: {
-      // Veggen du setter mål på, låses. Naboveggen flyttes på den siden som ikke rokker ved et mål du alt har satt.
+      // Veggen du setter mål på, regnes som «satt». Naboveggen flyttes i den enden som ikke rokker ved et mål du alt har satt.
       edgelen(el) {
         const r = sel(), len = num(el.value), i = Number(el.dataset.v);
         if (!r?.poly || !(i >= 0 && i < r.poly.length)) return;
-        const fixed = new Set(r.fixed || []);
-        if (!len) { fixed.delete(i); r.fixed = [...fixed]; return; }
-        const n = r.poly.length, old = r.poly;
-        const fromStart = fixed.has((i + 2) % n) && !fixed.has((i - 2 + n) % n);
-        const next = setEdgeLength(old, i, len, fromStart);
-        r.doors = remapDoors(old, r.doors, next);
-        r.poly = next;
-        if (next.length === n) { fixed.add(i); r.fixed = [...fixed]; } else r.fixed = [];
-        refit(r);
-        settle(ctx.state(), ui, r, old, next);
+        if (!len) { r.fixed = (r.fixed || []).filter((k) => k !== i); return; }
+        setLen(r, i, len);
       },
+      walllen(el) { const r = sel(), len = num(el.value); if (r?.poly && len && Number.isInteger(ui.wall) && ui.wall < r.poly.length) setLen(r, ui.wall, len); },
+      // Bredden endres fra hjørnet og utover, så avstanden fra hjørnet står fast.
+      opw(el) { const o = selOp(), w = num(el.value); if (o && w) setOp(o, (h) => h.s - o.w / 2 + clamp(w, 40, 300) / 2, w); },
+      opd(el) { const o = selOp(), t = String(el.value).replace(/[^\d]/g, ''); if (o && t) setOp(o, () => Number(t) + o.w / 2, o.w); },
       furnw(el) { const f = selFurn(), n = num(el.value); if (f && n) resize(f, { w: clamp(n, 20, 600) }); },
       furnd(el) { const f = selFurn(), n = num(el.value); if (f && n) resize(f, { d: clamp(n, 20, 600) }); },
     },

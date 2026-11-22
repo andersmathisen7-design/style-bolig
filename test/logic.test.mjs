@@ -280,3 +280,26 @@ test('fem steg, og «har fra før» lest med enkle regler', async () => {
   assert.deepEqual(parseOwned('Jeg har ikke sofa. Sofaen bør være grønn.'), { have: [], need: [] });
   assert.deepEqual(parseOwned(''), { have: [], need: [] });
 });
+
+test('plantegning: dører og vinduer lagres per vegg og overlever lagring', async () => {
+  const s = newState();
+  s.drawn = true;
+  s.rooms = [
+    { id: 'r101', type: 'stue', size: 'M', m2: 12, wall: 400, floor: 0, poly: [[100, 100], [500, 100], [500, 400], [100, 400]], doors: [], fixed: [], guess: true },
+    { id: 'r102', type: 'soverom', size: 'M', m2: 12, wall: 400, floor: 0, poly: [[500, 100], [900, 100], [900, 400], [500, 400]], doors: [], fixed: [] },
+  ];
+  s.openings = [
+    { id: 'o1', floor: 0, kind: 'door', w: 90, x: 500, y: 250 },          // i veggen mellom rommene
+    { id: 'o2', floor: 0, kind: 'window', w: 150.4, x: 300, y: 100 },
+    { id: 'o3', floor: 0, kind: 'window', w: 100, x: 300, y: 250 },      // midt i rommet: står ikke i noen vegg
+    { id: 'x', floor: 0, kind: 'door', w: 80, x: 300, y: 400 }, { id: 'o4', floor: 3, kind: 'door', w: 80, x: 300, y: 400 }, { id: 'o5', floor: 0, kind: 'door', w: 900, x: 300, y: 400 },
+  ];
+  const n = normalize(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(n.openings, [{ id: 'o1', floor: 0, kind: 'door', w: 90, x: 500, y: 250 }, { id: 'o2', floor: 0, kind: 'window', w: 150, x: 300, y: 100 }]);
+  assert.deepEqual(n.rooms[0].doors, [{ e: 1, t: 0.5, w: 90, kind: 'door', id: 'o1' }, { e: 0, t: 0.5, w: 150, kind: 'window', id: 'o2' }]);
+  assert.deepEqual(n.rooms[1].doors, [{ e: 3, t: 0.5, w: 90, kind: 'door', id: 'o1' }]); // samme dør, sett fra naborommet
+  assert.equal(n.rooms[0].guess, true);
+  assert.equal(n.rooms[1].guess, undefined);
+  assert.deepEqual(normalize(JSON.parse(JSON.stringify(n))), n);         // det som lagres, leses likt tilbake
+  assert.deepEqual(newState().openings, []);
+});
