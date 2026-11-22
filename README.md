@@ -9,10 +9,10 @@ Brukthjem er ikke tilknyttet FINN.no eller IKEA.
 Fem steg:
 
 1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn boligen selv. Tegn rundt boligen eller et rom på frihånd, så rettes strekene opp til rette vegger. Dra en strek tvers over et rom for å dele det i to; streken kan ha en knekk. Rom kan ha vinkler og skrå vegger, og boligen kan ha flere etasjer. Dra i hjørner og vegger for å endre formen, skriv inn mål bare på de veggene du har mål på, og sett inn dører og vinduer.
-2. **Stil.** Fjorten stiler med bilder. Hver stil har tre retninger du kan velge mellom, med egne søkeord. Stilen gir også forslag til pynt.
+2. **Stil.** Fjorten stiler med bilder. Hver stil har tre retninger du kan velge mellom, med egne søkeord. Stilen gir også forslag til pynt. Under bildene står hva som bør være brukt, hva som er greit å kjøpe nytt og hva du bør unngå i stilen, og hvor godt nytt fra kjedene passer.
 3. **Ting.** Hva vil du ha? En avkrysningsliste per rom, der haken betyr at tingen er med. Det vanlige er huket av på forhånd. Velg antall og variant rett på raden: sofaen kan for eksempel være 2-, 3- eller 4-seter, hjørnesofa, U-sofa (hesteskosofa), med sjeselong, modulsofa eller sovesofa, og senga finnes fra 90 cm til familieseng og køyeseng. Rommets størrelse foreslår en variant, og du kan velge en annen. Hver ting, også dine egne, har en «Kommentar» der du skriver hva du ser etter. Legg til møbler, kjøkkenutstyr, pynt og egne ting, og si om stil, komfort eller pris er viktigst. Du kan også skrive hva du har og hva du vil ha, så huker appen av.
 4. **Plasser.** Hvor skal tingene stå? Sett møblene ut på tegningen og dra dem på plass, eller trykk «Sett ut alt for meg» for et utgangspunkt. Har du ikke tegnet boligen, lages en enkel tegning av rommene. Møbler som står inntil en vegg, gir lista største bredde for den tingen. Steget er valgfritt. Tegningen følger lista: bytter du variant, antall eller tar noe bort på lista, endres møblene på tegningen også. Hjørnesofa, sofa med sjeselong og hjørneskrivebord tegnes som en vinkel, og U-sofa som en hestesko med åpningen ut i rommet. Begge kan snus og speilvendes. Knappene for å snu og ta bort det valgte møbelet ligger rett under tegningen. Et møbel som snus, blir stående inne i rommet: treffer det en vegg, skyves det inntil den.
-5. **Finn.** Lista over det som skal skaffes. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk. Hovedsøket ser bare i «Møbler og interiør». «Søk bredere» bruker de samme ordene i alle kategorier, og «Andre ord folk bruker» gir ett søk per synonym (sofabord: stuebord, salongbord, kaffebord), også de i alle kategorier. Slik finner du annonser som er lagt i feil kategori eller kaller tingen noe annet. «Dagens runde» søker bredt. Ord fra kommentaren som kan brukes i et søk, legges i søket. Resten står som «Se etter selv».
+5. **Finn.** Lista over det som skal skaffes. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk. Hovedsøket ser bare i «Møbler og interiør». «Søk bredere» bruker de samme ordene i alle kategorier, og «Andre ord folk bruker» gir ett søk per synonym (sofabord: stuebord, salongbord, kaffebord), også de i alle kategorier. Slik finner du annonser som er lagt i feil kategori eller kaller tingen noe annet. «Dagens runde» søker bredt. Hver ting har en dom: «Kjøp brukt», «Brukt eller nytt» eller «Kjøp nytt», med én setning om hvorfor og inntil tre nye alternativer som passer stilen (IKEA, JYSK og Rusta). Ting som bør kjøpes nye, er merket på lista, og der står det nye over Finn-søket. Nederst ligger «Triks som løfter rommet» for stilen og rommene dine. Huker du av «Jeg vil gjerne fikse litt selv», vises også ideer med verktøy, innkjøp og framgangsmåte. Ord fra kommentaren som kan brukes i et søk, legges i søket. Resten står som «Se etter selv».
 
 Alt lagres i nettleseren (`localStorage`). Ingenting sendes noe sted. Lista kan deles som en lenke.
 
@@ -56,6 +56,12 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `geo/` | Kartdata som følger med appen. Lastes først når kartet åpnes. |
 | `tools/build-geodata.mjs` | Lager filene i `geo/` på nytt. |
 | `test/area.test.mjs` | Tester for område, kart og stedssøk. |
+| `js/rad.js` | Ren logikk for råd: dom per ting, nye produkter per stil, triks med og uten gjør-det-selv. |
+| `js/radview.js` | Rådene på skjermen: dom og nye alternativer per ting, stilens blanding, triks. |
+| `js/nytt.js`, `js/triks.js` | Rådene som data. Lages av `tools/build-rad.mjs` og lastes først når «Stil» eller «Finn» åpnes. |
+| `tools/kilder/` | Kildefilene for rådene (`nytt.json`, `triks.json`). Rediger her, ikke i `js/`. |
+| `tools/build-rad.mjs` | Sjekker kildefilene og lager `js/nytt.js` og `js/triks.js` på nytt: `node tools/build-rad.mjs`. |
+| `test/rad.test.mjs` | Tester for rådene. |
 
 ## Om tallene
 
@@ -65,6 +71,10 @@ Det er ingen byggesteg og ingen avhengigheter.
 - Prisene på de nyeste variantene (U-sofa, modulsofa, familieseng, hev/senk-bord og lignende) er grove anslag, og er ikke sjekket mot annonser.
 - «Andre ord folk bruker» (`alt` i `js/data.js`) er satt opp etter skjønn. Det er ikke målt hvilke ord som faktisk gir flest treff på Finn.
 - Søk innenfor en sirkel på kartet er ikke bekreftet hos Finn. Se «Område og kart».
+- Prisene på nye produkter (`js/nytt.js`) er lest av butikkenes egne nettsider 22. november 2026, de fleste fra kategorisider hos IKEA. Fire lenker og priser er stikkprøvd i etterkant; resten av lenkene er ikke åpnet én for én. Tilbud og «ny lavere pris» står som merknad på produktet. Appen viser datoen og sier at prisene kan ha endret seg.
+- Dommene «brukt», «begge» og «nytt», og hvilke stiler et produkt passer, er skjønn. Produktene er eksempler, ikke et fullstendig utvalg, og de tar ikke hensyn til hvilken størrelse du har valgt. Egne varianter som hjørnesofa og køyeseng får derfor bare et prisanslag.
+- Triksene (`js/triks.js`) har kilde per triks. Kostnadene er omtrentlige.
+- Brukthjem er heller ikke tilknyttet JYSK, Rusta eller nettstedene triksene viser til.
 
 Prisene endrer seg. Se over `js/data.js` med jevne mellomrom.
 

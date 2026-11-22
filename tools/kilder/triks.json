@@ -1,0 +1,1445 @@
+{
+  "asOf": "2026-11-22",
+  "starters": [
+    "nye-knotter",
+    "gardiner-hoyt-bredt",
+    "bildevegg-brukte-rammer",
+    "speil-som-fanger-lyset",
+    "flere-sma-lamper",
+    "rispapirlampe",
+    "plante-i-kurv",
+    "teppe-lag-pa-lag",
+    "nye-ben-kommode",
+    "brett-og-lysestaker"
+  ],
+  "tricks": [
+    {
+      "id": "nye-ben-kommode",
+      "title": "Nye ben på en brukt kommode",
+      "what": "Bytt sokkel eller plastføtter mot trebein eller metallbein. Møbelet løftes fra gulvet, virker lettere og ser mindre ut som standardvare.",
+      "styles": ["skandi", "retro", "moderne", "varm", "japandi", "fri"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["soverom", "stue", "gang"],
+      "finn": ["kommode", "malm kommode", "skjenk"],
+      "buy": [
+        { "what": "møbelben, 4 stk (ca.-pris)", "where": "IKEA / Jula / Biltema / nettbutikk", "approxNok": 300 },
+        { "what": "festeplater og skruer (ca.-pris)", "where": "Biltema / jernvare", "approxNok": 80 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["drill eller skrutrekker", "målebånd", "blyant"],
+        "steps": [
+          "Tøm møbelet og legg det på ryggen på et teppe.",
+          "Skru av gamle føtter eller sokkel.",
+          "Merk av like langt inn fra hvert hjørne og skru fast festeplatene i bunnplaten.",
+          "Skru inn beina, reis møbelet og sjekk at det står støtt. Fest høye møbler til veggen."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [200, 900],
+      "source": { "title": "IKEA Hacks: Best Ideas by Room & How to Start (2026 Guide) – Prettypegs", "url": "https://www.prettypegs.com/blog/guides/ikea-hacks-best-ideas-by-room-how-to-start-2026-guide-" },
+      "trend": "Prettypegs' guide fra mai 2026 trekker fram benbytte som en av de enkleste måtene å løfte et flatpakket møbel på."
+    },
+    {
+      "id": "male-brukt-kommode",
+      "title": "Mal en brukt kommode i dyp farge",
+      "what": "En sliten kommode i heltre får nytt liv med grunning og to strøk hard maling. En mettet farge gjør den til rommets blikkfang.",
+      "styles": ["skandi", "landlig", "klassisk", "vintage", "mork", "boho", "fri"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["soverom", "stue", "gang", "barnerom"],
+      "finn": ["kommode furu", "kommode heltre", "nattbord"],
+      "buy": [
+        { "what": "heftgrunning 0,75 l (ca.-pris)", "where": "fargehandel / Byggmakker / Obs Bygg", "approxNok": 250 },
+        { "what": "tre- og listmaling 0,68 l (ca.-pris)", "where": "fargehandel / Jula", "approxNok": 350 },
+        { "what": "slipepapir, liten rull og pensel (ca.-pris)", "where": "Biltema / Jula", "approxNok": 150 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["skrutrekker", "slipepapir korn 120–180", "støvmaske", "liten rull", "pensel"],
+        "steps": [
+          "Ta ut skuffene og skru av knotter og bein.",
+          "Vask med malingsvask fra fargehandelen og la tørke.",
+          "Matt ned alle flater med slipepapir. Bruk støvmaske og tørk av støvet.",
+          "Stryk grunning og la den tørke etter anvisningen på boksen.",
+          "Mal to tynne strøk med rull på flatene og pensel i kantene. Luft godt.",
+          "Vent til malingen er helt tørr før du setter på knotter, og vær forsiktig med flaten de første ukene."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [500, 1000],
+      "source": { "title": "Slik pusser du opp en kommode eller et skap på 1-2-3 – FINN", "url": "https://www.finn.no/bap/artikler/ta-vare-pa/hjem-og-interior/slik-pusser-du-opp-en-kommode-eller-et-skap-pa-1-2-3" },
+      "trend": "Jotuns fargekart for 2026 viser gamle møbler malt i sterke farger, og ifi.no oppfordrer i 2026-trendene til å gjøre om framfor å kaste."
+    },
+    {
+      "id": "nye-knotter",
+      "title": "Bytt knotter og håndtak",
+      "what": "Nye knotter i messing, porselen eller smijern endrer uttrykket på skap og skuffer på noen minutter. Det er den billigste oppgraderingen som synes.",
+      "styles": ["skandi", "klassisk", "landlig", "artdeco", "vintage", "moderne", "industri", "kyst"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["kjokken", "soverom", "stue", "bad", "gang"],
+      "finn": ["knotter messing", "håndtak skuff", "porselensknotter"],
+      "buy": [
+        { "what": "knotter eller håndtak, 6–10 stk (ca.-pris)", "where": "IKEA / Clas Ohlson / jernvare", "approxNok": 350 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["skrutrekker", "målebånd"],
+        "steps": [
+          "Mål avstanden mellom skruehullene på håndtakene du har.",
+          "Kjøp nye med samme hullavstand, eller knotter hvis det bare er ett hull.",
+          "Skru av de gamle og skru på de nye fra innsiden.",
+          "Leier du, legg de gamle i en pose og sett dem tilbake når du flytter."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [100, 800],
+      "source": { "title": "Slik kan du dekorere kjøkkenfrontene – Klikk.no", "url": "https://www.klikk.no/bolig/kjokken/personlige-og-billige-kjokkenfronter-3476387" },
+      "trend": "House Digest har dekorative knotter og håndtak på listen over gjør-det-selv-prosjekter for 2026 (januar 2026)."
+    },
+    {
+      "id": "teak-olje",
+      "title": "Frisk opp brukt teak med olje",
+      "what": "Tørr og flekkete teak får tilbake glød og dybde når den rengjøres forsiktig og oljes tynt. Du slipper å slipe gjennom den tynne fineren.",
+      "styles": ["retro", "skandi", "japandi", "vintage", "varm"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["stue", "soverom", "gang", "kontor"],
+      "finn": ["teak skjenk", "teakbord", "teak kommode"],
+      "buy": [
+        { "what": "teakolje 0,5 l (ca.-pris)", "where": "fargehandel / Jula / Biltema", "approxNok": 150 },
+        { "what": "stålull 0000 (ca.-pris)", "where": "fargehandel / jernvare", "approxNok": 60 },
+        { "what": "bomullskluter og hansker (ca.-pris)", "where": "Biltema / dagligvare", "approxNok": 60 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "en kveld",
+        "tools": ["stålull 0000", "bomullskluter", "hansker"],
+        "steps": [
+          "Gni forsiktig langs veden med fin stålull fuktet i møbelrens, ett felt om gangen, og tørk av med en gang.",
+          "La møbelet tørke helt.",
+          "Påfør olje tynt med en klut og tørk av det som ikke trekker inn.",
+          "Gjenta med ett eller to tynne strøk og la det tørke mellom hvert.",
+          "Legg brukte oljekluter i vann i en tett pose før du kaster dem. De kan selvantenne. Luft godt mens du jobber."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [150, 350],
+      "source": { "title": "How to refurbish a teak table at home – Finnish Design Shop", "url": "https://www.finnishdesignshop.com/en/design-stories/trending/how-to-refurbish-a-teak-table-at-home" },
+      "trend": "Mørkere treverk er på vei tilbake: House Digest har mørke trefinisher på 2026-listen, og ifi.no nevner mahogni og brunt blant årets farger."
+    },
+    {
+      "id": "trekke-om-stolsete",
+      "title": "Nytt stoff på setet til en brukt stol",
+      "what": "Et løst stolsete kan trekkes om på en kveld. Nytt stoff skjuler flekker og binder ulike stoler sammen til et sett.",
+      "styles": ["retro", "klassisk", "vintage", "landlig", "boho", "artdeco", "fri"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["kjokken", "stue", "kontor"],
+      "finn": ["spisestuestoler", "teak stoler", "pinnestol"],
+      "buy": [
+        { "what": "møbelstoff, 1 meter (ca.-pris)", "where": "Stoff & Stil / IKEA metervare", "approxNok": 200 },
+        { "what": "stiftepistol med stifter (ca.-pris)", "where": "Biltema / Jula / Clas Ohlson", "approxNok": 200 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en kveld",
+        "tools": ["skrutrekker", "stiftepistol", "saks"],
+        "steps": [
+          "Skru løs setet fra undersiden og ta vare på skruene.",
+          "Klipp nytt stoff noen centimeter større enn setet på alle sider.",
+          "Stram stoffet og stift midt på hver side først, deretter utover mot hjørnene.",
+          "Brett hjørnene pent, stift og klipp bort overflødig stoff.",
+          "Skru setet tilbake på stolen."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [200, 600],
+      "source": { "title": "Hvordan trekke om stol? – FINN", "url": "https://www.finn.no/bap/artikler/ta-vare-pa/hjem-og-interior/slik-trekker-du-om-en-stol" },
+      "trend": "Homes & Gardens peker på blomster- og botaniske mønstre på tekstiler som en av vintagetrendene for 2026."
+    },
+    {
+      "id": "kalkmaling-vegg",
+      "title": "Kalkmalt vegg med levende flate",
+      "what": "Kalkmaling strykes på med bred pensel i kryssende drag og gir en matt, skyet flate med dybde. Én vegg er nok til å gi rommet varme.",
+      "styles": ["varm", "japandi", "landlig", "kyst", "industri", "boho", "mork"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["stue", "soverom", "gang", "kjokken"],
+      "finn": [],
+      "buy": [
+        { "what": "kalkmaling 2,7 l (ca.-pris)", "where": "fargehandel", "approxNok": 900 },
+        { "what": "veggmaling i samme farge til mellomstrøk (ca.-pris)", "where": "fargehandel", "approxNok": 600 },
+        { "what": "bred pensel 100 mm (ca.-pris)", "where": "fargehandel / Jula", "approxNok": 250 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["bred pensel 100 mm", "rull", "malertape", "dekkpapp"],
+        "steps": [
+          "Leier du, spør utleier før du maler.",
+          "Prøv teknikken på en plate eller et lite felt først.",
+          "Vask veggen, grunn og mal ett strøk vanlig veggmaling i samme farge.",
+          "Stryk kalkmalingen i tilfeldige, kryssende drag. Lange drag gir rolig flate, korte gir mer liv.",
+          "Mal hele veggen uten pause, fra øverste hjørne og på skrå nedover.",
+          "Vurder et andre strøk etter noen timer. Luft godt underveis."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [1200, 2500],
+      "source": { "title": "Male med LADY Minerals kalkmaling – Jotun", "url": "https://www.jotun.com/no-no/decorative/how-to-guides/indoor/how-to-paint-with-lady-minerals" },
+      "trend": "ifi.no nevner kalkede flater blant materialtrendene for 2026, og Jotun løfter fram kalkmaling i årets fargekart."
+    },
+    {
+      "id": "spile-sengegavl",
+      "title": "Sengegavl av spiler",
+      "what": "Trespiler skrudd på en malt plate gir en rolig, varm vegg bak senga. Gavlen kan stå løst bak sengen og bli med når du flytter.",
+      "styles": ["japandi", "skandi", "varm", "moderne"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["soverom"],
+      "finn": [],
+      "buy": [
+        { "what": "spiler i furu eller eik (ca.-pris, avhenger av bredde)", "where": "Maxbo / Byggmakker / Obs Bygg", "approxNok": 1000 },
+        { "what": "MDF-plate 10 mm (ca.-pris)", "where": "byggevarehus", "approxNok": 300 },
+        { "what": "maling og skruer (ca.-pris)", "where": "byggevarehus / Jula", "approxNok": 300 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["fintannet sag eller gjærsag", "drill", "slipepapir", "målebånd", "støvmaske"],
+        "steps": [
+          "Mål sengebredden og bestem høyden. Kjøp et par spiler ekstra.",
+          "Mal bakplaten i ønsket farge og la den tørke.",
+          "Kapp spilene i lik lengde og puss kantene. Bruk støvmaske.",
+          "Skru fast én spile om gangen med en kloss som avstandsmal, 1–3 cm mellom hver.",
+          "Sett gavlen bak senga. Den kan stå klemt mellom seng og vegg, så slipper du å bore."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [1200, 2500],
+      "source": { "title": "Slik bygger du en sengegavl av spiler – Maxbo", "url": "https://maxbo.no/tips-og-inspirasjon/gjor-det-selv/diy-sengegavl-spiler" },
+      "trend": "Maxbo har egen byggeguide for spilegavl, og Homes & Gardens har hjemmelagde sengegavler på listen over gjør-det-selv-trender."
+    },
+    {
+      "id": "spilepanel-vegg",
+      "title": "Ferdig spilepanel på én vegg",
+      "what": "Ferdige paneler med spiler på filt dekker en vegg raskt og demper romklang. Det gir struktur bak TV, i gangen eller på hjemmekontoret.",
+      "styles": ["japandi", "moderne", "skandi", "varm", "mork"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["stue", "gang", "soverom", "kontor"],
+      "finn": ["spilepanel", "akustikkpanel"],
+      "buy": [
+        { "what": "spilepanel 60 x 240 cm, per stk (ca.-pris)", "where": "Byggmakker / Maxbo / Obs Bygg / Jula", "approxNok": 800 },
+        { "what": "skruer i filtens farge eller monteringslim (ca.-pris)", "where": "byggevarehus", "approxNok": 150 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en kveld",
+        "tools": ["sag", "drill", "målebånd", "malertape", "vater", "støvmaske"],
+        "steps": [
+          "Leier du, spør utleier først. Panelene skrus eller limes til veggen.",
+          "Mål veggens høyde og bredde og bestem om panelene skal stå på gulvlisten eller gå ned til gulvet.",
+          "Tape over kappelinjen før du sager, så fliser ikke fineren opp.",
+          "Fest hvert panel med skruer gjennom filten inn i stender eller med plugger. På mur er lim enklere.",
+          "Avslutt en delvegg med en endelist. Ikke rør stikkontakter utover å sage ut rundt dem."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [1500, 5000],
+      "source": { "title": "Sett opp spilepanel i rekordfart – ifi.no", "url": "https://www.ifi.no/artikkel/594098/last-ned" },
+      "trend": "ifi.no viser at en panelvegg kan monteres på rundt en halvtime, og Homes & Gardens anbefaler panel og struktur på vegg i japandi-rom."
+    },
+    {
+      "id": "bildevegg-brukte-rammer",
+      "title": "Bildevegg med brukte rammer",
+      "what": "Rammer og malerier fra bruktmarkedet blandet med egne trykk gir en personlig vegg. Planlegg på gulvet først, så blir det ro selv om rammene er ulike.",
+      "styles": ["vintage", "boho", "fri", "klassisk", "retro", "skandi", "landlig"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "gang", "soverom", "kontor"],
+      "finn": ["bilderammer", "gammel ramme", "maleri"],
+      "buy": [
+        { "what": "trykk eller plakater (ca.-pris)", "where": "nettbutikk / egen utskrift", "approxNok": 200 },
+        { "what": "bildestrips for leietakere (ca.-pris)", "where": "Clas Ohlson / Jula", "approxNok": 80 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "en kveld",
+        "tools": ["hammer", "malertape", "gråpapir", "saks", "vater"],
+        "steps": [
+          "Legg bildene på gulvet og flytt rundt til gruppen fungerer.",
+          "Klipp en papirmal til hvert bilde og tape malene på veggen.",
+          "Hold en felles linje, for eksempel midten, og ikke heng for høyt.",
+          "Slå tynne spiker gjennom malen, riv bort papiret og heng opp. Leier du, bruk bildestrips på lette rammer."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [100, 800],
+      "source": { "title": "Tenk alltid på dette før du henger opp bilder – Bonytt / Klikk.no", "url": "https://www.klikk.no/bolig/inspirasjon/henge-opp-bilder-pa-vegg-i-monster-6947618" },
+      "trend": "House Digest har brukt originalkunst på listen over brukttrender for 2026 (juni 2026)."
+    },
+    {
+      "id": "rammer-en-farge",
+      "title": "Mal brukte rammer i én farge",
+      "what": "Ulike rammer i tre og gull blir en samlet gruppe når alle males i samme tone. Billig måte å få en rolig bildevegg på.",
+      "styles": ["skandi", "moderne", "mork", "boho", "fri"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["stue", "gang", "soverom", "kontor", "barnerom"],
+      "finn": ["bilderammer", "rammer pakke"],
+      "buy": [
+        { "what": "liten boks maling eller fargeprøve (ca.-pris)", "where": "fargehandel / Jula", "approxNok": 150 },
+        { "what": "slipepapir og liten pensel (ca.-pris)", "where": "Biltema / Jula", "approxNok": 60 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "en kveld",
+        "tools": ["slipepapir", "liten pensel", "klut"],
+        "steps": [
+          "Ta ut glass og bakplate.",
+          "Puss lett over lakkerte eller malte rammer og tørk av støvet.",
+          "Mal ett til to strøk til fargen dekker. Luft godt.",
+          "La rammene tørke helt før du setter inn glass og bilde."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [50, 400],
+      "source": { "title": "Det kuleste du kan gjøre med loppefunnene – Klikk.no", "url": "https://www.klikk.no/bolig/det-kuleste-du-kan-gjore-med-loppefunnene-2584529" },
+      "trend": "Jysk anbefaler rammer i samme farge for en harmonisk bildevegg, og brukt kunst står på House Digests trendliste for 2026."
+    },
+    {
+      "id": "bildehylle",
+      "title": "Smal bildehylle i stedet for mange hull",
+      "what": "På en smal hylle kan bilder stå lent og byttes uten nye hull. Fint over sofa, seng eller skrivebord, og til bøker med forsiden fram.",
+      "styles": ["skandi", "moderne", "japandi", "varm", "kyst", "fri"],
+      "kind": ["nytt"],
+      "rooms": ["stue", "soverom", "gang", "barnerom", "kontor"],
+      "finn": ["bildehylle", "bilderammer"],
+      "buy": [
+        { "what": "bildehylle 55 cm (ca.-pris)", "where": "IKEA", "approxNok": 79 },
+        { "what": "skruer og plugger tilpasset veggen (ca.-pris)", "where": "Biltema / jernvare", "approxNok": 50 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["drill", "vater", "blyant"],
+        "steps": [
+          "Leier du, spør utleier om du kan bore.",
+          "Merk av høyden og bruk vater.",
+          "Bor og fest med skruer og plugger som passer veggtypen.",
+          "Sett store rammer bakerst og små foran, og hold deg under hyllas makslast."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [130, 500],
+      "source": { "title": "MOSSLANDA picture ledge, 55 cm – IKEA Norge", "url": "https://www.ikea.com/no/en/p/mosslanda-picture-ledge-birch-effect-60511338/" },
+      "trend": "IKEA Hackers har bildehyller med på listen «20 Easy IKEA Hacks to Try in 2026» (desember 2025)."
+    },
+    {
+      "id": "gardiner-hoyt-bredt",
+      "title": "Heng gardinene høyt og bredt",
+      "what": "Gardinstang nær taket og godt utenfor vinduskarmen får vinduet til å virke større og taket høyere. Gardinene skal rekke helt ned til gulvet.",
+      "styles": ["skandi", "klassisk", "varm", "moderne", "mork", "japandi", "landlig", "artdeco"],
+      "kind": ["nytt", "brukt"],
+      "rooms": ["stue", "soverom", "kontor"],
+      "finn": ["gardiner lin", "gardinstang", "gardiner lange"],
+      "buy": [
+        { "what": "gardinstang eller skinne (ca.-pris)", "where": "IKEA / Jysk / Kid", "approxNok": 300 },
+        { "what": "to lange gardinlengder (ca.-pris)", "where": "IKEA / Jysk / Kid", "approxNok": 500 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["drill", "vater", "målebånd", "gardintrapp"],
+        "steps": [
+          "Leier du, spør utleier om du kan bore, eller bruk festene som allerede sitter der.",
+          "Fest stanga tett opp mot taket eller taklisten.",
+          "La stanga gå et godt stykke utenfor karmen på hver side, så gardinene henger på veggen og ikke foran glasset.",
+          "Velg stoff som til sammen er omtrent dobbelt så bredt som vinduet, og la det nå gulvet."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [400, 1500],
+      "source": { "title": "Gardiner gjør stuen lunere og større – ifi.no", "url": "https://www.ifi.no/artikkel/553988/last-ned" },
+      "trend": "ifi.no skriver i 2026-trendene at fyldigere gardiner er populære, og Livingetc anbefaler gulvlange lengder i gardintrendene for 2026."
+    },
+    {
+      "id": "kafegardin",
+      "title": "Kafégardin av en brodert duk",
+      "what": "En kort gardin på nedre halvdel av vinduet gir innsynsskjerming og slipper inn lys øverst. En brukt duk eller et linhåndkle på klyper gjør jobben uten søm.",
+      "styles": ["landlig", "vintage", "klassisk", "kyst", "boho", "retro"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["kjokken", "bad", "gang"],
+      "finn": ["brodert duk", "kjøkkenhåndklær lin", "blondegardin"],
+      "buy": [
+        { "what": "klemstang som spennes i vinduet (ca.-pris)", "where": "IKEA / Jysk / Clas Ohlson", "approxNok": 100 },
+        { "what": "gardinklyper med ring (ca.-pris)", "where": "IKEA / Kid", "approxNok": 60 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["målebånd"],
+        "steps": [
+          "Mål bredden inne i vindusåpningen.",
+          "Spenn klemstanga omtrent midt på vinduet. Ingen hull trengs.",
+          "Fest duken med klyper og brett overkanten bakover til lengden passer."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [100, 350],
+      "source": { "title": "This Old School Curtain Trend is Equal Parts Cute and Practical – Apartment Therapy", "url": "https://www.apartmenttherapy.com/cafe-curtain-uses-36867134" },
+      "trend": "Livingetc har kafégardiner på listen over gardintrender for 2026 (januar 2026)."
+    },
+    {
+      "id": "dorforheng",
+      "title": "Tungt forheng i døråpningen",
+      "what": "Et brukt fløyels- eller ullforheng i en døråpning demper trekk og lyd og gir rommet et mykt, lunt preg. På klemstang kan det tas ned igjen uten spor.",
+      "styles": ["vintage", "klassisk", "mork", "artdeco", "boho"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["gang", "stue", "soverom"],
+      "finn": ["fløyelsgardiner", "velour gardiner", "tunge gardiner"],
+      "buy": [
+        { "what": "kraftig klemstang eller gardinstang (ca.-pris)", "where": "Clas Ohlson / Jysk / IKEA", "approxNok": 200 },
+        { "what": "gardinringer med klype (ca.-pris)", "where": "IKEA / Kid", "approxNok": 80 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [200, 900],
+      "source": { "title": "Curtain trends 2026 – Homes & Gardens", "url": "https://www.homesandgardens.com/interior-design/curtain-trends-2026" },
+      "trend": "Homes & Gardens har dørforheng blant gardintrendene for 2026 (februar 2026)."
+    },
+    {
+      "id": "oppladbar-vegglampe",
+      "title": "Vegglamper uten ledning",
+      "what": "Oppladbare vegglamper festes med lim eller én skrue og trenger ingen elektriker. To stykker på hver side av et bilde eller en seng ser ut som fast belysning.",
+      "styles": ["moderne", "klassisk", "artdeco", "mork", "varm", "skandi"],
+      "kind": ["nytt"],
+      "rooms": ["stue", "soverom", "gang"],
+      "finn": [],
+      "buy": [
+        { "what": "oppladbar vegglampe, per stk (ca.-pris)", "where": "Clas Ohlson / Jula / nettbutikk", "approxNok": 300 },
+        { "what": "monteringsstrips (ca.-pris)", "where": "Clas Ohlson / Jula", "approxNok": 80 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [300, 1000],
+      "source": { "title": "Stick-On Wall Lights Are My Style Editor Secret – Homes & Gardens", "url": "https://www.homesandgardens.com/collection/decor/amazon-stick-on-wall-lights" },
+      "trend": "Homes & Gardens skrev om selvklebende, oppladbare vegglamper som leietakertriks i oktober 2026."
+    },
+    {
+      "id": "lampe-i-brukt-vase",
+      "title": "Sett en lampe ned i en brukt vase",
+      "what": "En liten bordlampe plassert nedi en stor krukke eller vase ser ut som en dyr keramikklampe. Ingenting bygges om, og ledningen går ut bak.",
+      "styles": ["klassisk", "vintage", "artdeco", "kyst", "landlig", "fri"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "soverom", "gang"],
+      "finn": ["gulvvase keramikk", "krukke blå hvit", "bordlampe"],
+      "buy": [
+        { "what": "oppladbar bordlampe hvis du vil slippe ledning (ca.-pris)", "where": "IKEA / Clas Ohlson / Jula", "approxNok": 300 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [100, 600],
+      "source": { "title": "The Mind-Blowing Thrift Hack Shoppers Are Going Wild for – Apartment Therapy", "url": "https://www.apartmenttherapy.com/thrifted-vase-lamp-hack-viral-instagram-37548684" },
+      "trend": "Apartment Therapy omtalte trikset i april 2026 etter at det spredte seg på Instagram."
+    },
+    {
+      "id": "rispapirlampe",
+      "title": "Stor rispapirlampe over bordet",
+      "what": "En stor papirskjerm sprer mykt lys uten blending og koster lite. Velg heller for stor enn for liten, så ser den gjennomtenkt ut.",
+      "styles": ["japandi", "skandi", "varm", "boho", "moderne", "retro"],
+      "kind": ["nytt"],
+      "rooms": ["stue", "kjokken", "soverom", "barnerom"],
+      "finn": ["rispapirlampe", "papirlampe"],
+      "buy": [
+        { "what": "rispapirskjerm (ca.-pris)", "where": "IKEA / Søstrene Grene / Jysk", "approxNok": 100 },
+        { "what": "lampeoppheng med støpsel hvis du mangler (ca.-pris)", "where": "IKEA / Clas Ohlson", "approxNok": 150 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [80, 500],
+      "source": { "title": "The Affordable Lighting Trend That Even Top Designers Are Using To Add a Soft Statement in 2026 – Homes & Gardens", "url": "https://www.homesandgardens.com/interior-design/paper-light-trend" },
+      "trend": "Homes & Gardens (januar 2026) og Livingetc (september 2026) omtaler begge papirlamper som en av de store lystrendene."
+    },
+    {
+      "id": "ny-lampeskjerm",
+      "title": "Brukt lampefot med ny skjerm",
+      "what": "En solid lampefot i messing, keramikk eller glass får nytt uttrykk med en ny skjerm, og eventuelt et strøk matt maling på foten.",
+      "styles": ["vintage", "klassisk", "landlig", "artdeco", "retro", "fri"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["stue", "soverom", "gang", "kontor"],
+      "finn": ["lampefot messing", "bordlampe keramikk", "lampefot glass"],
+      "buy": [
+        { "what": "lampeskjerm (ca.-pris)", "where": "IKEA / Jysk / Kid", "approxNok": 200 },
+        { "what": "spraymaling eller liten boks maling, valgfritt (ca.-pris)", "where": "Biltema / Jula", "approxNok": 120 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["klut", "malertape", "pensel eller spraymaling"],
+        "steps": [
+          "Se over ledning og støpsel. Er noe sprukket eller løst, lever lampen til en fagperson og ikke bruk den.",
+          "Vask foten ren for fett og støv.",
+          "Vil du male: tape over pæreholder og ledning og mal tynt, ute eller med god lufting.",
+          "Sett på ny skjerm og bruk LED-pære."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [150, 600],
+      "source": { "title": "9 Bright Ideas For Making That Sad Lamp Look Way More Expensive – Apartment Therapy", "url": "https://www.apartmenttherapy.com/thrifted-lamp-upgrades-36704105" },
+      "trend": "Apartment Therapy (mars 2026) har brukte lamper på listen over bruktfunn som aldri går ut."
+    },
+    {
+      "id": "teppe-lag-pa-lag",
+      "title": "Lite mønstret teppe oppå et stort",
+      "what": "Et stort, rimelig juteteppe i bunn og et mindre brukt teppe med mønster oppå gir stor flate og personlighet for liten pris.",
+      "styles": ["boho", "landlig", "vintage", "kyst", "varm", "klassisk", "fri"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["stue", "soverom", "kontor"],
+      "finn": ["persisk teppe", "kelim", "ryeteppe"],
+      "buy": [
+        { "what": "stort juteteppe eller flatvevd teppe (ca.-pris)", "where": "IKEA / Jysk / Rusta", "approxNok": 1200 },
+        { "what": "sklisikring (ca.-pris)", "where": "IKEA / Jysk", "approxNok": 100 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [500, 2500],
+      "source": { "title": "How to layer rugs – Livingetc", "url": "https://www.livingetc.com/us/advice/how-to-layer-rugs" },
+      "trend": "Livingetc samlet designerråd om tepper lag på lag i oktober 2025, og Apartment Therapy anbefaler brukte persiske tepper i 2026."
+    },
+    {
+      "id": "folie-benkeplate",
+      "title": "Folie på slitt benkeplate",
+      "what": "Selvklebende folie skjuler riper og en utdatert farge på laminat. Det er en midlertidig løsning som tåler lite varme, men endrer kjøkkenet for noen hundrelapper.",
+      "styles": ["moderne", "industri", "skandi", "retro"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["kjokken", "bad"],
+      "finn": [],
+      "buy": [
+        { "what": "selvklebende folie, per rull (ca.-pris)", "where": "Jula / Biltema / Clas Ohlson", "approxNok": 200 },
+        { "what": "rakel og tapetkniv (ca.-pris)", "where": "Biltema / Jula", "approxNok": 80 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en kveld",
+        "tools": ["rakel", "tapetkniv", "målebånd", "sprayflaske", "klut"],
+        "steps": [
+          "Leier du, spør utleier og test at folien slipper på et lite, skjult felt.",
+          "Vask og avfett platen grundig. Smuler og fett synes gjennom folien.",
+          "Mål opp og skjær folien med litt overheng.",
+          "Dusj flaten lett med vann tilsatt noen dråper oppvaskmiddel, legg folien og skyv ut bobler med rakel.",
+          "Skjær rent langs kantene. Bruk alltid gryteunderlag og skjærefjøl etterpå."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [200, 700],
+      "source": { "title": "Alt du skal vide om folie til bordplader – Bauhaus", "url": "https://www.bauhaus.dk/guides/alt-du-skal-vide-om-folie-til-bordplader" },
+      "trend": "Apartment Therapy har selvklebende flater på listen over de beste leietakertriksene, og Bauhaus har egen guide for folie på benkeplater."
+    },
+    {
+      "id": "speil-som-fanger-lyset",
+      "title": "Stort brukt speil som fanger lyset",
+      "what": "Et stort speil plassert slik at det kaster dagslys inn i rommet gir følelse av et ekstra vindu. Særlig effektivt i trange ganger og små stuer.",
+      "styles": ["skandi", "klassisk", "artdeco", "vintage", "moderne", "varm", "kyst", "mork"],
+      "kind": ["brukt"],
+      "rooms": ["gang", "stue", "soverom"],
+      "finn": ["speil stort", "speil messing", "gullspeil"],
+      "buy": [
+        { "what": "veltesikring eller speiloppheng (ca.-pris)", "where": "Biltema / jernvare", "approxNok": 60 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [100, 1000],
+      "source": { "title": "Gode tips til innredning med speil – JYSK", "url": "https://jysk.no/inspiration/gode-tips-til-innredning-med-speil" },
+      "trend": "PureWow (oppdatert september 2026) mener buede standardspeil er oppbrukt og anbefaler speil med mer særpreg, som er lette å finne brukt."
+    },
+    {
+      "id": "plante-i-kurv",
+      "title": "Stor plante i en brukt kurv",
+      "what": "Én stor plante gir mer effekt enn mange små. En flettet kurv skjuler plastpotta og myker opp harde flater som betong, stål og fliser.",
+      "styles": ["boho", "skandi", "japandi", "kyst", "landlig", "industri", "varm"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["stue", "soverom", "gang", "kontor", "balkong"],
+      "finn": ["kurv flettet", "stor plante", "monstera"],
+      "buy": [
+        { "what": "underskål som passer i kurven (ca.-pris)", "where": "Plantasjen / IKEA", "approxNok": 50 },
+        { "what": "stor grønn plante hvis du ikke finner brukt (ca.-pris)", "where": "Plantasjen / IKEA", "approxNok": 350 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [100, 700],
+      "source": { "title": "Industrial style interiors are back, but not as you remember – Homebuilding & Renovating", "url": "https://www.homebuilding.co.uk/home-improvements/industrial-style-interiors" },
+      "trend": "Homebuilding & Renovating (oktober 2026) bruker planter i flettede kurver for å gi liv til den nye, mykere industristilen."
+    },
+    {
+      "id": "brett-og-lysestaker",
+      "title": "Messingstaker samlet på et brett",
+      "what": "Tre til fem brukte lysestaker i ulik høyde på et brett ser samlet og gjennomtenkt ut. Patina er en fordel, ikke en feil.",
+      "styles": ["klassisk", "vintage", "artdeco", "mork", "landlig", "retro"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "kjokken", "gang", "soverom"],
+      "finn": ["lysestaker messing", "brett messing", "sølvplett lysestake"],
+      "buy": [
+        { "what": "kronelys, pakke (ca.-pris)", "where": "IKEA / Søstrene Grene / dagligvare", "approxNok": 60 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [50, 400],
+      "source": { "title": "Designers Say These “Thrift Store MVPs” Will Never Be Outdated – Apartment Therapy", "url": "https://www.apartmenttherapy.com/vintage-home-trends-37545277" },
+      "trend": "Apartment Therapy (mars 2026) lister brett og patinert messing blant bruktfunnene designere alltid ser etter."
+    },
+    {
+      "id": "krom-og-stal",
+      "title": "Krom og stål fra bruktmarkedet",
+      "what": "En kromlampe, en stålrørsstol eller et glassbord med kromramme gir et stramt, blankt innslag. Hold deg til én metalltone i rommet, så ser det planlagt ut.",
+      "styles": ["industri", "moderne", "retro", "artdeco"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "kontor", "kjokken", "gang"],
+      "finn": ["krom lampe", "stålrørstol", "glassbord krom"],
+      "buy": [
+        { "what": "metallpuss (ca.-pris)", "where": "Biltema / Jula", "approxNok": 80 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [100, 1500],
+      "source": { "title": "11 Antique And Vintage Thrifting Trends That Will Take Over In 2026 – House Digest", "url": "https://www.housedigest.com/2184288/antique-vintage-thrifting-trends-2026/" },
+      "trend": "House Digest (juni 2026) har krom og sølv på listen over årets brukttrender, og Livingetc trekker fram børstet stål."
+    },
+    {
+      "id": "fargedrenking",
+      "title": "Samme farge på vegg, list og tak",
+      "what": "Når vegger, lister og tak males i én farge, forsvinner overgangene og rommet virker roligere og mer omsluttende. Fungerer best i små rom.",
+      "styles": ["mork", "klassisk", "vintage", "varm", "artdeco", "moderne"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["soverom", "stue", "gang", "kontor"],
+      "finn": [],
+      "buy": [
+        { "what": "veggmaling 2,7 l (ca.-pris)", "where": "fargehandel", "approxNok": 700 },
+        { "what": "list- og panelmaling 0,68 l i samme farge (ca.-pris)", "where": "fargehandel", "approxNok": 350 },
+        { "what": "takmaling i samme farge og maleutstyr (ca.-pris)", "where": "fargehandel / Jula", "approxNok": 800 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["rull med forlengerskaft", "pensel", "malertape", "dekkpapp", "gardintrapp"],
+        "steps": [
+          "Leier du, må utleier godkjenne fargen først.",
+          "Vask flatene, dekk gulv og tape rundt vinduer og brytere.",
+          "Mal taket først, deretter veggene, to strøk.",
+          "Matt ned listene lett og mal dem til slutt i samme farge med listmaling.",
+          "Luft godt mens du maler og mens det tørker."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [1500, 3000],
+      "source": { "title": "Jotun Årets farger 2026", "url": "https://www.jotun.com/no-no/decorative/inspiration/articles/indoor/colours-of-the-year" },
+      "trend": "Jotuns fargekart for 2026 viser rom malt i én farge på vegg, tak og lister, og Homes & Gardens kaller det en hovedtrend i vintageinteriør."
+    },
+    {
+      "id": "malt-dor",
+      "title": "Mal innerdøra i en egen farge",
+      "what": "En dør i en tone mørkere enn veggen, eller i en klar kontrastfarge, blir en detalj i stedet for et hvitt hull. Krever lite maling.",
+      "styles": ["landlig", "klassisk", "retro", "kyst", "skandi", "boho", "fri"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["gang", "stue", "soverom", "kjokken", "barnerom"],
+      "finn": [],
+      "buy": [
+        { "what": "dør- og listmaling 0,68 l (ca.-pris)", "where": "fargehandel", "approxNok": 350 },
+        { "what": "slipepapir, rull og pensel (ca.-pris)", "where": "Jula / Biltema", "approxNok": 150 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["skrutrekker", "slipepapir", "liten rull", "pensel", "malertape", "støvmaske"],
+        "steps": [
+          "Leier du, spør utleier først.",
+          "Skru av vrider og tape over hengsler.",
+          "Vask døra og matt ned med fint slipepapir. Bruk støvmaske og tørk av støvet.",
+          "Mal speil og profiler med pensel, flatene med rull, i to tynne strøk.",
+          "La døra stå åpen til malingen er tørr, og luft godt."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [400, 700],
+      "source": { "title": "Jotun Årets farger 2026", "url": "https://www.jotun.com/no-no/decorative/inspiration/articles/indoor/colours-of-the-year" },
+      "trend": "Jotun viser dører i egne farger, også med ulik farge på hver side, i fargekartet for 2026."
+    },
+    {
+      "id": "riflete-skuffefronter",
+      "title": "Riflete fronter med halvstaff",
+      "what": "Halvrunde lister limt tett i tett på en slett skuffefront gir den riflete flaten mange kjenner fra dyre møbler. Malt i én farge ser en brukt kommode skreddersydd ut.",
+      "styles": ["artdeco", "moderne", "japandi", "varm", "retro"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["soverom", "stue", "gang"],
+      "finn": ["malm kommode", "ikea kommode", "skjenk hvit"],
+      "buy": [
+        { "what": "halvstafflister, ca. 20 meter (ca.-pris)", "where": "Byggmakker / Maxbo / Obs Bygg", "approxNok": 700 },
+        { "what": "trelim eller monteringslim (ca.-pris)", "where": "byggevarehus / Biltema", "approxNok": 100 },
+        { "what": "heftgrunning og maling (ca.-pris)", "where": "fargehandel / Jula", "approxNok": 500 }
+      ],
+      "diy": {
+        "level": "krevende",
+        "time": "en helg",
+        "tools": ["gjærkasse og fintannet sag", "målebånd", "slipepapir", "pensel", "støvmaske"],
+        "steps": [
+          "Ta ut skuffene, skru av håndtak og mål høyden på fronten.",
+          "Kapp listene i lik lengde og puss endene. Det blir mange kutt, så lag en stoppekloss i gjærkassa.",
+          "Matt ned fronten, lim listene tett i tett og legg press på mens limet tørker.",
+          "Grunn og mal to strøk. Bruk pensel som kommer ned i sporene, og luft godt.",
+          "Sett på knotter med lengre skruer enn de opprinnelige."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [800, 1800],
+      "source": { "title": "This IKEA hack transforms a MALM chest of drawers into an on-trend fluted masterpiece – Livingetc", "url": "https://www.livingetc.com/us/news/ikea-hack-malm-chest-of-drawers" },
+      "trend": "Riflete fronter går igjen i Livingetcs samling av IKEA-hacks, og Pinterest spår en ny art deco-bølge for 2026."
+    },
+    {
+      "id": "plassbygd-bokhylle",
+      "title": "Bokhyller som ser plassbygde ut",
+      "what": "Brukte standardhyller satt tett sammen, med lister som dekker glipene mot vegg og tak og malt i veggfargen, ser ut som snekkerbygd innredning.",
+      "styles": ["klassisk", "vintage", "mork", "moderne", "skandi"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["stue", "kontor", "soverom", "gang"],
+      "finn": ["billy bokhylle", "bokhylle hvit", "bokhyller"],
+      "buy": [
+        { "what": "lister, fotlist og MDF til topp og sider (ca.-pris)", "where": "byggevarehus", "approxNok": 700 },
+        { "what": "akrylfugemasse (ca.-pris)", "where": "Biltema / byggevarehus", "approxNok": 80 },
+        { "what": "heftgrunning og maling (ca.-pris)", "where": "fargehandel", "approxNok": 600 }
+      ],
+      "diy": {
+        "level": "krevende",
+        "time": "en helg",
+        "tools": ["drill", "sag og gjærkasse", "vater", "fugepistol", "rull og pensel", "støvmaske"],
+        "steps": [
+          "Leier du, trenger du utleiers tillatelse. Hyllene festes til veggen og males.",
+          "Sett hyllene tett sammen, skru dem i hverandre og fest dem til veggen med veltesikring.",
+          "Dekk åpningen mot taket og veggene med MDF-remser og lister.",
+          "Fug skjøtene med akryl og la det tørke.",
+          "Matt ned, grunn og mal hyller og lister i samme farge. Luft godt."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [800, 2500],
+      "source": { "title": "The 5 Most Genius IKEA Hacks We Saw in 2025 – Apartment Therapy", "url": "https://apartmenttherapy.com/best-ikea-hacks-2025-37522721" },
+      "trend": "Tre av de fem beste IKEA-hackene Apartment Therapy kåret i desember 2025 var innebygde bokhylleløsninger."
+    },
+    {
+      "id": "tapet-bak-i-hylla",
+      "title": "Tapet eller stoff bak i en åpen hylle",
+      "what": "Mønster eller farge på bakveggen i en reol eller et vitrineskap løfter tingene som står foran. Fest tapetet på løse plater, så kan det byttes.",
+      "styles": ["boho", "landlig", "vintage", "retro", "klassisk", "fri"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["stue", "kjokken", "barnerom", "kontor", "gang"],
+      "finn": ["kallax", "vitrineskap", "tapet rull"],
+      "buy": [
+        { "what": "tapetrull eller stoffrest (ca.-pris)", "where": "fargehandel / Jula / Stoff & Stil", "approxNok": 350 },
+        { "what": "tynn kartong og dobbeltsidig teip (ca.-pris)", "where": "Clas Ohlson / Panduro", "approxNok": 100 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "en kveld",
+        "tools": ["målebånd", "tapetkniv", "linjal"],
+        "steps": [
+          "Mål hvert felt i hylla.",
+          "Skjær kartongplater som passer akkurat, og kle dem med tapet eller stoff.",
+          "Fest platene mot bakveggen med litt dobbeltsidig teip, eller klem dem på plass.",
+          "Samme grep fungerer i bunnen av skuffer."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [100, 600],
+      "source": { "title": "The 25 “Most Searched For” IKEA Hacks of 2025 – IKEA Hackers", "url": "https://ikeahackers.net/2025/12/most-popular-ikea-hacks.html" },
+      "trend": "Bakvegg til Kallax var blant de 25 mest søkte IKEA-hackene i 2025 hos IKEA Hackers."
+    },
+    {
+      "id": "furuskap-beis-og-ben",
+      "title": "Ubehandlet furuskap med beis og ben",
+      "what": "Skap i ubehandlet furu, som IKEAs Ivar, tar beis og maling godt uten mye forarbeid. Med farge, ben og nye knotter ligner det et designmøbel.",
+      "styles": ["skandi", "japandi", "varm", "moderne", "kyst", "landlig"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["stue", "gang", "soverom", "kontor"],
+      "finn": ["ivar skap", "ikea ivar", "furuskap"],
+      "buy": [
+        { "what": "beis eller maling 0,75 l (ca.-pris)", "where": "fargehandel / Jula", "approxNok": 300 },
+        { "what": "møbelben, 4 stk (ca.-pris)", "where": "IKEA / Jula / nettbutikk", "approxNok": 300 },
+        { "what": "knotter (ca.-pris)", "where": "IKEA / Clas Ohlson", "approxNok": 100 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["skrutrekker", "slipepapir korn 180", "pensel eller klut", "støvmaske"],
+        "steps": [
+          "Ta av dørene og puss lett over alle flater. Bruk støvmaske.",
+          "Beis med klut eller pensel langs veden, eller grunn og mal to strøk.",
+          "Lakker eller oljer du beiset flate, varer den lenger. Luft godt, og legg oljekluter i vann før de kastes.",
+          "Skru på ben og knotter, og fest skapet til veggen hvis det står høyt."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [500, 1200],
+      "source": { "title": "42 IKEA Hacks That Prove Even Inexpensive Flatpack Can Still Create a Designer-Look Home – Livingetc", "url": "https://www.livingetc.com/us/features/ikea-hacks" },
+      "trend": "Ivar var blant de mest søkte IKEA-hackene i 2025 hos IKEA Hackers, og Livingetc viser flere malte varianter."
+    },
+    {
+      "id": "hylle-bak-sofaen",
+      "title": "Smal hylle bak sofaen",
+      "what": "En smal planke på ben bak sofaryggen gir plass til lampe, bøker og kaffekopp når det ikke er rom for sidebord. Ledningene kan samles ute av syne bak sofaen.",
+      "styles": ["moderne", "skandi", "varm", "industri", "fri"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["stue"],
+      "finn": ["limtreplate", "konsollbord", "hyllebrett"],
+      "buy": [
+        { "what": "limtrehylle eller høvlet planke, ca. 20 x 200 cm (ca.-pris)", "where": "byggevarehus / Jula", "approxNok": 350 },
+        { "what": "bordben eller hyllekonsoller (ca.-pris)", "where": "IKEA / Biltema / Jula", "approxNok": 250 },
+        { "what": "olje eller beis (ca.-pris)", "where": "fargehandel / Jula", "approxNok": 150 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en kveld",
+        "tools": ["drill", "sag", "slipepapir", "målebånd", "klut"],
+        "steps": [
+          "Mål lengden og høyden på sofaryggen. Hylla bør ligge i høyde med ryggen eller litt under.",
+          "Kapp planken, eller be byggevarehuset kappe den.",
+          "Puss kantene og behandle med olje eller beis. Luft godt.",
+          "Skru på ben i hver ende og eventuelt ett på midten.",
+          "Sett hylla mellom sofa og vegg. Legg en vanlig skjøteledning på gulvet bak. Ikke monter noe fast elektrisk."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [400, 1000],
+      "source": { "title": "20 Easy IKEA Hacks to Try in 2026 – IKEA Hackers", "url": "https://ikeahackers.net/2025/12/easy-ikea-hacks-2.html" },
+      "trend": "IKEA Hackers hadde hylle bak sofaen øverst på listen over enkle hacks for 2026 (desember 2025)."
+    },
+    {
+      "id": "knaggrekke",
+      "title": "Knaggrekke av planke og knotter",
+      "what": "En oljet eller malt planke med møbelknotter som knagger gir orden i gangen og ser håndlaget ut. Lengden tilpasser du veggen.",
+      "styles": ["landlig", "skandi", "kyst", "japandi", "klassisk", "vintage"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["gang", "bad", "barnerom", "kjokken"],
+      "finn": ["knagger", "knaggrekke", "knotter tre"],
+      "buy": [
+        { "what": "planke i furu, ca. 19 x 100 mm (ca.-pris)", "where": "byggevarehus", "approxNok": 80 },
+        { "what": "møbelknotter eller knagger, 4–6 stk (ca.-pris)", "where": "IKEA / Clas Ohlson / jernvare", "approxNok": 150 },
+        { "what": "skruer, plugger og olje eller maling (ca.-pris)", "where": "Biltema / Jula", "approxNok": 200 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en kveld",
+        "tools": ["sag", "drill", "slipepapir", "vater", "pensel", "støvmaske"],
+        "steps": [
+          "Leier du, spør utleier om du kan bore i veggen.",
+          "Kapp planken til ønsket lengde og puss den glatt. Bruk støvmaske.",
+          "Merk av jevn avstand mellom knaggene og forbor.",
+          "Olje eller mal planken, la den tørke og skru på knaggene.",
+          "Fest rekka til veggen med skruer og plugger som passer veggtypen, og bruk vater."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [250, 600],
+      "source": { "title": "Gør det selv: knagerække – 10-4", "url": "https://www.10-4.dk/goer-det-selv-knageraekke" },
+      "trend": "Den danske byggevarekjeden 10-4 har en byggeguide for knaggrekke datert 2026."
+    },
+    {
+      "id": "furu-lys-og-matt",
+      "title": "Gult furumøbel blir lyst og matt",
+      "what": "Gulnet, lakkert furu slipes ned til rent tre og behandles med hvitpigmentert olje eller voks. Resultatet er en lys, matt flate som ligner dyrere treslag.",
+      "styles": ["skandi", "landlig", "japandi", "varm", "kyst"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["kjokken", "stue", "soverom", "gang"],
+      "finn": ["furubord", "furuskap", "kommode furu"],
+      "buy": [
+        { "what": "slipepapir korn 80, 120 og 180 (ca.-pris)", "where": "Biltema / Jula", "approxNok": 100 },
+        { "what": "hvitpigmentert møbelolje eller hardvoksolje (ca.-pris)", "where": "fargehandel / byggevarehus", "approxNok": 350 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["eksentersliper eller slipekloss", "støvmaske", "kluter", "skrutrekker"],
+        "steps": [
+          "Skru av knotter og løse lister.",
+          "Slip bort gammel lakk til treet er jevnt lyst, først grovt og så finere. Jobb ute eller med åpent vindu, og bruk støvmaske.",
+          "Støvsug og tørk av med lett fuktig klut.",
+          "Gni inn olje eller voks tynt med klut og tørk av overskuddet.",
+          "Gjenta med ett strøk til. Legg brukte kluter i vann i tett pose før du kaster dem."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [300, 800],
+      "source": { "title": "Gjør furumøblene nye! – Klikk.no", "url": "https://www.klikk.no/kvinneguiden/gjor-furumoblene-nye-2565338" },
+      "trend": "ifi.no skriver i 2026-trendene at gamle møbler bør gjøres om eller repareres framfor å kastes."
+    },
+    {
+      "id": "ulike-stoler",
+      "title": "Ulike brukte stoler rundt bordet",
+      "what": "Stoler kjøpt én og én ser bevisst ut når de har noe felles: samme farge, treslag, epoke eller setehøyde. Det gjør det også lett å supplere senere.",
+      "styles": ["fri", "boho", "vintage", "landlig", "retro", "skandi"],
+      "kind": ["brukt"],
+      "rooms": ["kjokken", "stue"],
+      "finn": ["pinnestol", "spisestuestol", "wienerstol"],
+      "buy": [
+        { "what": "maling hvis du vil samle stolene i én farge (ca.-pris)", "where": "fargehandel / Jula", "approxNok": 300 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [200, 2000],
+      "source": { "title": "Having Mismatched Dining Chairs Is the New Telltale Sign of Serious Style – Livingetc", "url": "https://www.livingetc.com/us/ideas/mismatched-dining-chairs" },
+      "trend": "Livingetc kalte umake spisestoler et tegn på stilsikkerhet i april 2025, og ifi.no venter mer stilblanding i 2026."
+    },
+    {
+      "id": "hoyglans-sidebord",
+      "title": "Blankt sidebord i sterk farge",
+      "what": "Et lite brukt bord malt i høyglans blir et fargepunkt mot tre, lin og ull. Blank maling viser alle ujevnheter, så forarbeidet avgjør resultatet.",
+      "styles": ["artdeco", "retro", "moderne", "boho", "fri"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["stue", "soverom", "gang"],
+      "finn": ["sidebord", "nattbord", "pidestall"],
+      "buy": [
+        { "what": "heftgrunning 0,75 l (ca.-pris)", "where": "fargehandel", "approxNok": 250 },
+        { "what": "blank møbelmaling 0,68 l (ca.-pris)", "where": "fargehandel", "approxNok": 350 },
+        { "what": "sparkel, fint slipepapir og skumrull (ca.-pris)", "where": "Jula / Biltema", "approxNok": 200 }
+      ],
+      "diy": {
+        "level": "krevende",
+        "time": "en helg",
+        "tools": ["sparkelspade", "slipepapir korn 180–240", "støvmaske", "skumrull", "pensel"],
+        "steps": [
+          "Vask bordet og sparkle hakk og sår. Slip helt glatt når sparkelen er tørr. Bruk støvmaske.",
+          "Tørk av alt støv og stryk grunning.",
+          "Mal tynne strøk med fin rull, og puss lett mellom strøkene.",
+          "Mal i et støvfritt rom med god lufting, og la bordet stå urørt til malingen har herdet."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [400, 900],
+      "source": { "title": "15 Interior Design Trends That Will Define the Rest of 2026 – Livingetc", "url": "https://www.livingetc.com/news/instagram-interiors-trends" },
+      "trend": "Livingetc har lakkblanke møbler i mettede farger på trendlisten for 2026 (oppdatert mars 2026)."
+    },
+    {
+      "id": "frynser-lampeskjerm",
+      "title": "Frynser på en enkel lampeskjerm",
+      "what": "Et frynsebånd limt langs nedre kant gir en rimelig skjerm bevegelse og et snev av 1920-tall. Samme bånd kan sys på en pute.",
+      "styles": ["artdeco", "boho", "vintage", "mork", "klassisk"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["stue", "soverom"],
+      "finn": ["lampeskjerm", "bordlampe"],
+      "buy": [
+        { "what": "frynsebånd, 1–2 meter (ca.-pris)", "where": "Stoff & Stil / Panduro", "approxNok": 150 },
+        { "what": "tekstillim (ca.-pris)", "where": "Panduro / Clas Ohlson", "approxNok": 80 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["målebånd", "saks", "klesklyper"],
+        "steps": [
+          "Mål omkretsen nederst på skjermen og klipp båndet litt lengre.",
+          "Lim båndet på innsiden eller utsiden av kanten, litt om gangen.",
+          "Hold det på plass med klesklyper til limet er tørt.",
+          "Bruk LED-pære, som blir lite varm."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [150, 400],
+      "source": { "title": "10 Ways to Bring Art Deco Style Into Your Living Room That Feel Right for Today – Livingetc", "url": "https://www.livingetc.com/us/ideas/art-deco-living-rooms" },
+      "trend": "Frynser står både i Livingetcs art deco-råd og på bladets trendliste for 2026."
+    },
+    {
+      "id": "farget-glass",
+      "title": "Farget kunstglass i vinduskarmen",
+      "what": "Brukte vaser og skåler i farget glass lyser opp når dagslyset går gjennom dem. Samle tre til fem i beslektede farger i stedet for å spre dem.",
+      "styles": ["retro", "vintage", "boho", "artdeco", "kyst", "fri"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "kjokken", "bad", "gang"],
+      "finn": ["hadeland glass", "kunstglass", "glassvase farget"],
+      "buy": [],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [50, 500],
+      "source": { "title": "The Vintage Interior Trends Designers Predict Will Define Homes in 2026 – Homes & Gardens", "url": "https://www.homesandgardens.com/interior-design/vintage-trends-2026" },
+      "trend": "Homes & Gardens (desember 2025) og House Digest (juni 2026) peker begge på munnblåst farget glass som brukttrend."
+    },
+    {
+      "id": "stoffskjort-under-vask",
+      "title": "Stoffskjørt under vask eller benk",
+      "what": "Et rynket stoff på wire skjuler rør, bøtter og rot under en vask eller åpen benk. Det gir mønster og mykhet i rom med mange harde flater.",
+      "styles": ["landlig", "vintage", "klassisk", "kyst", "boho"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["kjokken", "bad", "gang"],
+      "finn": ["metervare stoff", "gardiner rutete", "lin duk"],
+      "buy": [
+        { "what": "stoff, ca. 2 meter (ca.-pris)", "where": "Stoff & Stil / IKEA metervare", "approxNok": 250 },
+        { "what": "gardinwire med kroker eller klemstang (ca.-pris)", "where": "IKEA / Clas Ohlson", "approxNok": 80 },
+        { "what": "strykefast faldebånd hvis du ikke syr (ca.-pris)", "where": "Stoff & Stil / Panduro", "approxNok": 50 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "en kveld",
+        "tools": ["målebånd", "saks", "strykejern eller symaskin"],
+        "steps": [
+          "Mål bredde og høyde på åpningen.",
+          "Klipp stoffet omtrent dobbelt så bredt som åpningen og noen centimeter høyere.",
+          "Fald kantene med søm eller strykebånd, og brett en løpegang øverst.",
+          "Tre stoffet på wire eller klemstang og fest den bak kanten. Klemstang trenger ingen hull.",
+          "Velg stoff som kan vaskes, siden det står utsatt til for søl."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [150, 500],
+      "source": { "title": "This nostalgic kitchen and bathroom trend is taking over 2025 and is on track to be huge news next year – Ideal Home", "url": "https://www.idealhome.co.uk/all-rooms/sink-skirt-trend-for-kitchen-and-bathroom" },
+      "trend": "Ideal Home skrev i september 2025 at stoffskjørt under vasken ville bli enda større i 2026, og Livingetc nevner skjørtekanter i kysttrendene."
+    },
+    {
+      "id": "apne-kjokkenhyller",
+      "title": "Ta av skapdører for åpne hyller",
+      "what": "Uten dører på ett eller to overskap får kjøkkenet åpne hyller uten ombygging. Vis fram stentøy, glass og krukker du har funnet brukt.",
+      "styles": ["landlig", "industri", "skandi", "boho", "kyst"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["kjokken"],
+      "finn": ["stentøy", "tallerkener keramikk", "glasskrukker"],
+      "buy": [],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["skrutrekker", "pose og tusj til merking"],
+        "steps": [
+          "Velg ett eller to skap der innholdet tåler å vises.",
+          "Skru dørene av ved hengslene og legg skruer og hengsler i en merket pose.",
+          "Lagre dørene flatt og tørt, så de kan settes på igjen. Det er viktig hvis du leier.",
+          "Rydd hyllene og hold deg til få farger."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [0, 300],
+      "source": { "title": "13 of the Very Best Rental-Friendly Hacks of All Time – Apartment Therapy", "url": "https://www.apartmenttherapy.com/high-impact-living-room-ideas-for-renters-238980" },
+      "trend": "Homebuilding & Renovating (oktober 2026) anbefaler åpne hyller på kjøkkenet i den nye industristilen."
+    },
+    {
+      "id": "lister-pa-slette-dorer",
+      "title": "Lister som gir slette dører speil",
+      "what": "Tynne profillister limt som en ramme på flate skapdører, malt i samme farge som døra, gir et klassisk speildør-uttrykk uten å bytte fronter.",
+      "styles": ["klassisk", "landlig", "vintage", "kyst"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["kjokken", "soverom", "gang"],
+      "finn": ["garderobeskap", "kjøkkenfronter"],
+      "buy": [
+        { "what": "tynne profillister (ca.-pris, avhenger av antall dører)", "where": "byggevarehus", "approxNok": 400 },
+        { "what": "monteringslim (ca.-pris)", "where": "Biltema / byggevarehus", "approxNok": 100 },
+        { "what": "heftgrunning og maling (ca.-pris)", "where": "fargehandel", "approxNok": 600 }
+      ],
+      "diy": {
+        "level": "krevende",
+        "time": "en helg",
+        "tools": ["gjærkasse og fintannet sag", "målebånd", "skrutrekker", "rull og pensel", "støvmaske"],
+        "steps": [
+          "Leier du, må utleier godkjenne det. Endringen er varig.",
+          "Skru av dører og håndtak, vask av fett og matt ned flatene. Bruk støvmaske.",
+          "Grunn dørene med heftgrunning.",
+          "Kapp lister med 45 graders hjørner og lim dem som en ramme like langt fra kanten på alle sider.",
+          "Mal dører og lister i to strøk, og pass på at det ikke kommer maling i skruehullene. Luft godt."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [800, 2000],
+      "source": { "title": "Slik kan du dekorere kjøkkenfrontene – Klikk.no", "url": "https://www.klikk.no/bolig/kjokken/personlige-og-billige-kjokkenfronter-3476387" },
+      "trend": "Prettypegs' 2026-guide foreslår dekorlister på flate skapdører, og Apartment Therapy viste garderobeskap med lister blant årets beste hacks."
+    },
+    {
+      "id": "listerammer-pa-vegg",
+      "title": "Rammer av lister på veggen",
+      "what": "Pyntelister satt opp som rektangler og malt i veggfargen gir en slett vegg preg av gammel bygård. Effekten er stor for materialkostnaden.",
+      "styles": ["klassisk", "artdeco", "vintage", "mork"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["stue", "soverom", "gang"],
+      "finn": [],
+      "buy": [
+        { "what": "pyntelister, ca. 20 meter (ca.-pris)", "where": "Byggmakker / Maxbo / Obs Bygg", "approxNok": 800 },
+        { "what": "monteringslim og akrylfug (ca.-pris)", "where": "Biltema / byggevarehus", "approxNok": 180 },
+        { "what": "veggmaling 2,7 l (ca.-pris)", "where": "fargehandel", "approxNok": 700 }
+      ],
+      "diy": {
+        "level": "krevende",
+        "time": "en helg",
+        "tools": ["gjærkasse og fintannet sag", "vater", "målebånd", "malertape", "fugepistol", "pensel og rull"],
+        "steps": [
+          "Leier du, trenger du utleiers tillatelse.",
+          "Tegn opp feltene med malertape først, med lik avstand til tak, gulvlist og hverandre.",
+          "Kapp listene med 45 graders hjørner.",
+          "Lim listene opp etter vater og støtt dem med tape til limet har satt seg.",
+          "Fug skjøter og hjørner, la det tørke og mal lister og vegg i samme farge. Luft godt."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [1200, 2500],
+      "source": { "title": "This $300 One-Wall Upgrade Completely Transforms a “Boring” Living Room – Apartment Therapy", "url": "https://www.apartmenttherapy.com/living-room-wall-picture-frame-molding-makeover-ba-37534171" },
+      "trend": "Apartment Therapy viste en slik listevegg til rundt 300 dollar i januar 2026."
+    },
+    {
+      "id": "skrivebord-av-skuffer",
+      "title": "Skrivebord av skuffer og en plate",
+      "what": "To brukte skuffeseksjoner med en treplate oppå gir et stort skrivebord med mye oppbevaring. Platen kan være en brukt benkeplate.",
+      "styles": ["moderne", "skandi", "industri", "varm", "fri"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["kontor", "soverom", "barnerom"],
+      "finn": ["alex skuffeseksjon", "skuffeseksjon", "benkeplate"],
+      "buy": [
+        { "what": "limtreplate eller bordplate, ca. 60 x 150 cm (ca.-pris)", "where": "byggevarehus / IKEA", "approxNok": 700 },
+        { "what": "olje til platen og sklisikring (ca.-pris)", "where": "Jula / Biltema", "approxNok": 200 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "en kveld",
+        "tools": ["målebånd", "slipepapir", "klut", "drill"],
+        "steps": [
+          "Finn to skuffeseksjoner i samme høyde.",
+          "Puss platen lett og olje den i to tynne strøk. Luft godt, og legg oljekluter i vann før de kastes.",
+          "Sett seksjonene med passe avstand og legg platen oppå.",
+          "Legg sklisikring mellom, eller skru små vinkler fra innsiden av seksjonene opp i platen."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [500, 2000],
+      "source": { "title": "IKEA Hacks: Best Ideas by Room & How to Start (2026 Guide) – Prettypegs", "url": "https://www.prettypegs.com/blog/guides/ikea-hacks-best-ideas-by-room-how-to-start-2026-guide-" },
+      "trend": "Prettypegs' guide fra mai 2026 løfter fram skuffeseksjoner med bordplate som det typiske hjemmekontor-hacket."
+    },
+    {
+      "id": "hullplate-over-pulten",
+      "title": "Hullplate over skrivebordet",
+      "what": "En hullplate med kroker, kopper og små hyller får småting opp fra bordflaten. Fungerer like godt for redskaper på kjøkkenet og nøkler i gangen.",
+      "styles": ["moderne", "industri", "skandi", "fri"],
+      "kind": ["nytt"],
+      "rooms": ["kontor", "kjokken", "gang", "barnerom"],
+      "finn": ["skådis", "hullplate", "verktøytavle"],
+      "buy": [
+        { "what": "hullplate (ca.-pris)", "where": "IKEA / Biltema / Jula", "approxNok": 200 },
+        { "what": "kroker, hyller og beholdere (ca.-pris)", "where": "IKEA / Biltema", "approxNok": 150 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["drill", "vater", "blyant"],
+        "steps": [
+          "Leier du, spør utleier om du kan bore.",
+          "Hold platen mot veggen, bruk vater og merk av hullene.",
+          "Fest med skruer og plugger som passer veggtypen.",
+          "Heng opp tilbehøret og flytt rundt til det fungerer."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [200, 500],
+      "source": { "title": "The 25 “Most Searched For” IKEA Hacks of 2025 – IKEA Hackers", "url": "https://ikeahackers.net/2025/12/most-popular-ikea-hacks.html" },
+      "trend": "Tilbehør og nye bruksområder for IKEAs hullplate var blant de mest søkte hackene i 2025 hos IKEA Hackers."
+    },
+    {
+      "id": "trillebord",
+      "title": "Trillebord som flyttbar hylle",
+      "what": "Et lite trillebord i metall gir tre hyller der det ikke er plass til skap, og kan trilles dit det trengs. Praktisk på små bad og kjøkken.",
+      "styles": ["industri", "moderne", "skandi", "retro", "fri"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["bad", "kjokken", "kontor", "barnerom"],
+      "finn": ["råskog", "trillebord", "rullebord"],
+      "buy": [
+        { "what": "trillebord i metall hvis du ikke finner brukt (ca.-pris)", "where": "IKEA / Jysk / Rusta", "approxNok": 450 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [150, 500],
+      "source": { "title": "20 Easy IKEA Hacks to Try in 2026 – IKEA Hackers", "url": "https://ikeahackers.net/2025/12/easy-ikea-hacks-2.html" },
+      "trend": "Både IKEA Hackers (desember 2025) og Prettypegs (mai 2026) bruker trillebordet som flyttbar oppbevaring."
+    },
+    {
+      "id": "barvogn",
+      "title": "Brukt serveringstralle som barvogn",
+      "what": "En gammel tevogn i messing, teak eller krom med glass, karafler og et brett blir et lite møbel med mye stemning. Trenger bare en vask og puss.",
+      "styles": ["artdeco", "retro", "vintage", "klassisk", "mork"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "kjokken"],
+      "finn": ["serveringstralle", "tevogn", "barvogn"],
+      "buy": [
+        { "what": "metallpuss eller møbelolje (ca.-pris)", "where": "Biltema / Jula", "approxNok": 100 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [200, 1200],
+      "source": { "title": "Designers Say These “Thrift Store MVPs” Will Never Be Outdated – Apartment Therapy", "url": "https://www.apartmenttherapy.com/vintage-home-trends-37545277" },
+      "trend": "Apartment Therapy (mars 2026) nevner barutstyr, brett og patinert messing blant bruktfunnene som holder seg."
+    },
+    {
+      "id": "brukte-boker",
+      "title": "Brukte bøker som farge og pynt",
+      "what": "Bøker stablet liggende med en vase eller lampe oppå fyller hyller og bord billig. Sortert etter farge eller størrelse gir de ro i en full hylle.",
+      "styles": ["klassisk", "vintage", "mork", "boho", "skandi", "fri"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "soverom", "kontor", "gang"],
+      "finn": ["bøker pakke", "gamle bøker", "kunstbøker"],
+      "buy": [],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [0, 300],
+      "source": { "title": "Vis frem bøkene dine – JYSK", "url": "https://jysk.no/inspiration/vis-frem-bokene-dine" },
+      "trend": "Apartment Therapy (mars 2026) har gamle bøker på listen over bruktfunn som gir farge og struktur for lite penger."
+    },
+    {
+      "id": "brukt-sofa-nytt-trekk",
+      "title": "Brukt sofa med nytt trekk og malte ben",
+      "what": "En brukt sofa med avtakbart trekk kan vaskes eller få nytt trekk i en annen farge. Mal eller bytt beina samtidig, så ser den ny ut.",
+      "styles": ["skandi", "varm", "klassisk", "moderne", "kyst", "landlig"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["stue"],
+      "finn": ["sofa avtagbart trekk", "ektorp sofa", "kivik sofa"],
+      "buy": [
+        { "what": "nytt sofatrekk (ca.-pris, varierer mye med modell)", "where": "IKEA / spesialbutikk på nett", "approxNok": 2500 },
+        { "what": "spraymaling til bein (ca.-pris)", "where": "Biltema / Jula", "approxNok": 120 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "en kveld",
+        "tools": ["skrutrekker eller fastnøkkel", "slipepapir", "spraymaling"],
+        "steps": [
+          "Sjekk vaskelappen og vask det gamle trekket hvis det tåler maskinvask.",
+          "Skru av beina og puss dem lett.",
+          "Spraymal beina ute eller med svært god lufting, i tynne strøk.",
+          "Skru beina på igjen når de er tørre, og tre på nytt eller nyvasket trekk."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [150, 4000],
+      "source": { "title": "Så enkelt blir en brukt sofa som ny – FINN", "url": "https://www.finn.no/bap/artikler/ta-vare-pa/hjem-og-interior/sa-enkelt-blir-en-brukt-sofa-som-ny" },
+      "trend": "FINN har egen guide til grepet, og Homes & Gardens har sofaer og stoler med skjørtekant blant vintagetrendene for 2026."
+    },
+    {
+      "id": "trefliser-balkong",
+      "title": "Trefliser oppå balkonggulvet",
+      "what": "Fliser i tre på plastunderlag legges løst oppå betongen og gir balkongen varmt gulv på under en time. De kan tas med når du flytter.",
+      "styles": ["skandi", "kyst", "boho", "varm", "japandi", "landlig"],
+      "kind": ["nytt"],
+      "rooms": ["balkong"],
+      "finn": ["terrassefliser", "balkongfliser tre"],
+      "buy": [
+        { "what": "terrassefliser 30 x 30 cm, pakke med 9 stk som dekker ca. 0,8 m² (ca.-pris)", "where": "Jysk / IKEA / Jula", "approxNok": 300 }
+      ],
+      "diy": {
+        "level": "lett",
+        "time": "1 time",
+        "tools": ["kost", "målebånd", "sag til tilpasning"],
+        "steps": [
+          "Sjekk reglene i borettslaget eller med utleier.",
+          "Mål balkongen og regn ut antall pakker.",
+          "Fei gulvet rent og start i et hjørne.",
+          "Legg flisene tett sammen og tilpass ytterste rad med sag om nødvendig.",
+          "Hold sluk og avrenning åpne."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [600, 2000],
+      "source": { "title": "Terrasseflise KNEKKAND 30 x 30 cm, 9 stk – JYSK", "url": "https://jysk.no/hage/hagetilbehor/hagepynt/terrasseflise-knekkand-b30xl30-tre-9-stk-pk" },
+      "trend": "House Digest har rolige utesoner med myk belysning og gode sitteplasser blant gjør-det-selv-prosjektene for 2026."
+    },
+    {
+      "id": "balkong-kafesett",
+      "title": "Kafésett, lykter og puter ute",
+      "what": "Et lite brukt kafébord med to stoler, lykter som henger på rekkverket og noen puter gjør en smal balkong til et ekstra rom.",
+      "styles": ["boho", "kyst", "landlig", "skandi", "vintage", "fri"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["balkong"],
+      "finn": ["kafébord", "kafésett", "klappstoler"],
+      "buy": [
+        { "what": "lyslenke eller lykt med solcelle (ca.-pris)", "where": "Jysk / Rusta / Clas Ohlson", "approxNok": 150 },
+        { "what": "puter som tåler å stå ute (ca.-pris)", "where": "Jysk / IKEA", "approxNok": 200 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [200, 1200],
+      "source": { "title": "Tips til innredning av balkongen – JYSK", "url": "https://jysk.no/inspiration/tips-til-innredning-av-balkongen" },
+      "trend": "House Digest (januar 2026) løfter fram private utekroker med myk belysning som et av årets prosjekter."
+    },
+    {
+      "id": "bad-uten-oppussing",
+      "title": "Bad som føles nytt uten oppussing",
+      "what": "Håndklær i én fargefamilie, en ny badematte, en enkel såpedispenser og en plante endrer et slitent bad uten at du rører flisene.",
+      "styles": ["varm", "skandi", "japandi", "kyst", "klassisk", "boho"],
+      "kind": ["nytt", "brukt"],
+      "rooms": ["bad"],
+      "finn": ["krakk tre", "kurv", "speil"],
+      "buy": [
+        { "what": "håndklær i to–tre beslektede toner (ca.-pris)", "where": "Jysk / Kid / IKEA", "approxNok": 300 },
+        { "what": "badematte og såpedispenser (ca.-pris)", "where": "Jysk / Søstrene Grene / IKEA", "approxNok": 200 },
+        { "what": "plante som tåler fukt (ca.-pris)", "where": "Plantasjen / IKEA", "approxNok": 100 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [200, 800],
+      "source": { "title": "Forny badet uten å pusse opp – JYSK", "url": "https://jysk.no/forny-badet-uten-pusse-opp" },
+      "trend": "House Digest har hjemmelaget spa-stemning på badet på listen over gjør-det-selv-prosjekter for 2026."
+    },
+    {
+      "id": "mork-vegg-lyst-teppe",
+      "title": "Mørk vegg med lyst teppe",
+      "what": "En dyp grønn, blå eller burgunder vegg gir lunhet og får møbler i tre og messing til å gløde. Et lyst teppe og nok lamper hindrer at rommet blir tungt.",
+      "styles": ["mork", "moderne", "klassisk", "artdeco", "industri"],
+      "kind": ["nytt", "gjorselv"],
+      "rooms": ["stue", "soverom", "kontor", "gang"],
+      "finn": ["teppe beige", "ullteppe lyst"],
+      "buy": [
+        { "what": "matt veggmaling 2,7 l (ca.-pris)", "where": "fargehandel", "approxNok": 700 },
+        { "what": "god rull, pensel og tape (ca.-pris)", "where": "fargehandel / Jula", "approxNok": 300 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["rull av god kvalitet", "pensel", "malertape", "dekkpapp"],
+        "steps": [
+          "Leier du, må utleier godkjenne fargen.",
+          "Ta utgangspunkt i møbler og tepper du skal beholde når du velger farge.",
+          "Vask veggen, tape lister og dekk gulvet.",
+          "Mal to strøk med en god rull. Rullemerker synes lettere på mørke vegger.",
+          "Luft godt, og legg til lyst teppe, gardiner og flere lamper etterpå."
+        ]
+      },
+      "renterOk": false,
+      "costNok": [800, 2500],
+      "source": { "title": "9 gode råd til deg som vil ha det mørkt – ifi.no", "url": "https://www.ifi.no/artikkel/538199/last-ned" },
+      "trend": "PureWow (oppdatert september 2026) har mørke vegger balansert med lyse tepper øverst på høstens trendliste."
+    },
+    {
+      "id": "flere-sma-lamper",
+      "title": "Flere små lamper i stedet for taklys",
+      "what": "Tre–fire brukte bordlamper og en gulvlampe spredt i hjørnene gir mykere lys enn én taklampe. Varmhvite pærer og en dimmerplugg gjør resten.",
+      "styles": ["mork", "varm", "klassisk", "vintage", "japandi", "skandi", "boho", "retro"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["stue", "soverom", "gang", "kontor"],
+      "finn": ["bordlampe", "gulvlampe", "lampe messing"],
+      "buy": [
+        { "what": "LED-pærer 2700 K, per stk (ca.-pris)", "where": "IKEA / Clas Ohlson / Biltema", "approxNok": 40 },
+        { "what": "dimmerplugg eller smartplugg til stikkontakten (ca.-pris)", "where": "IKEA / Clas Ohlson / Jula", "approxNok": 150 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [150, 1200],
+      "source": { "title": "Smarte tips som gjør at små rom virker større – Klikk.no", "url": "https://www.klikk.no/bolig/smarte-tips-som-gjor-at-sma-rom-virker-storre-2257510" },
+      "trend": "Homes & Gardens har dempet, mykt lys blant lystrendene for 2026, og Homebuilding & Renovating anbefaler 2700 K-pærer."
+    },
+    {
+      "id": "tekstil-pa-veggen",
+      "title": "Brukt vevd teppe som veggpryd",
+      "what": "En rye, et vevd veggteppe eller en kelim på veggen gir farge, struktur og bedre akustikk. Det fyller en stor vegg billigere enn kunst.",
+      "styles": ["boho", "vintage", "mork", "retro", "landlig", "fri"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "soverom", "gang"],
+      "finn": ["ryeteppe", "veggteppe", "billedvev"],
+      "buy": [
+        { "what": "trelist eller gardinstang til oppheng (ca.-pris)", "where": "byggevarehus / IKEA", "approxNok": 100 },
+        { "what": "klyper eller selvklebende kroker (ca.-pris)", "where": "Clas Ohlson / Jula", "approxNok": 80 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [100, 800],
+      "source": { "title": "15 Interior Design Trends That Will Define the Rest of 2026 – Livingetc", "url": "https://www.livingetc.com/news/instagram-interiors-trends" },
+      "trend": "Livingetc nevner veggtepper i trenden «Modern Medieval» for 2026, og House Digest har håndlagde tekstiler som veggkunst på DIY-listen."
+    },
+    {
+      "id": "vasket-lin-og-tau",
+      "title": "Vasket lin og litt tau",
+      "what": "Kyststil uten anker og skjell: putetrekk og pledd i falmet lin i blått, hvitt og sand, pluss én ting i tau eller patinert tre. Det gir sommerhusfølelse uten å bli tema.",
+      "styles": ["kyst", "landlig", "skandi", "klassisk", "varm"],
+      "kind": ["brukt", "nytt"],
+      "rooms": ["stue", "soverom", "balkong"],
+      "finn": ["putetrekk lin", "lin gardiner", "stripete teppe"],
+      "buy": [
+        { "what": "putetrekk i lin eller bomull, per stk (ca.-pris)", "where": "IKEA / Jysk / Kid", "approxNok": 120 }
+      ],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [100, 600],
+      "source": { "title": "The Coastal Design Trends for 2026 That Make This Comforting Style Feel Fresh, but No Less Charming – Livingetc", "url": "https://www.livingetc.com/us/ideas/coastal-design-trends" },
+      "trend": "Livingetcs kysttrender for 2026 (mai 2026) handler om falmet lin, patina og tau i små doser framfor maritime motiver."
+    },
+    {
+      "id": "ett-rottingmobel",
+      "title": "Ett brukt rottingmøbel som blikkfang",
+      "what": "En kurvstol, et rottingbord eller en liten hylle i bambus gir varme og håndverkspreg. Ett stykke er nok, da ser det samlet ut og ikke som hagemøbler inne.",
+      "styles": ["boho", "kyst", "retro", "landlig", "varm"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "soverom", "gang", "balkong"],
+      "finn": ["rottingstol", "kurvstol", "bambus hylle"],
+      "buy": [],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [150, 1200],
+      "source": { "title": "The Coastal Design Trends for 2026 That Make This Comforting Style Feel Fresh, but No Less Charming – Livingetc", "url": "https://www.livingetc.com/us/ideas/coastal-design-trends" },
+      "trend": "Livingetc (mai 2026) anbefaler rotting og bambus brukt med måte, helst som enkeltstående vintagemøbler."
+    },
+    {
+      "id": "stor-vase-med-greiner",
+      "title": "Stor vase med greiner",
+      "what": "En stor brukt gulvvase med noen få høye greiner gir høyde og ro i et hjørne. Krøllet papir i bunnen og et smalt glass i midten holder greinene på plass.",
+      "styles": ["japandi", "varm", "skandi", "moderne", "landlig", "klassisk"],
+      "kind": ["brukt"],
+      "rooms": ["stue", "gang", "soverom"],
+      "finn": ["gulvvase", "stor vase keramikk", "krukke"],
+      "buy": [],
+      "diy": null,
+      "renterOk": true,
+      "costNok": [0, 400],
+      "source": { "title": "These 7 Rental-Friendly TikTok Decorating Hacks Are Brilliant for Your New Year Home Goals – Apartment Therapy", "url": "https://www.apartmenttherapy.com/rental-friendly-tiktok-decorating-hacks-37022677" },
+      "trend": "Trikset kom fra TikTok via Apartment Therapy, og store skulpturelle enkeltting står fortsatt på Livingetcs lister for 2026."
+    },
+    {
+      "id": "hylle-i-veggfargen",
+      "title": "Mal en brukt hylle i veggfargen",
+      "what": "En bokhylle eller et skap malt i samme farge som veggen bak glir inn i rommet og ser plassbygd ut. Tingene i hylla blir det som synes.",
+      "styles": ["moderne", "varm", "mork", "skandi", "klassisk"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["stue", "kontor", "soverom", "gang"],
+      "finn": ["bokhylle", "vegghylle", "skap heltre"],
+      "buy": [
+        { "what": "heftgrunning 0,75 l (ca.-pris)", "where": "fargehandel", "approxNok": 250 },
+        { "what": "tre- og listmaling 0,68 l brukket i veggfargen (ca.-pris)", "where": "fargehandel", "approxNok": 350 },
+        { "what": "slipepapir, rull og pensel (ca.-pris)", "where": "Jula / Biltema", "approxNok": 150 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["skrutrekker", "slipepapir", "støvmaske", "liten rull", "pensel"],
+        "steps": [
+          "Ta ut løse hylleplater og vask alt med malingsvask.",
+          "Matt ned flatene, også laminat, og tørk av støvet. Bruk støvmaske.",
+          "Stryk heftgrunning og la den tørke.",
+          "Mal to tynne strøk i veggens fargekode, med rull på flater og pensel i hjørner. Luft godt.",
+          "Vent noen dager før du setter tunge ting på hyllene."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [500, 900],
+      "source": { "title": "15 DIY Home Projects That Will Be Big In 2026 – House Digest", "url": "https://www.housedigest.com/2074784/diy-projects-trend-for-2026" },
+      "trend": "House Digest har malte hyller øverst på listen over gjør-det-selv-prosjekter for 2026 (januar 2026)."
+    },
+    {
+      "id": "rottingflett-i-skapdor",
+      "title": "Rottingflett i skapdører",
+      "what": "Bytt glass eller fylling i en skapdør med rottingflett. Skapet får luft, struktur og et lett retropreg, og innholdet skjules delvis.",
+      "styles": ["boho", "retro", "japandi", "kyst", "varm"],
+      "kind": ["brukt", "gjorselv"],
+      "rooms": ["stue", "soverom", "gang"],
+      "finn": ["vitrineskap", "skap glassdører", "rottingflett"],
+      "buy": [
+        { "what": "rottingflett, ca. 1 meter (ca.-pris)", "where": "nettbutikk / hobbybutikk", "approxNok": 350 },
+        { "what": "stiftepistol med stifter (ca.-pris)", "where": "Biltema / Jula", "approxNok": 200 },
+        { "what": "tynne dekklister (ca.-pris)", "where": "byggevarehus", "approxNok": 100 }
+      ],
+      "diy": {
+        "level": "middels",
+        "time": "en helg",
+        "tools": ["skrutrekker", "stiftepistol", "saks", "arbeidshansker"],
+        "steps": [
+          "Velg en dør der glasset eller fyllingen sitter løst i en ramme med lister på baksiden.",
+          "Ta ut glasset forsiktig med hansker.",
+          "Legg flettet i lunkent vann en halvtime, så strammer det seg når det tørker.",
+          "Stift det fast på baksiden av rammen, fra midten og utover.",
+          "Dekk stiftene med tynne lister og la døra tørke før den henges på."
+        ]
+      },
+      "renterOk": true,
+      "costNok": [400, 1200],
+      "source": { "title": "42 IKEA Hacks That Prove Even Inexpensive Flatpack Can Still Create a Designer-Look Home – Livingetc", "url": "https://www.livingetc.com/us/features/ikea-hacks" },
+      "trend": "Livingetc viser flere hacks med rottingflett i dører og skuffer, og har rotting brukt med måte på kystlisten for 2026."
+    }
+  ]
+}
