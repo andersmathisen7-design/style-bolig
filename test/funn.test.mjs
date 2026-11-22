@@ -39,7 +39,9 @@ test('profil: bare ting brukeren leter etter, med ferdige søk for «lagt ut i d
   assert.equal(t.name, first.item.name);
   assert.ok(t.room && t.q && t.qty >= 1);
   // Lenkene lages av finnUrl, så område og pris følger resten av siden.
-  assert.equal(t.url, finnUrl(first, s, 'today', { broad: true }));
+  // Jobben får samme søk som knappen, men uten «sort»: Finn ber roboter la slike adresser være.
+  assert.equal(t.url, finnUrl(first, s, 'today', { broad: true }).replace('&sort=PUBLISHED_DESC', ''));
+  assert.ok(!JSON.stringify(p).includes('sort='));
   const u = new URL(t.url).searchParams;
   assert.equal(u.get('published'), '1');
   assert.equal(u.get('category'), null, 'bredt søk, uten kategori');

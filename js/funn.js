@@ -21,6 +21,10 @@ const isObj = (x) => !!x && typeof x === 'object' && !Array.isArray(x);
 const isDay = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// Finn ber roboter la være å hente søk med «sort» i adressen (robots.txt), så jobben får lenkene uten.
+// «Lagt ut i dag» kommer uansett med de nyeste først.
+const jobUrl = (url) => url.replace(/([?&])sort=[^&]*&?/, '$1').replace(/[?&]$/, '');
+
 // Det jobben trenger å vite om lista. Bare ting brukeren fortsatt leter etter er med.
 // opt.area = beskrivelse av området, opt.hidden = annonser brukeren har sagt nei til, opt.now = klokka (for tester).
 export function buildProfile(state, opt = {}) {
@@ -39,8 +43,8 @@ export function buildProfile(state, opt = {}) {
       name: clip(inst.item.name, 80),
       q: clip(searchText(inst, state), 120),
       qty: inst.qty,
-      url: finnUrl(inst, state, 'today', { broad: true }), // lagt ut i dag, alle kategorier
-      alt: altLinks(inst, state, 'today').slice(0, 3).map((a) => ({ word: clip(a.word, 60), url: a.url })),
+      url: jobUrl(finnUrl(inst, state, 'today', { broad: true })), // lagt ut i dag, alle kategorier
+      alt: altLinks(inst, state, 'today').slice(0, 3).map((a) => ({ word: clip(a.word, 60), url: jobUrl(a.url) })),
     };
     if (inst.v.label) t.variant = clip(inst.v.label, 80);
     if (max) t.max = max;
@@ -235,8 +239,11 @@ export async function initFunn(opt) {
       const stored = snap.data();
       funn.on = true;
       funn.hidden = cleanHidden(stored?.hidden);
-      lastSig = profileSig(stored);
+      // «seed» = en prøveliste lagt inn utenfra for å teste jobben. Den byttes ut med lista i denne nettleseren
+      // første gang siden åpnes, uten at brukeren må endre noe først.
+      lastSig = stored?.seed ? '' : profileSig(stored);
       listen();
+      if (stored?.seed) writeTimer = setTimeout(() => { flush().then(() => changed()); }, 1500);
     }
     startSig = profileSig(profile());
     funn.ready = true;
