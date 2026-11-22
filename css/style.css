@@ -244,3 +244,5 @@ a.chip { text-decoration: none; color: var(--ink); }
 .sheetrow { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .sheetrow .chips { flex: none; flex-wrap: nowrap; margin: 0 0 12px; }
 .walls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
+
+.undo-row { margin-bottom: 8px; min-height: 40px; }
