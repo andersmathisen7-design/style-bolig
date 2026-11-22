@@ -2,6 +2,7 @@
 import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS, FOOT, PRIOS, COMFORT } from './data.js';
 import { wallFor, letter } from './plan.js';
 import { areaParams, cleanNear } from './areastate.js';
+import { syncDoors, openingsFromDoors } from './walls.js';
 
 const FINN = 'https://www.finn.no/recommerce/forsale/search';
 const FINN_FURNITURE = '0.78'; // Møbler og interiør
@@ -9,7 +10,7 @@ const FINN_FURNITURE = '0.78'; // Møbler og interiør
 export function newState() {
   return {
     v: 1, step: 0, area: '', home: 'toroms', style: null, sub: null, prio: null, level: 'vanlig', total: null,
-    rooms: roomsFromHome('toroms'), drawn: false, floors: ['1. etasje'], furn: [], life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
+    rooms: roomsFromHome('toroms'), drawn: false, floors: ['1. etasje'], furn: [], openings: [], life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
   };
 }
 
@@ -515,9 +516,15 @@ export function normalize(s) {
       .filter((d) => d && Number.isInteger(d.e) && d.e >= 0 && d.e < poly.length && d.t >= 0 && d.t <= 1 && d.w >= 40 && d.w <= 300)
       .slice(0, 12).map((d) => ({ e: d.e, t: Number(d.t), w: Math.round(d.w), kind: d.kind === 'window' ? 'window' : 'door' }));
     const fixed = (Array.isArray(r.fixed) ? r.fixed : []).filter((i) => Number.isInteger(i) && i >= 0 && i < poly.length);
-    return { ...room, poly, doors, fixed: [...new Set(fixed)], floor: Number.isInteger(r.floor) && r.floor >= 0 && r.floor < nFloors ? r.floor : 0 };
+    return { ...room, poly, doors, fixed: [...new Set(fixed)], floor: Number.isInteger(r.floor) && r.floor >= 0 && r.floor < nFloors ? r.floor : 0, ...(r.guess === true ? { guess: true } : {}) };
   });
   out.drawn = out.rooms.some((r) => r.poly);
+  // Dører og vinduer hører til veggen, ikke rommet. Eldre tegninger hadde dem lagret i hvert rom og gjøres om her.
+  out.openings = Array.isArray(s.openings) && (s.openings.length || !out.rooms.some((r) => r.doors?.length))
+    ? s.openings.filter((o) => o && /^o\d{1,6}$/.test(o.id) && Number.isInteger(o.floor) && o.floor >= 0 && o.floor < nFloors && o.w >= 40 && o.w <= 300 && pt([o.x, o.y]))
+      .slice(0, 80).map((o) => ({ id: o.id, floor: o.floor, kind: o.kind === 'window' ? 'window' : 'door', w: Math.round(o.w), x: Math.round(o.x * 10) / 10, y: Math.round(o.y * 10) / 10 }))
+    : openingsFromDoors(out.rooms, () => 'o' + (out.seq += 1));
+  syncDoors(out);
   out.furn = (Array.isArray(s.furn) ? s.furn : [])
     .filter((f) => f && /^f\d{1,6}$/.test(f.id) && ITEMS[f.item] && out.rooms.some((r) => r.id === f.room && r.poly)
       && [f.x, f.y].every((v) => Number.isFinite(v) && v >= -500 && v <= 3000) && [f.w, f.d].every((v) => v >= 20 && v <= 600))

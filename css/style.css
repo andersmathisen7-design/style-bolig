@@ -227,16 +227,24 @@ a.chip { text-decoration: none; color: var(--ink); }
 .proom { fill: rgba(255, 255, 255, 0.86); stroke: var(--ink); stroke-linejoin: miter; }
 .proom.on { fill: var(--teal-soft); stroke: var(--teal); }
 .tool-move .proom, .tool-move .furn { cursor: move; }
-.pname, .pm2, .mark, .mark-t, .wlen, .handle, .gap, .win, .door, .empty, #ink, .furn text { pointer-events: none; }
+.pname, .pm2, .mark, .mark-t, .wlen, .wsel, .handle, .ops, .gap, .win, .door, .empty, #ink, .furn text { pointer-events: none; }
 .wlen { text-anchor: middle; font-weight: 700; fill: var(--teal); paint-order: stroke; stroke: var(--teal-soft); stroke-width: 0.3em; stroke-linejoin: round; }
 .handle { fill: #fff; stroke: var(--teal); }
 .hit { fill: transparent; cursor: grab; }
-.shaping .marks, .shaping .pname, .shaping .pm2, .shaping .gap, .shaping .win, .shaping .door { display: none; }
+.shaping .marks, .shaping .pname, .shaping .pm2, .shaping .ops, .moving .ops, .op.sliding .opdim, .op.sliding .opref { display: none; }
 .pname { text-anchor: middle; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 0.22em; stroke-linejoin: round; }
 .pm2 { text-anchor: middle; fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 0.22em; stroke-linejoin: round; }
 .gap { stroke: var(--surface); }
 .win { stroke: #2F7FB8; }
+rect.win { fill: #DCEEFA; }
 .door { fill: none; stroke: var(--ink); }
+.op.on .win, .op.on .door { stroke: var(--pink); }
+.op.on rect.win { fill: var(--pink-soft); }
+.opdim { stroke: var(--pink); }
+.opref { fill: var(--pink); }
+.wsel { stroke: var(--pink); stroke-linecap: round; }
+.mark.on { fill: var(--pink); }
+.tool-move .handle { cursor: grab; }
 .mark { fill: var(--ink); }
 .mark-t { text-anchor: middle; font-weight: 700; fill: #fff; }
 .furn rect { fill: var(--pink-soft); stroke: var(--pink); }
@@ -356,3 +364,23 @@ a.chip { text-decoration: none; color: var(--ink); }
 .ar-check { display: flex; align-items: center; gap: 10px; min-height: 46px; margin: 0 0 2px; font-weight: 600; }
 .ar-check input { flex: none; width: 24px; height: 24px; min-height: 0; padding: 0; accent-color: var(--teal); }
 @media (min-width: 560px) { .ar-kms { grid-template-columns: repeat(6, 1fr); } }
+/* Tegningen på «Bolig»: neste steg over tegningen, og det som er valgt i en linje rett under den. */
+.guide { margin: 8px 0; min-height: 2.7em; font-size: 0.9375rem; line-height: 1.35; }
+.guide b { display: inline-block; margin-right: 4px; padding: 1px 8px; border-radius: 999px; background: var(--teal); color: #fff; font-size: 0.8125rem; white-space: nowrap; }
+.sheet:has(+ .planbar) { margin-bottom: 0; }
+.planbar { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-height: 128px; padding: 6px 10px; margin: 0 0 8px; background: var(--surface); border: var(--wall) solid var(--ink); border-top: 0; }
+.planbar.on { position: sticky; bottom: calc(73px + env(safe-area-inset-bottom)); z-index: 4; box-shadow: 0 calc(-1 * var(--wall)) 0 var(--ink); }
+.barrow { display: flex; align-items: flex-end; gap: 8px; min-width: 0; }
+.planbar-name { flex: 1 1 0; min-width: 0; align-self: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.planbar-name small { display: block; overflow: hidden; text-overflow: ellipsis; font-weight: 400; font-size: 0.8125rem; color: var(--muted); }
+.barbtn.light { background: var(--surface); color: var(--ink); }
+.barfield { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; font-size: 0.75rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.barfield input { width: 100%; min-height: 44px; margin-top: 2px; padding: 6px 8px; border: 2px solid var(--ink); border-radius: 8px; background: #fff; color: var(--ink); font-size: 1rem; font-weight: 700; text-align: center; }
+.barfield.wide { flex: 2 1 0; }
+.seg { display: inline-flex; flex: none; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; }
+.segbtn { min-height: 44px; min-width: 52px; padding: 6px 12px; border: 0; background: var(--surface); color: var(--ink); font-weight: 700; font-size: 0.9375rem; }
+.segbtn.on { background: var(--ink); color: #fff; }
+.barscroll { display: flex; flex: 1 1 0; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.barscroll::-webkit-scrollbar { display: none; }
+.barchip { flex: none; min-height: 44px; min-width: 52px; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 999px; background: var(--surface); color: var(--ink); font-weight: 700; font-size: 0.9375rem; white-space: nowrap; }
+.barchip.on { background: var(--ink); color: #fff; }

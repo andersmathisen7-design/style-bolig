@@ -7,6 +7,7 @@ import {
 } from './logic.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
 import { drawView, furnishView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
+import { syncDoors } from './walls.js';
 import { syncFurniture } from './arrange.js';
 import { areaField, areaActions, bindArea } from './area.js';
 import { areaPhrase } from './areastate.js';
@@ -21,7 +22,7 @@ const SIZE_NAME = { S: 'Lite', M: 'Middels', L: 'Stort' };
 let state = load();
 const ui = {
   open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, style: null,
-  tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: sheetFor(state, window.innerWidth < 600 ? 1000 : 1500), furn: null, note: '', info: '', write: false, furnish: false,
+  tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: sheetFor(state, window.innerWidth < 600 ? 1000 : 1500), furn: null, wall: null, opening: null, note: '', info: '', write: false, furnish: false,
   cmt: null, // tingen på «Ting» som har kommentarfeltet åpent
 };
 let wantFocus = ''; // feltet som skal få fokus etter neste tegning av siden
@@ -474,13 +475,18 @@ function render() {
   else if (fsig) [...app.querySelectorAll('[data-act]')].find((el) => sig(el) === fsig)?.focus({ preventScroll: true });
   if (ui.furnish && ui.furn && ui.furn !== shownFurn) revealBar();
   shownFurn = ui.furnish ? ui.furn : null;
+  // På «Bolig»: når noe nytt er valgt på tegningen, skal linja med valgene under tegningen være synlig.
+  const picked = state.step === 0 && ui.tab === 'draw' && (ui.room || ui.opening) ? `${ui.room}|${ui.wall}|${ui.opening}` : '';
+  if (picked && picked !== shownPick) revealBar();
+  shownPick = picked;
 }
 
 // Når et møbel velges på «Plasser»: sørg for at knappelinja under tegningen er i bildet, uten å skyve tegningen
 // ut. Ruller bare de få pikslene som trengs, og aldri lenger enn at hele tegningen fortsatt synes.
 let shownFurn = null;
+let shownPick = '';
 function revealBar() {
-  const sheet = app.querySelector('.sheet'), bar = app.querySelector('.furnbar'), nav = app.querySelector('.nav'), top = app.querySelector('.top');
+  const sheet = app.querySelector('.sheet'), bar = app.querySelector('.furnbar, .planbar'), nav = app.querySelector('.nav'), top = app.querySelector('.top');
   if (!sheet || !bar) return;
   const s = sheet.getBoundingClientRect();
   const floor = nav ? nav.getBoundingClientRect().top : window.innerHeight;
@@ -542,7 +548,7 @@ const actions = {
     commit(); window.scrollTo(0, 0);
   },
   write() { ui.write = !ui.write; later(); },
-  home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; state.drawn = false; state.furn = []; state.floors = ['1. etasje']; ui.room = null; ui.furn = null; ui.floor = 0; ui.msg = null; commit(); },
+  home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; state.drawn = false; state.furn = []; state.openings = []; state.floors = ['1. etasje']; ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.floor = 0; ui.msg = null; commit(); },
   undo() {
     const json = undoStack.pop();
     const prev = json && normalize(JSON.parse(json));
@@ -554,10 +560,10 @@ const actions = {
     ui.floor = Math.min(ui.floor, state.floors.length - 1); ui.note = '';
     persist(); later();
   },
-  tab(v) { ui.tab = v === 'draw' ? 'draw' : 'pick'; ui.tool = 'draw'; ui.room = null; ui.furn = null; ui.note = ''; later(); },
-  room(v) { ui.room = ui.room === v ? null : v; ui.furn = null; later(); },
+  tab(v) { ui.tab = v === 'draw' ? 'draw' : 'pick'; ui.tool = 'draw'; ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.note = ''; later(); },
+  room(v) { ui.room = ui.room === v ? null : v; ui.wall = null; ui.opening = null; ui.furn = null; later(); },
   size(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r) { r.size = v; r.m2 = null; commit(); } },
-  delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.furn = state.furn.filter((f) => f.room !== ui.room); state.drawn = state.rooms.some((r) => r.poly); state.custom = state.custom.filter((c) => c.room !== ui.room); ui.room = null; commit(); },
+  delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.furn = state.furn.filter((f) => f.room !== ui.room); state.drawn = state.rooms.some((r) => r.poly); state.custom = state.custom.filter((c) => c.room !== ui.room); syncDoors(state); ui.room = null; ui.wall = null; ui.opening = null; commit(); },
   style(v, el) { state.style = v; state.sub = el?.dataset.i !== undefined ? Number(el.dataset.i) : null; ui.style = null; commit(); window.scrollTo(0, 0); },
   styleopen(v) { ui.style = v || null; later(); window.scrollTo(0, 0); },
   dropWish(v) { delete state.autoWish[v]; commit(); },
@@ -606,7 +612,7 @@ const actions = {
   isize(v, el) { const i = instByKey(v); if (!i) return; const it = { ...state.items[v] }; if (i.saved.size === el.dataset.s) delete it.size; else it.size = el.dataset.s; state.items[v] = it; commit(); },
   iprio(v, el) { const i = instByKey(v); if (!i) return; const it = { ...state.items[v] }; if (i.saved.prio === el.dataset.p) delete it.prio; else it.prio = el.dataset.p; state.items[v] = it; commit(); },
   prio(v) { state.prio = state.prio === v ? null : v; commit(); },
-  usepreset() { if (!state.drawn) { state.rooms = withDrawing(state.rooms); state.drawn = true; ui.sheet = sheetFor(state, ui.sheet); commit(); } },
+  usepreset() { if (!state.drawn) { state.rooms = withDrawing(state.rooms); state.openings = []; state.drawn = true; ui.sheet = sheetFor(state, ui.sheet); commit(); } },
   // Fra «Finn» og rett til «Plasser», med møbelet satt ut og valgt.
   place(v) {
     const i = instByKey(v);
@@ -644,7 +650,7 @@ async function loadPlan(file) {
       const id = 'r' + (state.seq = (state.seq || 100) + 1);
       return { id, type: x.type, size: x.m2 ? sizeFromM2(x.type, x.m2) : 'M', m2: x.m2, wall: null };
     });
-    state.home = ''; state.custom = []; state.drawn = false; state.furn = []; state.floors = ['1. etasje']; ui.floor = 0; ui.furn = null; ui.room = null;
+    state.home = ''; state.custom = []; state.drawn = false; state.furn = []; state.openings = []; state.floors = ['1. etasje']; ui.floor = 0; ui.furn = null; ui.room = null;
     ui.msg = { where: 'plan', text: `Fant ${r.rooms.length} rom. Tallene er lest eller anslått fra tegningen, så se over dem. ${r.note}`.trim() };
   } catch (e) {
     if (e.message) ui.msg = { where: 'plan', bad: true, text: e.message };
