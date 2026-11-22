@@ -497,6 +497,7 @@ const actions = {
     state.step = Math.min(LAST, Math.max(0, Number(v) || 0));
     ui.round = false; ui.room = null; ui.furn = null; ui.style = null; ui.open = null; ui.note = ''; ui.info = '';
     if (state.step === 3) ensureDrawing();
+    if (state.step === 0) ui.tool = 'draw'; // tilbake på «Bolig» starter man alltid med «Tegn rom»
     commit(); window.scrollTo(0, 0);
   },
   write() { ui.write = !ui.write; later(); },
@@ -512,7 +513,7 @@ const actions = {
     ui.floor = Math.min(ui.floor, state.floors.length - 1); ui.note = '';
     persist(); later();
   },
-  tab(v) { ui.tab = v === 'draw' ? 'draw' : 'pick'; ui.room = null; ui.furn = null; ui.note = ''; later(); },
+  tab(v) { ui.tab = v === 'draw' ? 'draw' : 'pick'; ui.tool = 'draw'; ui.room = null; ui.furn = null; ui.note = ''; later(); },
   room(v) { ui.room = ui.room === v ? null : v; ui.furn = null; later(); },
   size(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r) { r.size = v; r.m2 = null; commit(); } },
   delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.furn = state.furn.filter((f) => f.room !== ui.room); state.drawn = state.rooms.some((r) => r.poly); state.custom = state.custom.filter((c) => c.room !== ui.room); ui.room = null; commit(); },

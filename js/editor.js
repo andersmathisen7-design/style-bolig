@@ -395,7 +395,11 @@ export function bindEditor(app, ctx) {
           for (const f of state.furn) if (f.room === d.room.id) { f.x += dx; f.y += dy; }
         }
         ui.room = d.room.id; ui.furn = null;
-      } else { ui.room = null; ui.furn = null; }
+      } else {
+        ui.room = null; ui.furn = null;
+        // En lang strek på tomt ark mens «Velg og flytt» er valgt: brukeren prøver trolig å tegne.
+        if (d.far && !ui.furnish) ui.note = 'Nå er «Velg og flytt» valgt. Trykk «Tegn rom» over tegningen for å tegne.';
+      }
     } else if (!d.far) {
       // Dør eller vindu: finn nærmeste vegg på denne etasjen.
       const kind = d.tool === 'window' ? 'window' : 'door';
