@@ -211,20 +211,35 @@ a.chip { text-decoration: none; color: var(--ink); }
 .tab { min-height: 44px; border: 0; background: var(--surface); font-weight: 700; }
 .tab.on { background: var(--ink); color: #fff; }
 
-/* Tegneark: tynne linjer hver halve meter, tydeligere hver meter */
-.draw { position: relative; width: 100%; aspect-ratio: 1; margin: 6px 0 8px; border: var(--wall) solid var(--ink); background-color: var(--surface);
-  background-image: linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px),
-    linear-gradient(to right, var(--grid) 1px, transparent 1px), linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: calc(100% / 14) calc(100% / 14), calc(100% / 14) calc(100% / 14), calc(100% / 28) calc(100% / 28), calc(100% / 28) calc(100% / 28);
-  touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; overflow: hidden; }
-.droom { position: absolute; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 3px 5px; overflow: hidden;
-  background: rgba(255, 255, 255, 0.82); border: var(--wall) solid var(--ink); text-align: left; cursor: pointer; touch-action: none; }
-.droom.on { background: var(--teal-soft); border-color: var(--teal); cursor: move; z-index: 1; }
-.droom .room-name { font-size: 0.75rem; }
-.droom .room-m2 { font-size: 0.6875rem; white-space: nowrap; }
-#ghost { position: absolute; display: flex; align-items: center; justify-content: center; padding: 2px; background: rgba(14, 107, 92, 0.18); border: 2px dashed var(--teal);
-  color: var(--teal); font-size: 0.75rem; font-weight: 700; text-align: center; pointer-events: none; z-index: 2; }
-#ghost.small { background: rgba(176, 20, 95, 0.12); border-color: var(--pink); }
-.draw-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 24px; text-align: center; color: var(--muted); font-weight: 600; pointer-events: none; }
-
-#ghost[hidden] { display: none; }
+/* Plantegning */
+.floors { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.tools { display: grid; grid-template-columns: repeat(4, 1fr); border: var(--wall) solid var(--ink); border-radius: 8px; overflow: hidden; }
+.tool { min-height: 44px; padding: 6px 4px; border: 0; border-right: 1px solid var(--line); background: var(--surface); font-weight: 700; font-size: 0.875rem; line-height: 1.15; }
+.tool:last-child { border-right: 0; }
+.tool.on { background: var(--teal); color: #fff; }
+.tool-hint { margin: 8px 0; min-height: 2.6em; }
+.draw { display: block; width: 100%; aspect-ratio: 1; margin: 0 0 8px; border: var(--wall) solid var(--ink); background: var(--surface); touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
+.draw.tool-move { cursor: default; }
+.draw.tool-door, .draw.tool-window { cursor: pointer; }
+.g-thin { stroke: var(--grid); }
+.g-bold { stroke: var(--line); }
+.proom { fill: rgba(255, 255, 255, 0.86); stroke: var(--ink); stroke-linejoin: miter; }
+.proom.on { fill: var(--teal-soft); stroke: var(--teal); }
+.tool-move .proom, .tool-move .furn { cursor: move; }
+.pname, .pm2, .mark, .mark-t, .gap, .win, .door, .empty, #ink, .furn text { pointer-events: none; }
+.pname { text-anchor: middle; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 0.22em; stroke-linejoin: round; }
+.pm2 { text-anchor: middle; fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 0.22em; stroke-linejoin: round; }
+.gap { stroke: var(--surface); }
+.win { stroke: #2F7FB8; }
+.door { fill: none; stroke: var(--ink); }
+.mark { fill: var(--ink); }
+.mark-t { text-anchor: middle; font-weight: 700; fill: #fff; }
+.furn rect { fill: var(--pink-soft); stroke: var(--pink); }
+.furn.on rect { fill: var(--pink); }
+.furn text { text-anchor: middle; font-weight: 700; fill: var(--pink); }
+.furn.on text { fill: #fff; }
+#ink { stroke: var(--teal); stroke-linecap: round; stroke-linejoin: round; }
+.empty { text-anchor: middle; fill: var(--muted); font-weight: 600; }
+.sheetrow { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.sheetrow .chips { flex: none; flex-wrap: nowrap; margin: 0 0 12px; }
+.walls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }

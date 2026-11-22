@@ -3,9 +3,9 @@ import {
   newState, roomsFromHome, roomLabel, roomM2, sizeFromM2, sizeRange, instances, defaultMax, maxOf,
   parseLife, wishOf, searchText, finnUrl, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
   newHint, layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
-  GRID, rectFromLines, dims, areaOf, guessType, drawnRoom,
 } from './logic.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
+import { drawView, roomPanel, bindEditor, editorActions, isDragging } from './editor.js';
 
 const KEY = 'brukthjem.v1';
 const app = document.getElementById('app');
@@ -14,8 +14,10 @@ const canShare = !window.__noShare; // forhåndsvisninger uten egen adresse kan 
 const SIZE_NAME = { S: 'Lite', M: 'Middels', L: 'Stort' };
 
 let state = load();
-const ui = { open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, style: null, tab: state.drawn ? 'draw' : 'pick' };
-let drag = null; // pågående tegning eller flytting på tegnearket
+const ui = {
+  open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, style: null,
+  tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: 1500, furn: null, note: '',
+};
 
 function load() {
   let saved = null;
@@ -59,8 +61,8 @@ function viewHome() {
     <button class="tab ${ui.tab === 'pick' ? 'on' : ''}" data-act="tab" data-v="pick" aria-pressed="${ui.tab === 'pick'}">Velg bolig</button>
     <button class="tab ${ui.tab === 'draw' ? 'on' : ''}" data-act="tab" data-v="draw" aria-pressed="${ui.tab === 'draw'}">Tegn selv</button>
   </div>
-  ${ui.tab === 'draw' ? drawView() : pickView()}
-  ${sel ? roomEditor(sel) : ''}
+  ${ui.tab === 'draw' ? drawView(state, ui) : pickView()}
+  ${sel ? (sel.poly ? roomPanel(state, ui, sel) : roomEditor(sel)) : ''}
   ${ui.tab === 'pick' ? `<div class="field">
     <label for="addroom">Mangler det et rom?</label>
     <select id="addroom" data-ch="addroom"><option value="">Legg til rom</option>
@@ -89,24 +91,6 @@ function pickView() {
   ${uploadPanel()}`;
 }
 
-const pct = (n) => `${((n / GRID) * 100).toFixed(3)}%`;
-
-function drawView() {
-  const rooms = state.rooms.filter((r) => r.g);
-  return `
-  <p class="hint">Dra med fingeren eller musa for å tegne et rom. Trykk på et rom for å velge det, og dra det valgte rommet for å flytte det. Hver rute er en halv meter.</p>
-  <div class="draw" id="draw">
-    ${rooms.map((r) => `<button class="droom ${ui.room === r.id ? 'on' : ''}" data-act="room" data-v="${r.id}" data-room="${r.id}"
-      style="left:${pct(r.g.x)};top:${pct(r.g.y)};width:${pct(r.g.w)};height:${pct(r.g.h)}">
-      <span class="room-name">${esc(roomLabel(state.rooms, r))}</span><span class="room-m2">${dims(r.g)}</span></button>`).join('')}
-    ${rooms.length ? '' : '<p class="draw-empty">Dra her for å tegne det første rommet</p>'}
-    <div class="ghost" id="ghost" hidden></div>
-  </div>
-  <p class="plan-sum">${rooms.length
-    ? `Omtrent ${totalM2(rooms)} m² fordelt på ${rooms.length} rom. Arket er 14 × 14 meter.`
-    : `Arket er 14 × 14 meter. ${state.drawn ? '' : 'Det første rommet du tegner, erstatter rommene fra «Velg bolig».'}`}</p>`;
-}
-
 function status(where) {
   if (ui.busy === where) return `<p class="status" role="status">${where === 'plan' ? 'Claude leser tegningen. Det tar gjerne et halvt minutt.' : 'Claude leser teksten.'}</p>`;
   if (ui.msg?.where === where) return `<p class="status ${ui.msg.bad ? 'bad' : ''}" role="status">${esc(ui.msg.text)}</p>`;
@@ -126,16 +110,9 @@ function uploadPanel() {
 }
 
 function roomEditor(r) {
-  const drawn = !!r.g;
   return `
   <section class="panel" aria-label="Endre rom">
-    <h2>${esc(roomLabel(state.rooms, r))}${drawn ? `<small>${dims(r.g)}, ${areaOf(r.g)} m²</small>` : ''}</h2>
-    ${drawn ? `<span class="q-label">Hva slags rom er det?</span>
-    <div class="chips" role="group" aria-label="Type rom">
-      ${Object.entries(ROOMS).map(([id, t]) => `<button class="chip mini ${r.type === id ? 'on' : ''}" data-act="rtype" data-v="${id}" aria-pressed="${r.type === id}">${t.name}</button>`).join('')}
-    </div>
-    <div class="field"><label for="wall">Lengste ledige vegg, cm</label><input id="wall" inputmode="numeric" data-ch="wall" value="${r.wall ?? ''}" placeholder="valgfritt"></div>
-    <p class="hint">Fylt inn fra tegningen. Trekk fra dører og vinduer hvis du vet målet. Vil du endre størrelsen, fjern rommet og tegn det på nytt.</p>` : `
+    <h2>${esc(roomLabel(state.rooms, r))}</h2>
     <div class="chips" role="group" aria-label="Størrelse">
       ${['S', 'M', 'L'].map((s) => `<button class="chip ${r.size === s && !r.m2 ? 'on' : ''}" data-act="size" data-v="${s}">${SIZE_NAME[s]}<small>${sizeRange(r.type, s)}</small></button>`).join('')}
     </div>
@@ -143,7 +120,7 @@ function roomEditor(r) {
       <div class="field"><label for="m2">Eller skriv inn m²</label><input id="m2" inputmode="decimal" data-ch="m2" value="${r.m2 ?? ''}" placeholder="f.eks. 18"></div>
       <div class="field"><label for="wall">Lengste ledige vegg, cm</label><input id="wall" inputmode="numeric" data-ch="wall" value="${r.wall ?? ''}" placeholder="valgfritt"></div>
     </div>
-    <p class="hint">Veggmålet brukes til å regne ut hvor bred sofa, benk eller skap du har plass til.</p>`}
+    <p class="hint">Veggmålet brukes til å regne ut hvor bred sofa, benk eller skap du har plass til.</p>
     <button class="link danger" data-act="delroom">Fjern rommet</button>
   </section>`;
 }
@@ -257,7 +234,7 @@ function itemBody(inst, sum) {
   const notes = [...w.avoid.map((a) => `ikke ${a}`), ...w.notes];
   return `
   <div class="item-body">
-    ${[wallNote(inst), ...tipsFor(inst, state)].filter(Boolean).map((t) => `<p class="tip">${esc(t)}</p>`).join('')}
+    ${[wallNote(inst, state), ...tipsFor(inst, state)].filter(Boolean).map((t) => `<p class="tip">${esc(t)}</p>`).join('')}
     <div class="row">
       <a class="btn" href="${esc(finnUrl(inst, state, 'all'))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Søk på Finn</a>
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'today'))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Lagt ut i dag</a>
@@ -328,7 +305,7 @@ function viewList() {
     const on = mine.filter((i) => i.st !== 'off');
     const off = mine.filter((i) => i.st === 'off');
     return `<section class="roomlist">
-      <h2>${esc(roomLabel(state.rooms, room))}<small>${roomM2(room)} m²</small></h2>
+      <h2>${esc(roomLabel(state.rooms, room))}<small>${roomM2(room)} m²${state.floors.length > 1 && room.poly ? `, ${esc(state.floors[room.floor || 0])}` : ''}</small></h2>
       <ul class="items">${on.map((i) => itemRow(i, sum)).join('')}</ul>
       ${off.length ? `<div class="more"><span class="q-label">Legg til</span><div class="chips">${off.map((i) => `<button class="chip mini add" data-act="status" data-v="${i.key}" data-st="need">+ ${esc(i.item.name)}</button>`).join('')}</div></div>` : ''}
       <div class="own"><div class="field"><label for="own-${room.id}">Noe annet? Beskriv hva du ser etter</label>
@@ -378,7 +355,7 @@ let queued = false;
 function later() {
   if (queued) return;
   queued = true;
-  setTimeout(() => { queued = false; if (drag) drag.rerender = true; else render(); }, 0);
+  setTimeout(() => { queued = false; if (!isDragging()) render(); }, 0);
 }
 function commit() { save(); later(); }
 function setItem(key, patch) { state.items[key] = { ...state.items[key], ...patch }; commit(); }
@@ -414,12 +391,11 @@ const actions = {
     ui.busy = ''; commit();
   },
   step(v) { state.step = Math.min(3, Math.max(0, Number(v))); ui.round = false; ui.room = null; ui.style = null; commit(); window.scrollTo(0, 0); },
-  home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; state.drawn = false; ui.room = null; ui.msg = null; commit(); },
-  tab(v) { ui.tab = v === 'draw' ? 'draw' : 'pick'; ui.room = null; later(); },
-  room(v) { ui.room = ui.room === v ? null : v; later(); },
-  rtype(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r && ROOMS[v]) { r.type = v; r.size = sizeFromM2(v, roomM2(r)); commit(); } },
+  home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; state.drawn = false; state.furn = []; state.floors = ['1. etasje']; ui.room = null; ui.furn = null; ui.floor = 0; ui.msg = null; commit(); },
+  tab(v) { ui.tab = v === 'draw' ? 'draw' : 'pick'; ui.room = null; ui.furn = null; ui.note = ''; later(); },
+  room(v) { ui.room = ui.room === v ? null : v; ui.furn = null; later(); },
   size(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r) { r.size = v; r.m2 = null; commit(); } },
-  delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.drawn = state.rooms.some((r) => r.g); state.custom = state.custom.filter((c) => c.room !== ui.room); ui.room = null; commit(); },
+  delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.furn = state.furn.filter((f) => f.room !== ui.room); state.drawn = state.rooms.some((r) => r.poly); state.custom = state.custom.filter((c) => c.room !== ui.room); ui.room = null; commit(); },
   style(v) { state.style = v; ui.style = null; commit(); window.scrollTo(0, 0); },
   styleopen(v) { ui.style = v || null; later(); window.scrollTo(0, 0); },
   life(v) { state.life = state.life.includes(v) ? state.life.filter((x) => x !== v) : [...state.life, v]; commit(); },
@@ -459,7 +435,7 @@ const actions = {
   },
   sure() { ui.sure = true; later(); },
   unsure() { ui.sure = false; later(); },
-  reset() { state = newState(); ui.open = ui.room = null; ui.sure = false; ui.copied = ''; ui.tab = 'pick'; commit(); window.scrollTo(0, 0); },
+  reset() { state = newState(); ui.open = ui.room = null; ui.sure = false; ui.copied = ''; ui.tab = 'pick'; ui.floor = 0; ui.furn = null; commit(); window.scrollTo(0, 0); },
   useShared() { state = ui.shared; ui.tab = state.drawn ? 'draw' : 'pick'; ui.shared = null; history.replaceState(null, '', location.pathname); commit(); },
   dropShared() { ui.shared = null; history.replaceState(null, '', location.pathname); later(); },
 };
@@ -473,7 +449,7 @@ async function loadPlan(file) {
       const id = 'r' + (state.seq = (state.seq || 100) + 1);
       return { id, type: x.type, size: x.m2 ? sizeFromM2(x.type, x.m2) : 'M', m2: x.m2, wall: null };
     });
-    state.home = ''; state.custom = []; state.drawn = false; ui.room = null;
+    state.home = ''; state.custom = []; state.drawn = false; state.furn = []; state.floors = ['1. etasje']; ui.floor = 0; ui.furn = null; ui.room = null;
     ui.msg = { where: 'plan', text: `Fant ${r.rooms.length} rom. Tallene er lest eller anslått fra tegningen, så se over dem. ${r.note}`.trim() };
   } catch (e) {
     if (e.message) ui.msg = { where: 'plan', bad: true, text: e.message };
@@ -509,72 +485,11 @@ app.addEventListener('click', (e) => {
   if (el.tagName !== 'A') e.preventDefault();
   actions[el.dataset.act]?.(el.dataset.v, el);
 });
-// ---------- Tegning med finger eller mus ----------
-// Mens man drar, flyttes bare en hjelpefigur. Tilstanden lagres først når man slipper.
-
-function linePos(e, el) {
-  const b = el.getBoundingClientRect();
-  return { x: ((e.clientX - b.left) / b.width) * GRID, y: ((e.clientY - b.top) / b.height) * GRID };
-}
-function place(el, g) {
-  el.style.left = pct(g.x); el.style.top = pct(g.y); el.style.width = pct(g.w); el.style.height = pct(g.h);
-}
-
-app.addEventListener('pointerdown', (e) => {
-  const sheet = e.target.closest('#draw');
-  if (!sheet || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
-  const hit = e.target.closest('[data-room]');
-  const p = linePos(e, sheet);
-  if (hit && hit.dataset.room !== ui.room) return; // trykk på et annet rom velger det (vanlig klikk)
-  if (hit) {
-    const room = state.rooms.find((r) => r.id === ui.room);
-    drag = { mode: 'move', sheet, el: hit, room, dx: p.x - room.g.x, dy: p.y - room.g.y, g: room.g, id: e.pointerId };
-  } else {
-    drag = { mode: 'draw', sheet, el: sheet.querySelector('#ghost'), sx: p.x, sy: p.y, g: null, id: e.pointerId };
-  }
-  try { sheet.setPointerCapture(e.pointerId); } catch { /* går fint uten */ }
-  e.preventDefault();
-});
-
-window.addEventListener('pointermove', (e) => {
-  if (!drag || e.pointerId !== drag.id) return;
-  const p = linePos(e, drag.sheet);
-  if (drag.mode === 'move') {
-    const { w, h } = drag.room.g;
-    const x = Math.min(GRID - w, Math.max(0, Math.round(p.x - drag.dx)));
-    const y = Math.min(GRID - h, Math.max(0, Math.round(p.y - drag.dy)));
-    drag.g = { x, y, w, h };
-    place(drag.el, drag.g);
-  } else {
-    drag.g = rectFromLines(drag.sx, drag.sy, p.x, p.y);
-    const ok = drag.g.w >= 2 && drag.g.h >= 2;
-    drag.el.hidden = drag.g.w < 1 || drag.g.h < 1;
-    drag.el.classList.toggle('small', !ok);
-    drag.el.textContent = ok ? `${dims(drag.g)}, ${areaOf(drag.g)} m²` : '';
-    place(drag.el, drag.g);
-  }
-});
-
-function endDrag(e, cancelled) {
-  if (!drag || e.pointerId !== drag.id) return;
-  const d = drag;
-  drag = null;
-  if (!cancelled && d.mode === 'move' && d.g !== d.room.g) {
-    Object.assign(d.room, drawnRoom(d.room, d.g), { wall: d.room.wall });
-  } else if (!cancelled && d.mode === 'draw' && d.g && d.g.w >= 2 && d.g.h >= 2) {
-    const id = 'r' + (state.seq = (state.seq || 100) + 1);
-    const base = state.drawn ? state.rooms : [];
-    const room = drawnRoom({ id, type: guessType(base, d.g), size: 'M', m2: null, wall: null }, d.g);
-    if (!state.drawn) { state.items = {}; state.custom = []; state.home = ''; state.drawn = true; }
-    state.rooms = [...base, room];
-    ui.room = id;
-  } else if (d.mode === 'draw') {
-    ui.room = null; // trykk på tomt ark opphever valget
-  }
-  save(); render();
-}
-window.addEventListener('pointerup', (e) => endDrag(e, false));
-window.addEventListener('pointercancel', (e) => endDrag(e, true));
+const editorCtx = { state: () => state, ui, save, render, later, commit };
+const ed = editorActions(editorCtx);
+Object.assign(actions, ed.actions);
+Object.assign(changes, ed.changes);
+bindEditor(app, editorCtx);
 
 app.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.dataset?.enter) return;

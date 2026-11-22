@@ -184,26 +184,31 @@ test('egne ting og pynt', async () => {
   assert.equal(searchText(get(s, 'spisebord'), s), 'spisebord eik');
 });
 
-test('tegne rom', async () => {
-  const { GRID, rectFromLines, dims, areaOf, guessType, drawnRoom } = await import('../js/logic.js');
-  const g = rectFromLines(10.4, 2.2, 2.6, 9.9);
-  assert.deepEqual(g, { x: 3, y: 2, w: 7, h: 8 });
-  assert.equal(dims(g), '3,5 × 4 m');
-  assert.equal(areaOf(g), 14);
-  assert.deepEqual(rectFromLines(-5, -5, 99, 99), { x: 0, y: 0, w: GRID, h: GRID });
-  assert.equal(guessType([], g), 'stue');
-  assert.equal(guessType([{ type: 'stue' }], g), 'soverom');
-  assert.equal(guessType([{ type: 'stue' }], { x: 0, y: 0, w: 4, h: 4 }), 'bad');
-  const r = drawnRoom({ id: 'r101', type: 'stue', size: 'M', m2: null, wall: null }, g);
-  assert.equal(r.m2, 14); assert.equal(r.size, 'S'); assert.equal(r.wall, 400);
+test('plantegning: lagring, eldre format og møbel mot vegg', async () => {
+  const { placedWall, footprint } = await import('../js/logic.js');
   const s = newState();
-  s.rooms = [r, { id: 'r102', type: 'bad', size: 'S', m2: 4, wall: null, g: { x: 27, y: 0, w: 5, h: 2 } }];
+  s.floors = ['1. etasje', 'x'];
+  s.rooms = [
+    { id: 'r101', type: 'stue', size: 'M', m2: 12, wall: 400, floor: 0, poly: [[100, 100], [500, 100], [500, 400], [100, 400]], doors: [{ e: 0, t: 0.1, w: 80, kind: 'door' }, { e: 9, t: 0.5, w: 80 }] },
+    { id: 'r102', type: 'soverom', size: 'S', m2: 4, wall: null, g: { x: 2, y: 2, w: 4, h: 4 } },
+    { id: 'r103', type: 'bad', size: 'S', m2: 4, wall: null, floor: 7, poly: [[0, 0], ['<x>', 0], [1, 1]] },
+  ];
+  s.furn = [{ id: 'f1', room: 'r101', item: 'sofa', x: 300, y: 150, w: 210, d: 90, r: 0 }, { id: 'f2', room: 'r103', item: 'sofa', x: 0, y: 0, w: 100, d: 50, r: 0 }, { id: 'bad', room: 'r101', item: 'sofa', x: 0, y: 0, w: 1, d: 1 }];
   s.drawn = true;
   const n = normalize(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(n.rooms[0].g, g);
-  assert.equal(n.rooms[1].g, undefined); // utenfor arket
+  assert.deepEqual(n.floors, ['1. etasje', '2. etasje']);
+  assert.equal(n.rooms[0].doors.length, 1);
+  assert.deepEqual(n.rooms[1].poly, [[100, 100], [300, 100], [300, 300], [100, 300]]); // gammelt rektangel
+  assert.equal(n.rooms[2].poly, undefined);
+  assert.equal(n.furn.length, 1);
   assert.equal(n.drawn, true);
-  assert.match(wallNote(get(n, 'sofa')), /360 cm/);
+  assert.deepEqual(placedWall(n, 'r101', 'sofa'), { e: 0, len: 400, free: 320, letter: 'A' });
+  assert.match(wallNote(get(n, 'sofa'), n), /vegg A.*400 cm.*320 cm er fri.*280 cm bred/);
+  assert.deepEqual(footprint('sofa', 'M'), [210, 90]);
+  assert.deepEqual(footprint('nattbord', 'S'), [45, 40]);
+  assert.equal(footprint('gardiner', 'M'), null);
+  const back = decodeState(encodeState(n));
+  assert.deepEqual(back.rooms[0].poly, n.rooms[0].poly);
 });
 
 test('stilbilder finnes', async () => {

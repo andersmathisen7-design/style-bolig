@@ -6,7 +6,7 @@ Brukthjem er ikke tilknyttet FINN.no eller IKEA.
 
 ## Slik virker det
 
-1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn rommene selv med finger eller mus på et rutenett der hver rute er en halv meter. Du kan også endre størrelse, skrive inn kvadratmeter eller legge inn lengste ledige vegg.
+1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn boligen selv: tegn rundt hvert rom på frihånd, så rettes strekene opp til rette vegger. Rom kan ha vinkler og skrå vegger, og boligen kan ha flere etasjer. Etterpå setter du riktige veggmål, dører, vinduer og møbler. Møbler du setter inntil en vegg, gir lista største bredde for den tingen.
 2. **Stil.** Åtte stiler med bilder. Trykk på en stil for flere eksempler og kjennetegn. Stilen gir forslag til søkeord og pynt.
 3. **Hverdag.** Skriv fritt («vil ikke ha rundt bord, sofaen bør være grønn») eller trykk på ferdige valg. Teksten tolkes av enkle regler i nettleseren.
 4. **Lista.** Huk av det du har, og legg til egne ting med en kort beskrivelse. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk.
@@ -42,6 +42,8 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `js/app.js` | Skjermbildene og knappene. |
 | `photos/` | Stilbildene, tre per stil. |
 | `js/ai.js` | Valgfri AI: plantegning og fritekst. |
+| `js/plan.js` | Geometri for tegningen: retting av streker, veggmål, dører. |
+| `js/editor.js` | Tegneflaten og verktøyene. |
 | `test/logic.test.mjs` | Tester for logikken. |
 
 ## Om tallene

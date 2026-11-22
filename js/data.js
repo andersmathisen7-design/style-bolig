@@ -431,3 +431,20 @@ export const LEVELS = [
   { id: 'vanlig', name: 'Vanlig brukt', f: 1, hint: 'Det ting vanligvis går for på Finn.' },
   { id: 'pent', name: 'Pent brukt', f: 1.8, hint: 'Nyere ting og kjente merker.' },
 ];
+
+// Omtrentlig fotavtrykk i cm (bredde × dybde) for møbler som kan settes ut på plantegningen.
+// Ting med flere størrelser følger romstørrelsen (S, M, L).
+export const FOOT = {
+  sofa: { S: [160, 90], M: [210, 90], L: [260, 100] },
+  sovesofa: [200, 95], sofabord: [100, 60], lenestol: [80, 80], bokhylle: [80, 30], gulvlampe: [35, 35],
+  tvbenk: { S: [120, 40], M: [150, 40], L: [180, 40] },
+  teppe: { S: [200, 140], M: [230, 160], L: [300, 200] },
+  spisebord: { S: [100, 70], M: [150, 90], L: [200, 95] },
+  barkrakker: [120, 40], kjokkentralle: [60, 40],
+  seng: { S: [120, 200], M: [160, 200], L: [180, 200] },
+  gjesteseng: [90, 200], nattbord: [45, 40], kommode: [80, 45],
+  garderobe: { S: [100, 60], M: [150, 60], L: [200, 60] },
+  skohylle: [80, 30], benk: [100, 35],
+  skrivebord: { S: [100, 60], M: [130, 65], L: [160, 80] }, kontorstol: [60, 60],
+  badhylle: [40, 30], barneseng: [70, 140], lekekasse: [80, 40], utemobler: [120, 70],
+};

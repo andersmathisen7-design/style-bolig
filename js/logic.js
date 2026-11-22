@@ -1,5 +1,6 @@
 // Ren logikk uten DOM, slik at den kan testes i Node.
-import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS } from './data.js';
+import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS, FOOT } from './data.js';
+import { wallFor, letter } from './plan.js';
 
 const FINN = 'https://www.finn.no/recommerce/forsale/search';
 const FINN_FURNITURE = '0.78'; // Møbler og interiør
@@ -7,7 +8,7 @@ const FINN_FURNITURE = '0.78'; // Møbler og interiør
 export function newState() {
   return {
     v: 1, step: 0, area: '', home: 'toroms', style: null, level: 'vanlig', total: null,
-    rooms: roomsFromHome('toroms'), drawn: false, life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
+    rooms: roomsFromHome('toroms'), drawn: false, floors: ['1. etasje'], furn: [], life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
   };
 }
 
@@ -257,9 +258,17 @@ export function decorLinks(state, mode = 'all') {
   });
 }
 
-// Hvor bred tingen kan være når brukeren har målt veggen.
-export function wallNote(inst) {
-  if (!inst.room.wall || !['sofa', 'sovesofa', 'tvbenk', 'garderobe', 'skrivebord'].includes(inst.itemId)) return '';
+// Hvor bred tingen kan være. Best når møbelet er satt ut på tegningen, ellers ut fra veggmålet til rommet.
+const WALL_ITEMS = ['sofa', 'sovesofa', 'tvbenk', 'garderobe', 'skrivebord', 'bokhylle', 'kommode', 'seng'];
+export function wallNote(inst, state) {
+  if (!WALL_ITEMS.includes(inst.itemId)) return '';
+  const pw = state ? placedWall(state, inst.room.id, inst.itemId) : null;
+  if (pw) {
+    const max = pw.free - (inst.item.wall ?? 20);
+    const doors = pw.free < pw.len ? `, der ${pw.free} cm er fri for dører` : '';
+    return max > 40 ? `På tegningen står den mot vegg ${pw.letter}, som er ${pw.len} cm${doors}. Maks ca. ${max} cm bred.` : '';
+  }
+  if (!inst.room.wall || ['bokhylle', 'kommode', 'seng'].includes(inst.itemId)) return '';
   const max = inst.room.wall - (inst.item.wall || 20);
   return max > 40 ? `Maks ca. ${max} cm bred, siden veggen er ${inst.room.wall} cm.` : '';
 }
@@ -348,38 +357,21 @@ export function layoutPlan(rooms) {
   return out;
 }
 
-// ---------- Tegne selv ----------
+// ---------- Møbler på plantegningen ----------
 
-export const GRID = 28;      // ruter per side på tegnearket
-export const CELL_M = 0.5;   // meter per rute
-
-// Rektangel mellom to punkter på rutenettet (linjenummer 0..GRID).
-export function rectFromLines(ax, ay, bx, by) {
-  const c = (n) => Math.min(GRID, Math.max(0, Math.round(n)));
-  const x = Math.min(c(ax), c(bx)), y = Math.min(c(ay), c(by));
-  return { x, y, w: Math.abs(c(ax) - c(bx)), h: Math.abs(c(ay) - c(by)) };
+export function footprint(itemId, size) {
+  const f = FOOT[itemId];
+  return !f ? null : Array.isArray(f) ? f : f[size];
 }
 
-const comma = (n) => String(n).replace('.', ',');
-export const dims = (g) => `${comma(g.w * CELL_M)} × ${comma(g.h * CELL_M)} m`;
-export const areaOf = (g) => Math.max(1, Math.round(g.w * g.h * CELL_M * CELL_M));
-
-// Gjetter romtype for et nytt rom: det vanligste som mangler, ellers etter størrelse.
-export function guessType(rooms, g) {
-  const m2 = areaOf(g);
-  const has = (t) => rooms.some((r) => r.type === t);
-  if (m2 <= 6) return !has('bad') ? 'bad' : !has('gang') ? 'gang' : 'bad';
-  for (const t of ['stue', 'soverom', 'kjokken']) if (!has(t)) return t;
-  return 'soverom';
+// Veggen møbelet til en ting på lista står mot, hvis det er satt ut på tegningen.
+export function placedWall(state, roomId, itemId) {
+  const room = state.rooms.find((r) => r.id === roomId);
+  const f = (state.furn || []).find((x) => x.room === roomId && x.item === itemId);
+  if (!room?.poly || !f) return null;
+  const w = wallFor(room.poly, room.doors, f);
+  return w ? { ...w, letter: letter(w.e) } : null;
 }
-
-// Lager eller oppdaterer et tegnet rom. Areal, størrelse og lengste vegg følger av tegningen.
-export function drawnRoom(room, g) {
-  const m2 = areaOf(g);
-  return { ...room, g, m2, size: sizeFromM2(room.type, m2), wall: Math.round(Math.max(g.w, g.h) * CELL_M * 100) };
-}
-
-const validG = (g) => g && [g.x, g.y, g.w, g.h].every(Number.isInteger) && g.x >= 0 && g.y >= 0 && g.w >= 1 && g.h >= 1 && g.x + g.w <= GRID && g.y + g.h <= GRID;
 
 export function totalM2(rooms) {
   return Math.round(rooms.reduce((s, r) => s + roomM2(r), 0));
@@ -412,9 +404,27 @@ export function normalize(s) {
   out.level = LEVELS.some((x) => x.id === s.level) ? s.level : 'vanlig';
   out.total = n(s.total, 1e7);
   out.seq = n(s.seq, 1e6) || 100;
-  out.rooms = s.rooms.filter((r) => /^r\d{1,6}$/.test(r.id)).slice(0, 30)
-    .map((r) => ({ id: r.id, type: r.type, size: r.size, m2: n(r.m2, 200), wall: n(r.wall, 2000), ...(validG(r.g) ? { g: { x: r.g.x, y: r.g.y, w: r.g.w, h: r.g.h } } : {}) }));
-  out.drawn = out.rooms.some((r) => r.g);
+  const pt = (q) => Array.isArray(q) && q.length === 2 && q.every((v) => Number.isFinite(v) && v >= -500 && v <= 3000);
+  const nFloors = Array.isArray(s.floors) ? Math.min(5, Math.max(1, s.floors.length)) : 1;
+  out.floors = Array.from({ length: nFloors }, (_, i) => `${i + 1}. etasje`);
+  out.rooms = s.rooms.filter((r) => /^r\d{1,6}$/.test(r.id)).slice(0, 30).map((r) => {
+    const room = { id: r.id, type: r.type, size: r.size, m2: n(r.m2, 2000), wall: n(r.wall, 3000) };
+    let poly = Array.isArray(r.poly) && r.poly.length >= 3 && r.poly.length <= 40 && r.poly.every(pt) ? r.poly.map(([x, y]) => [Math.round(x), Math.round(y)]) : null;
+    const g = r.g; // eldre tegninger var rektangler i halvmeters ruter
+    if (!poly && g && [g.x, g.y, g.w, g.h].every(Number.isInteger) && g.w >= 1 && g.h >= 1 && g.x >= 0 && g.y >= 0 && g.x + g.w <= 60 && g.y + g.h <= 60) {
+      poly = [[g.x, g.y], [g.x + g.w, g.y], [g.x + g.w, g.y + g.h], [g.x, g.y + g.h]].map(([x, y]) => [x * 50, y * 50]);
+    }
+    if (!poly) return room;
+    const doors = (Array.isArray(r.doors) ? r.doors : [])
+      .filter((d) => d && Number.isInteger(d.e) && d.e >= 0 && d.e < poly.length && d.t >= 0 && d.t <= 1 && d.w >= 40 && d.w <= 300)
+      .slice(0, 12).map((d) => ({ e: d.e, t: Number(d.t), w: Math.round(d.w), kind: d.kind === 'window' ? 'window' : 'door' }));
+    return { ...room, poly, doors, floor: Number.isInteger(r.floor) && r.floor >= 0 && r.floor < nFloors ? r.floor : 0 };
+  });
+  out.drawn = out.rooms.some((r) => r.poly);
+  out.furn = (Array.isArray(s.furn) ? s.furn : [])
+    .filter((f) => f && /^f\d{1,6}$/.test(f.id) && ITEMS[f.item] && out.rooms.some((r) => r.id === f.room && r.poly)
+      && [f.x, f.y].every((v) => Number.isFinite(v) && v >= -500 && v <= 3000) && [f.w, f.d].every((v) => v >= 20 && v <= 600))
+    .slice(0, 80).map((f) => ({ id: f.id, room: f.room, item: f.item, x: Math.round(f.x), y: Math.round(f.y), w: Math.round(f.w), d: Math.round(f.d), r: f.r === 90 ? 90 : 0 }));
   out.life = s.life.filter((id) => LIFE.some((l) => l.id === id));
   out.lifeText = typeof s.lifeText === 'string' ? s.lifeText.slice(0, 2000) : '';
   out.autoWish = {};
