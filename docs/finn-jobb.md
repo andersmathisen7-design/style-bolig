@@ -1,6 +1,6 @@
 # Daglig sjekk på Finn – oppdraget til den planlagte Claude-økta
 
-Denne fila er oppdraget som kjøres én gang hver morgen. Alt under streken limes inn som teksten i den planlagte
+Denne fila er oppdraget som kjøres én gang hver kveld (kl. 20.43 norsk tid, så det meste av dagens annonser er lagt ut). Alt under streken limes inn som teksten i den planlagte
 oppgaven, uendret. Siden (js/funn.js) skriver profilene og viser funnene, så formatene her og der må endres samtidig.
 
 Kort fortalt: økta leser listene til dem som har slått på «Daglig sjekk på Finn», henter «lagt ut i dag»-søkene
