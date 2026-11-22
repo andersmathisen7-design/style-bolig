@@ -6,7 +6,7 @@ import {
   straighten, straightenLine, isLine, splitPoly, moveWall, moveCorner, dragAlong, valid, remapDoor, remapDoors, alignTo, fitSheet, canonical,
   area, areaM2, edges, letter, setEdgeLength, nearestEdge, labelPoint, pointInPoly, moved, opening, wallFor,
 } from './plan.js';
-import { arrangeRoom, armOf, localNotch, turnCorner, flipCorner } from './arrange.js';
+import { arrangeRoom, armOf, localNotch, flipCorner, turned, keepInside } from './arrange.js';
 
 export const SHEETS = [1000, 1500, 2500];
 const TOOLS = [['draw', 'Tegn rom'], ['move', 'Velg og flytt'], ['door', 'Dør'], ['window', 'Vindu']];
@@ -141,7 +141,7 @@ function sheetSvg(state, ui, rooms, emptyText) {
   const S = ui.sheet, k = S / 1000;
   const sorted = [...rooms].sort((a, b) => (a.id === ui.room) - (b.id === ui.room));
   return `
-  <div class="sheet"><svg class="draw tool-${ui.tool}" id="draw" viewBox="0 0 ${S} ${S}" role="img" aria-label="Plantegning av ${esc(state.floors[ui.floor])}">
+  <div class="sheet"><svg class="draw tool-${ui.tool} ${ui.furnish ? 'furnishing' : ''}" id="draw" viewBox="0 0 ${S} ${S}" role="img" aria-label="Plantegning av ${esc(state.floors[ui.floor])}">
     <defs>
       <pattern id="g50" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" class="g-thin" stroke-width="${1.2 * k}"/></pattern>
       <pattern id="g100" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0H0V100" fill="none" class="g-bold" stroke-width="${1.6 * k}"/></pattern>
@@ -174,8 +174,22 @@ export function drawView(state, ui, canUndo) {
   <div class="sheetrow"><span class="plan-sum">${all.length ? `Omtrent ${all.reduce((s, r) => s + r.m2, 0)} m² i ${all.length} rom.` : (state.drawn ? '' : 'Det første rommet du tegner, erstatter rommene fra «Velg bolig».')} Store ruter er 1 meter.</span>
     <span class="chips" role="group" aria-label="Arkstørrelse">${SHEETS.map((s) => `<button class="chip mini ${S === s ? 'on' : ''}" data-act="sheet" data-v="${s}" aria-pressed="${S === s}">${s / 100} m</button>`).join('')}</span></div>
   ${rooms.length ? `<div class="chips" role="group" aria-label="Rom på denne etasjen">${rooms.map((r) => `<button class="chip mini ${ui.room === r.id ? 'on' : ''}" data-act="room" data-v="${r.id}" aria-pressed="${ui.room === r.id}">${esc(roomLabel(state.rooms, r))}</button>`).join('')}</div>` : ''}
-  ${state.floors.length > 1 && !rooms.length ? '<button class="link danger" data-act="delfloor">Fjern denne etasjen</button>' : ''}
-  ${furnPanel(state, ui)}`;
+  ${state.floors.length > 1 && !rooms.length ? '<button class="link danger" data-act="delfloor">Fjern denne etasjen</button>' : ''}`;
+}
+
+// Knappene for det valgte møbelet, rett under tegningen. Linja har alltid samme høyde, så ingenting hopper når
+// man velger noe. Havner den under skjermkanten, fester den seg over «Neste»-knappen, så den alltid kan nås mens
+// man ser på tegningen.
+function furnBar(state, ui) {
+  const f = (state.furn || []).find((x) => x.id === ui.furn);
+  if (!f) return '<div class="furnbar"><span class="furnbar-hint">Trykk på et møbel for å snu det eller ta det bort.</span></div>';
+  const name = f.corner ? 'Hjørnesofa' : ITEMS[f.item].name;
+  return `<div class="furnbar on" role="group" aria-label="Valgt møbel: ${esc(name)}">
+    <span class="furnbar-name">${esc(name)}</span>
+    <button class="barbtn" data-act="rotfurn">Snu</button>
+    ${f.corner ? '<button class="barbtn" data-act="flipfurn">Snu hjørnet</button>' : ''}
+    <button class="barbtn danger" data-act="delfurn">Ta bort</button>
+  </div>`;
 }
 
 function furnPanel(state, ui) {
@@ -194,9 +208,6 @@ function furnPanel(state, ui) {
       ? `Står mot vegg ${letter(w.e)}, som er ${m(w.len)} m.${w.free < w.len ? ` ${m(w.free)} m er fri for dører.` : ''} Lista bruker dette som største bredde.`
       : 'Står fritt i rommet. Dra det inntil en vegg, så regner lista ut hvor bredt det kan være.'}</p>
     ${f.corner ? '<p class="hint">Målene gjelder hele vinkelen. Størrelsen velger du på lista.</p>' : ''}
-    <div class="row"><button class="btn ghost small" data-act="rotfurn">Snu 90 grader</button>
-      ${f.corner ? '<button class="btn ghost small" data-act="flipfurn">Snu hjørnet</button>' : ''}
-      <button class="link danger" data-act="delfurn">Ta bort møbelet</button></div>
   </section>`;
 }
 
@@ -254,8 +265,9 @@ export function furnishView(state, ui, canUndo) {
     <button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
     ${out ? '<button class="link danger" data-act="clearfurn">Ta bort alle</button>' : ''}
   </div>
-  <p class="hint tool-hint">Trykk på et rom for å velge hva som skal stå der. Trykk på et møbel for å velge det, og dra for å flytte.</p>
+  <p class="hint tool-hint">Trykk på et rom for å velge hva som skal stå der. Trykk på et møbel for å velge det, og dra for å flytte. Knappene for å snu ligger rett under tegningen.</p>
   ${sheetSvg(state, ui, rooms, 'Ingen rom på denne etasjen')}
+  ${furnBar(state, ui)}
   ${ui.note ? `<p class="status bad" role="status">${esc(ui.note)}</p>` : ''}
   ${ui.info ? `<p class="status" role="status">${esc(ui.info)}</p>` : ''}
   <div class="sheetrow"><span class="plan-sum">${out === 1 ? '1 møbel er satt ut.' : out ? `${out} møbler er satt ut.` : 'Ingen møbler er satt ut ennå.'} Store ruter er 1 meter.</span>
@@ -296,7 +308,7 @@ export function bindEditor(app, ctx) {
       drag.pts = [p];
       drag.ink = svg.querySelector('#ink');
     } else if (ui.tool === 'move') {
-      const fEl = e.target.closest('[data-furn]'), rEl = e.target.closest('[data-room]');
+      const fEl = ui.furnish ? e.target.closest('[data-furn]') : null, rEl = e.target.closest('[data-room]'); // møbler flyttes bare på «Plasser»
       const hEl = e.target.closest('[data-corner], [data-wall]');
       const cur = state.rooms.find((r) => r.id === ui.room);
       if (hEl && cur?.poly) {
@@ -464,6 +476,12 @@ export function editorActions(ctx) {
   const sel = () => ctx.state().rooms.find((r) => r.id === ui.room);
   const selFurn = () => ctx.state().furn.find((f) => f.id === ui.furn);
   const num = (v) => { const n = Math.round(Number(String(v).replace(/[^\d]/g, ''))); return Number.isFinite(n) && n > 0 ? n : null; };
+  // Nye mål skrevet for hånd: møbelet skyves inn igjen hvis det ellers ville stukket gjennom en vegg.
+  const resize = (f, dims) => {
+    const room = ctx.state().rooms.find((r) => r.id === f.room);
+    const next = { ...f, ...dims };
+    Object.assign(f, (room?.poly && keepInside(room, next)) || next);
+  };
   return {
     actions: {
       tool(v) { if (HINTS[v]) { ui.tool = v; ui.note = ''; ctx.later(); } },
@@ -523,8 +541,25 @@ export function editorActions(ctx) {
         ui.furn = id; ui.room = null; ui.tool = 'move';
         ctx.commit();
       },
-      rotfurn() { const f = selFurn(); if (f) { f.r = f.r === 90 ? 0 : 90; if (f.corner) f.corner = turnCorner(f.corner); ctx.commit(); } },
-      flipfurn() { const f = selFurn(); if (f?.corner) { f.corner = flipCorner(f); ctx.commit(); } },
+      // Snur møbelet. Det blir stående inne i rommet: treffer det en vegg, skyves det inntil den.
+      rotfurn() {
+        const s = ctx.state(), f = selFurn();
+        if (!f) return;
+        const room = s.rooms.find((r) => r.id === f.room);
+        const next = room?.poly ? turned(room, f) : { ...f, r: f.r === 90 ? 0 : 90 };
+        ui.note = ''; ui.info = '';
+        if (!next) { ui.note = 'Det er ikke plass til å snu den i dette rommet.'; ctx.later(); return; }
+        Object.assign(f, next);
+        ctx.commit();
+      },
+      flipfurn() {
+        const s = ctx.state(), f = selFurn();
+        if (!f?.corner) return;
+        const room = s.rooms.find((r) => r.id === f.room);
+        const flipped = { ...f, corner: flipCorner(f) };
+        Object.assign(f, (room?.poly && keepInside(room, flipped)) || flipped);
+        ui.note = ''; ctx.commit();
+      },
       delfurn() { const s = ctx.state(); s.furn = s.furn.filter((f) => f.id !== ui.furn); ui.furn = null; ctx.commit(); },
     },
     changes: {
@@ -543,8 +578,8 @@ export function editorActions(ctx) {
         refit(r);
         settle(ctx.state(), ui, r, old, next);
       },
-      furnw(el) { const f = selFurn(), n = num(el.value); if (f && n) f.w = clamp(n, 20, 600); },
-      furnd(el) { const f = selFurn(), n = num(el.value); if (f && n) f.d = clamp(n, 20, 600); },
+      furnw(el) { const f = selFurn(), n = num(el.value); if (f && n) resize(f, { w: clamp(n, 20, 600) }); },
+      furnd(el) { const f = selFurn(), n = num(el.value); if (f && n) resize(f, { d: clamp(n, 20, 600) }); },
     },
   };
 }

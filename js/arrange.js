@@ -249,6 +249,37 @@ export function arrangeRoom(room, wants, existing = []) {
   return { placed, skipped: left.filter((w) => w.qty > 0).map((w) => w.item) };
 }
 
+// ---------- Snu og hold inne i rommet ----------
+
+// Alle forskyvninger i 5 cm-steg innenfor 4 meter, de korteste først. Lages én gang.
+const SHIFTS = (() => {
+  const out = [];
+  for (let dx = -400; dx <= 400; dx += 5) for (let dy = -400; dy <= 400; dy += 5) out.push([dx, dy, Math.hypot(dx, dy)]);
+  return out.sort((a, b) => a[2] - b[2] || Math.abs(a[0] * a[1]) - Math.abs(b[0] * b[1])); // ved likt: rett bortover eller nedover først
+})();
+
+// Står hele møbelet inne i rommet? For en hjørnesofa sjekkes de to armene hver for seg.
+export const fitsRoom = (room, f) => boxesOf(f).every((b) => insideRoom(room.poly, b));
+
+// Flytter møbelet kortest mulig vei slik at det står inne i rommet. Gir samme objekt tilbake når det alt står
+// inne, og null når det ikke får plass noe sted i nærheten.
+export function keepInside(room, f) {
+  if (!room?.poly || fitsRoom(room, f)) return f;
+  for (const [dx, dy] of SHIFTS) {
+    const g = { ...f, x: f.x + dx, y: f.y + dy };
+    if (fitsRoom(room, g)) return g;
+  }
+  return null;
+}
+
+// Snur møbelet 90 grader. Ville det stukket gjennom en vegg, skyves det akkurat så langt inn at det står inntil
+// veggen i stedet. Gir null når det ikke er plass til å snu det i rommet.
+export function turned(room, f) {
+  const next = { ...f, r: f.r === 90 ? 0 : 90 };
+  if (f.corner) next.corner = turnCorner(f.corner);
+  return keepInside(room, next);
+}
+
 // ---------- Tegningen følger lista ----------
 
 const OLD_FOOT = { sofa: { L: [260, 100] } }; // mål fra før hjørnesofaen ble tegnet som en vinkel

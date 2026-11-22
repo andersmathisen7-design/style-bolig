@@ -292,3 +292,15 @@ a.chip { text-decoration: none; color: var(--ink); }
 .furn.on polygon { fill: var(--pink); }
 .furn .seam { stroke: var(--pink); opacity: 0.5; pointer-events: none; }
 .furn.on .seam { stroke: #fff; }
+
+/* Knapper for valgt møbel, rett under tegningen. Fester seg over «Neste»-knappen når den ellers ville vært utenfor skjermen. */
+.sheet:has(+ .furnbar) { margin-bottom: 0; }
+.furnbar { display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 6px 10px; margin: 0 0 8px; background: var(--surface); border: var(--wall) solid var(--ink); border-top: 0; }
+.furnbar.on { position: sticky; bottom: calc(73px + env(safe-area-inset-bottom)); z-index: 4; box-shadow: 0 calc(-1 * var(--wall)) 0 var(--ink); }
+.furnbar-hint { font-size: 0.875rem; color: var(--muted); }
+.furnbar-name { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.barbtn { flex: none; min-height: 44px; min-width: 52px; padding: 8px 12px; border: 2px solid var(--ink); border-radius: 999px; background: var(--ink); color: #fff; font-weight: 700; font-size: 0.9375rem; line-height: 1.1; }
+.barbtn.danger { background: var(--surface); color: var(--pink); border-color: var(--pink); }
+.draw:not(.furnishing) .furn { pointer-events: none; } /* på «Bolig» vises møblene bare; de flyttes på «Plasser» */
+
+.furnishing .wlen { display: none; } /* på «Plasser» skal ikke veggmålene ligge oppå møblene */

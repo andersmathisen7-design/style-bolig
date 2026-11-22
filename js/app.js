@@ -456,6 +456,22 @@ function render() {
     <footer class="foot"><p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
   if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
   else if (fsig) [...app.querySelectorAll('[data-act]')].find((el) => sig(el) === fsig)?.focus({ preventScroll: true });
+  if (ui.furnish && ui.furn && ui.furn !== shownFurn) revealBar();
+  shownFurn = ui.furnish ? ui.furn : null;
+}
+
+// Når et møbel velges på «Plasser»: sørg for at knappelinja under tegningen er i bildet, uten å skyve tegningen
+// ut. Ruller bare de få pikslene som trengs, og aldri lenger enn at hele tegningen fortsatt synes.
+let shownFurn = null;
+function revealBar() {
+  const sheet = app.querySelector('.sheet'), bar = app.querySelector('.furnbar'), nav = app.querySelector('.nav'), top = app.querySelector('.top');
+  if (!sheet || !bar) return;
+  const s = sheet.getBoundingClientRect();
+  const floor = nav ? nav.getBoundingClientRect().top : window.innerHeight;
+  const need = s.bottom + bar.offsetHeight - floor;                       // så mye stikker linja under kanten
+  const room = s.top - (top ? top.getBoundingClientRect().bottom : 0);    // så mye kan tegningen flyttes opp
+  const dy = Math.min(need, Math.max(0, room));
+  if (dy > 1) window.scrollBy({ top: dy, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 let queued = false;
 function later() {
