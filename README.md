@@ -6,10 +6,13 @@ Brukthjem er ikke tilknyttet FINN.no eller IKEA.
 
 ## Slik virker det
 
-1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn boligen selv. Tegn rundt boligen eller et rom på frihånd, så rettes strekene opp til rette vegger. Dra en strek tvers over et rom for å dele det i to; streken kan ha en knekk. Rom kan ha vinkler og skrå vegger, og boligen kan ha flere etasjer. Dra i hjørner og vegger for å endre formen, og skriv inn mål bare på de veggene du har mål på. Sett inn dører, vinduer og møbler. Møbler du setter inntil en vegg, gir lista største bredde for den tingen.
+Fem steg:
+
+1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn boligen selv. Tegn rundt boligen eller et rom på frihånd, så rettes strekene opp til rette vegger. Dra en strek tvers over et rom for å dele det i to; streken kan ha en knekk. Rom kan ha vinkler og skrå vegger, og boligen kan ha flere etasjer. Dra i hjørner og vegger for å endre formen, skriv inn mål bare på de veggene du har mål på, og sett inn dører og vinduer.
 2. **Stil.** Åtte stiler med bilder. Hver stil har tre retninger du kan velge mellom, med egne søkeord. Stilen gir også forslag til pynt.
-3. **Ønsker.** Skriv fritt («vil ikke ha rundt bord, sofaen bør være grønn») eller trykk på ferdige valg. Teksten tolkes av enkle regler i nettleseren.
-4. **Lista.** Huk av det du har, og legg til egne ting med en kort beskrivelse. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk.
+3. **Ting.** Hva vil du ha? En avkrysningsliste per rom, der haken betyr at tingen er med. Det vanlige er huket av på forhånd. Velg antall og størrelse rett på raden, legg til møbler, kjøkkenutstyr, pynt og egne ting, og si om stil, komfort eller pris er viktigst. Du kan også skrive hva du har og hva du vil ha, så huker appen av.
+4. **Plasser.** Hvor skal tingene stå? Sett møblene ut på tegningen og dra dem på plass, eller trykk «Sett ut alt for meg» for et utgangspunkt. Har du ikke tegnet boligen, lages en enkel tegning av rommene. Møbler som står inntil en vegg, gir lista største bredde for den tingen. Steget er valgfritt.
+5. **Finn.** Lista over det som skal skaffes. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk.
 
 Alt lagres i nettleseren (`localStorage`). Ingenting sendes noe sted. Lista kan deles som en lenke.
 
@@ -43,7 +46,8 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `photos/` | Stilbildene, tre per stil. |
 | `js/ai.js` | Valgfri AI: plantegning og fritekst. |
 | `js/plan.js` | Geometri for tegningen: retting av streker, veggmål, dører. |
-| `js/editor.js` | Tegneflaten og verktøyene. |
+| `js/editor.js` | Tegneflaten og verktøyene, og møbleringen på steg 4. |
+| `js/arrange.js` | «Sett ut alt for meg»: regler for hvor møbler settes. |
 | `test/logic.test.mjs` | Tester for logikken. |
 
 ## Om tallene

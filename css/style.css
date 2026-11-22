@@ -46,9 +46,9 @@ p { margin: 0 0 12px; }
 /* Topp og steg */
 .top { position: sticky; top: 0; z-index: 5; background: var(--paper); padding: 10px 0 8px; border-bottom: var(--wall) solid var(--ink); }
 .brand { display: block; font-weight: 800; font-size: 1.125rem; letter-spacing: -0.02em; margin-bottom: 8px; }
-.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.step { background: none; border: 0; padding: 6px 0; text-align: left; font-size: 0.875rem; font-weight: 600; color: var(--muted); border-top: 4px solid var(--line); }
-.step-n { display: inline-block; margin-right: 5px; font-weight: 800; }
+.steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.step { background: none; border: 0; padding: 6px 0; text-align: left; font-size: 0.8125rem; font-weight: 600; color: var(--muted); border-top: 4px solid var(--line); white-space: nowrap; }
+.step-n { display: inline-block; margin-right: 3px; font-weight: 800; }
 .step[aria-current] { color: var(--ink); border-top-color: var(--teal); }
 
 /* Knapper */
@@ -272,3 +272,17 @@ a.chip { text-decoration: none; color: var(--ink); }
 .stepper button:disabled { opacity: 0.3; }
 .stepper span { text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
 .item-body .q .btn { margin: 2px 0 12px; }
+
+/* Steg 3, Ting: avkrysning med antall og størrelse rett på raden */
+.thing .item-head { padding: 4px 0; }
+.stepper.mini { grid-template-columns: 38px 28px 38px; margin-top: 0; }
+.stepper.mini button { height: 36px; }
+.thing-size { margin: 0 0 10px 40px; gap: 6px; }
+.thing-size .chip { min-height: 32px; padding: 3px 10px; font-size: 0.8125rem; }
+.write { margin: 0 0 4px; }
+.write .field { margin-top: 8px; }
+.write .got { margin-bottom: 10px; }
+/* Steg 5, Finn: radene har ingen avkrysning */
+.item.find .item-head { grid-template-columns: 1fr auto; }
+.lead .link { display: inline; padding: 0; }
+@media (min-width: 560px) { .step { font-size: 0.875rem; } }
