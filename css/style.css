@@ -320,3 +320,23 @@ a.chip { text-decoration: none; color: var(--ink); }
 .furnbar-name { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.15; overflow-wrap: anywhere; hyphens: auto; }
 .furnbar.shaped { gap: 6px; padding-left: 8px; padding-right: 8px; }
 .furnbar.shaped .barbtn { padding: 8px 10px; }
+
+/* Forslag og feil: ligger i bunnteksten på alle steg. Skjemaet åpnes under knappene. */
+.fb { margin: 0 0 20px; padding: 16px 0 4px; border-top: 2px solid var(--line); font-size: 1rem; color: var(--ink); }
+.fb h2 { font-size: 1.0625rem; margin-bottom: 4px; }
+.fb > .hint { margin: 0 0 10px; }
+.fb .btn, .fb .btn.small { min-height: 44px; }
+.fb .link { min-height: 44px; padding: 10px 12px 10px 0; }
+.fb [aria-expanded="true"] { background: var(--ink); color: var(--paper); }
+.fb-form { margin-top: 6px; padding: 14px 0 0; border-top: 1px solid var(--line); }
+.fb-form .hint { margin: 0 0 10px; }
+.fb-form .row { margin-bottom: 6px; }
+.fb-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 0.9375rem; font-weight: 700; }
+.fb-check input { width: 22px; height: 22px; min-height: 0; flex: none; padding: 0; accent-color: var(--teal); }
+.fb-ctx { margin: 0 0 8px 32px; padding: 0; list-style: none; font-size: 0.8125rem; color: var(--muted); overflow-wrap: anywhere; }
+.fb-ctx li { padding: 1px 0; }
+.fb-form .hint.fb-sub { margin: -4px 0 8px 32px; }
+.fb-err { margin: 0 0 10px; padding: 8px 12px; border-radius: 6px; background: var(--amber-soft); color: var(--amber); font-size: 0.9375rem; font-weight: 600; }
+.fb-form .status { margin: 8px 0 12px; }
+.fb-form [hidden] { display: none; }
+#fb-manual { font-size: 0.875rem; }

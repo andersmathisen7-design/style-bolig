@@ -8,6 +8,7 @@ import {
 import { ai, initAI, readPlan, readLife } from './ai.js';
 import { drawView, furnishView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
 import { syncFurniture } from './arrange.js';
+import { feedbackView, feedbackAfterRender, bindFeedback } from './feedback.js';
 
 const KEY = 'brukthjem.v2'; // v2: starter med blanke ark etter at tegningen ble lagt om
 const app = document.getElementById('app');
@@ -469,12 +470,17 @@ function render() {
   ui.furnish = state.step === 3; // på «Plasser» kan bare møbler flyttes
   if (ui.furnish) ui.tool = 'move';
   app.innerHTML = `${header()}<main>${sharedBanner()}${views[state.step]()}</main>${footerNav()}
-    <footer class="foot"><p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
+    <footer class="foot">${feedbackView(state, fbEnv())}<p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
   if (wantFocus) { document.getElementById(wantFocus)?.focus(); wantFocus = ''; }
   else if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
   else if (fsig) [...app.querySelectorAll('[data-act]')].find((el) => sig(el) === fsig)?.focus({ preventScroll: true });
+  feedbackAfterRender(app);
   if (ui.furnish && ui.furn && ui.furn !== shownFurn) revealBar();
   shownFurn = ui.furnish ? ui.furn : null;
+}
+// Det «Forslag og feil» trenger å vite. Lista følger bare med hvis brukeren huker av for det.
+function fbEnv() {
+  return { steps: STEPS, width: window.innerWidth, height: window.innerHeight, userAgent: navigator.userAgent, payload: () => encodeState(state) };
 }
 
 // Når et møbel velges på «Plasser»: sørg for at knappelinja under tegningen er i bildet, uten å skyve tegningen
@@ -687,6 +693,7 @@ const ed = editorActions(editorCtx);
 Object.assign(actions, ed.actions);
 Object.assign(changes, ed.changes);
 bindEditor(app, editorCtx);
+bindFeedback(app, { state: () => state, later, env: fbEnv });
 
 app.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.dataset?.enter) return;
