@@ -183,3 +183,25 @@ test('egne ting og pynt', async () => {
   s.autoWish = { spisebord: { search: ['eik'], avoid: ['rundt'], notes: ['firkantet'] } };
   assert.equal(searchText(get(s, 'spisebord'), s), 'spisebord eik');
 });
+
+test('tegne rom', async () => {
+  const { GRID, rectFromLines, dims, areaOf, guessType, drawnRoom } = await import('../js/logic.js');
+  const g = rectFromLines(10.4, 2.2, 2.6, 9.9);
+  assert.deepEqual(g, { x: 3, y: 2, w: 7, h: 8 });
+  assert.equal(dims(g), '3,5 × 4 m');
+  assert.equal(areaOf(g), 14);
+  assert.deepEqual(rectFromLines(-5, -5, 99, 99), { x: 0, y: 0, w: GRID, h: GRID });
+  assert.equal(guessType([], g), 'stue');
+  assert.equal(guessType([{ type: 'stue' }], g), 'soverom');
+  assert.equal(guessType([{ type: 'stue' }], { x: 0, y: 0, w: 4, h: 4 }), 'bad');
+  const r = drawnRoom({ id: 'r101', type: 'stue', size: 'M', m2: null, wall: null }, g);
+  assert.equal(r.m2, 14); assert.equal(r.size, 'S'); assert.equal(r.wall, 400);
+  const s = newState();
+  s.rooms = [r, { id: 'r102', type: 'bad', size: 'S', m2: 4, wall: null, g: { x: 27, y: 0, w: 5, h: 2 } }];
+  s.drawn = true;
+  const n = normalize(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(n.rooms[0].g, g);
+  assert.equal(n.rooms[1].g, undefined); // utenfor arket
+  assert.equal(n.drawn, true);
+  assert.match(wallNote(get(n, 'sofa')), /360 cm/);
+});

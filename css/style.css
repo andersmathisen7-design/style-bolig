@@ -197,3 +197,26 @@ textarea { resize: vertical; line-height: 1.4; }
 .decor p { margin: 10px 0; }
 a.chip { text-decoration: none; color: var(--ink); }
 .panel h2:not(:first-child) { margin-top: 18px; }
+
+/* Velg bolig eller tegn selv */
+.tabs { display: grid; grid-template-columns: 1fr 1fr; border: var(--wall) solid var(--ink); border-radius: 999px; overflow: hidden; margin: 4px 0 14px; }
+.tab { min-height: 44px; border: 0; background: var(--surface); font-weight: 700; }
+.tab.on { background: var(--ink); color: #fff; }
+
+/* Tegneark: tynne linjer hver halve meter, tydeligere hver meter */
+.draw { position: relative; width: 100%; aspect-ratio: 1; margin: 6px 0 8px; border: var(--wall) solid var(--ink); background-color: var(--surface);
+  background-image: linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid) 1px, transparent 1px), linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: calc(100% / 14) calc(100% / 14), calc(100% / 14) calc(100% / 14), calc(100% / 28) calc(100% / 28), calc(100% / 28) calc(100% / 28);
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; overflow: hidden; }
+.droom { position: absolute; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 3px 5px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.82); border: var(--wall) solid var(--ink); text-align: left; cursor: pointer; touch-action: none; }
+.droom.on { background: var(--teal-soft); border-color: var(--teal); cursor: move; z-index: 1; }
+.droom .room-name { font-size: 0.75rem; }
+.droom .room-m2 { font-size: 0.6875rem; white-space: nowrap; }
+.ghost { position: absolute; display: flex; align-items: center; justify-content: center; padding: 2px; background: rgba(14, 107, 92, 0.18); border: 2px dashed var(--teal);
+  color: var(--teal); font-size: 0.75rem; font-weight: 700; text-align: center; pointer-events: none; z-index: 2; }
+.ghost.small { background: rgba(176, 20, 95, 0.12); border-color: var(--pink); }
+.draw-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 24px; text-align: center; color: var(--muted); font-weight: 600; pointer-events: none; }
+
+.ghost[hidden] { display: none; }

@@ -7,7 +7,7 @@ const FINN_FURNITURE = '0.78'; // Møbler og interiør
 export function newState() {
   return {
     v: 1, step: 0, area: '', home: 'toroms', style: null, level: 'vanlig', total: null,
-    rooms: roomsFromHome('toroms'), life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
+    rooms: roomsFromHome('toroms'), drawn: false, life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
   };
 }
 
@@ -348,6 +348,39 @@ export function layoutPlan(rooms) {
   return out;
 }
 
+// ---------- Tegne selv ----------
+
+export const GRID = 28;      // ruter per side på tegnearket
+export const CELL_M = 0.5;   // meter per rute
+
+// Rektangel mellom to punkter på rutenettet (linjenummer 0..GRID).
+export function rectFromLines(ax, ay, bx, by) {
+  const c = (n) => Math.min(GRID, Math.max(0, Math.round(n)));
+  const x = Math.min(c(ax), c(bx)), y = Math.min(c(ay), c(by));
+  return { x, y, w: Math.abs(c(ax) - c(bx)), h: Math.abs(c(ay) - c(by)) };
+}
+
+const comma = (n) => String(n).replace('.', ',');
+export const dims = (g) => `${comma(g.w * CELL_M)} × ${comma(g.h * CELL_M)} m`;
+export const areaOf = (g) => Math.max(1, Math.round(g.w * g.h * CELL_M * CELL_M));
+
+// Gjetter romtype for et nytt rom: det vanligste som mangler, ellers etter størrelse.
+export function guessType(rooms, g) {
+  const m2 = areaOf(g);
+  const has = (t) => rooms.some((r) => r.type === t);
+  if (m2 <= 6) return !has('bad') ? 'bad' : !has('gang') ? 'gang' : 'bad';
+  for (const t of ['stue', 'soverom', 'kjokken']) if (!has(t)) return t;
+  return 'soverom';
+}
+
+// Lager eller oppdaterer et tegnet rom. Areal, størrelse og lengste vegg følger av tegningen.
+export function drawnRoom(room, g) {
+  const m2 = areaOf(g);
+  return { ...room, g, m2, size: sizeFromM2(room.type, m2), wall: Math.round(Math.max(g.w, g.h) * CELL_M * 100) };
+}
+
+const validG = (g) => g && [g.x, g.y, g.w, g.h].every(Number.isInteger) && g.x >= 0 && g.y >= 0 && g.w >= 1 && g.h >= 1 && g.x + g.w <= GRID && g.y + g.h <= GRID;
+
 export function totalM2(rooms) {
   return Math.round(rooms.reduce((s, r) => s + roomM2(r), 0));
 }
@@ -380,7 +413,8 @@ export function normalize(s) {
   out.total = n(s.total, 1e7);
   out.seq = n(s.seq, 1e6) || 100;
   out.rooms = s.rooms.filter((r) => /^r\d{1,6}$/.test(r.id)).slice(0, 30)
-    .map((r) => ({ id: r.id, type: r.type, size: r.size, m2: n(r.m2, 200), wall: n(r.wall, 2000) }));
+    .map((r) => ({ id: r.id, type: r.type, size: r.size, m2: n(r.m2, 200), wall: n(r.wall, 2000), ...(validG(r.g) ? { g: { x: r.g.x, y: r.g.y, w: r.g.w, h: r.g.h } } : {}) }));
+  out.drawn = out.rooms.some((r) => r.g);
   out.life = s.life.filter((id) => LIFE.some((l) => l.id === id));
   out.lifeText = typeof s.lifeText === 'string' ? s.lifeText.slice(0, 2000) : '';
   out.autoWish = {};

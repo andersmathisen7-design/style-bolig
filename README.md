@@ -6,7 +6,7 @@ Brukthjem er ikke tilknyttet FINN.no eller IKEA.
 
 ## Slik virker det
 
-1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre. Rommene tegnes opp, og du kan endre størrelse, skrive inn kvadratmeter eller legge inn lengste ledige vegg.
+1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn rommene selv med finger eller mus på et rutenett der hver rute er en halv meter. Du kan også endre størrelse, skrive inn kvadratmeter eller legge inn lengste ledige vegg.
 2. **Stil.** Åtte stiler, tegnet som samme stue. Stilen gir forslag til søkeord og pynt.
 3. **Hverdag.** Skriv fritt («vil ikke ha rundt bord, sofaen bør være grønn») eller trykk på ferdige valg. Teksten tolkes av enkle regler i nettleseren.
 4. **Lista.** Huk av det du har, og legg til egne ting med en kort beskrivelse. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk.
