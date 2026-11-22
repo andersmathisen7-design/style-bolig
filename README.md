@@ -16,6 +16,8 @@ Fem steg:
 
 Alt lagres i nettleseren (`localStorage`). Ingenting sendes noe sted. Lista kan deles som en lenke.
 
+Nederst på hvert steg ligger «Forslag og feil». Der kan du foreslå noe nytt eller melde en feil: «Send på GitHub» åpner en ferdig utfylt sak i `andersmathisen7-design/style-bolig` (merket `forslag` eller `feil`), og «Kopier teksten» gir deg den samme teksten til å lime inn et annet sted. En feilmelding får med steg, versjon, skjermstørrelse, nettleser og antall rom, møbler og ting. Det du har skrevet i appen og selve lista følger bare med hvis du huker av «Legg ved lista mi».
+
 ## Med og uten AI
 
 Når siden vises inne i Claude (som en publisert artifact), kan den be Claude om to ting: lese av rom og kvadratmeter fra et bilde av en plantegning, og tolke friteksten din. Hvert kall bruker av kvoten til den som ser på siden. Koden ligger i `js/ai.js`.
@@ -49,6 +51,7 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `js/walls.js` | Vegger som deles av flere rom, deling med rette streker, og dører og vinduer. Tegningen lagrer én mangekant per rom (`rooms[].poly`) og én liste med åpninger per bolig (`openings`: etasje, type, bredde og midtpunkt i cm). `rooms[].doors` regnes ut fra den. Eldre tegninger gjøres om når de lastes. |
 | `js/editor.js` | Tegneflaten og verktøyene, og møbleringen på steg 4. |
 | `js/arrange.js` | «Sett ut alt for meg»: regler for hvor møbler settes. |
+| `js/feedback.js` | «Forslag og feil»: skjemaet, teksten og GitHub-lenken. Repo (`REPO`) og versjon (`VERSION`) settes øverst i fila. Tester i `test/feedback.test.mjs`. |
 | `test/logic.test.mjs` | Tester for logikken. |
 | `test/variants.test.mjs` | Tester for varianter, kommentarer, bredt søk og U-sofa. |
 | `js/area.js` | «Hvor vil du lete?»: kartet, stedssøket og avstandsvalget. |

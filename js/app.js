@@ -11,6 +11,7 @@ import { syncDoors } from './walls.js';
 import { syncFurniture } from './arrange.js';
 import { areaField, areaActions, bindArea } from './area.js';
 import { areaPhrase } from './areastate.js';
+import { feedbackView, feedbackAfterRender, bindFeedback } from './feedback.js';
 
 const KEY = 'brukthjem.v2'; // v2: starter med blanke ark etter at tegningen ble lagt om
 const app = document.getElementById('app');
@@ -469,16 +470,21 @@ function render() {
   ui.furnish = state.step === 3; // på «Plasser» kan bare møbler flyttes
   if (ui.furnish) ui.tool = 'move';
   app.innerHTML = `${header()}<main>${sharedBanner()}${views[state.step]()}</main>${footerNav()}
-    <footer class="foot"><p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
+    <footer class="foot">${feedbackView(state, fbEnv())}<p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
   if (wantFocus) { document.getElementById(wantFocus)?.focus(); wantFocus = ''; }
   else if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
   else if (fsig) [...app.querySelectorAll('[data-act]')].find((el) => sig(el) === fsig)?.focus({ preventScroll: true });
+  feedbackAfterRender(app);
   if (ui.furnish && ui.furn && ui.furn !== shownFurn) revealBar();
   shownFurn = ui.furnish ? ui.furn : null;
   // På «Bolig»: når noe nytt er valgt på tegningen, skal linja med valgene under tegningen være synlig.
   const picked = state.step === 0 && ui.tab === 'draw' && (ui.room || ui.opening) ? `${ui.room}|${ui.wall}|${ui.opening}` : '';
   if (picked && picked !== shownPick) revealBar();
   shownPick = picked;
+}
+// Det «Forslag og feil» trenger å vite. Lista følger bare med hvis brukeren huker av for det.
+function fbEnv() {
+  return { steps: STEPS, width: window.innerWidth, height: window.innerHeight, userAgent: navigator.userAgent, payload: () => encodeState(state) };
 }
 
 // Når et møbel velges på «Plasser»: sørg for at knappelinja under tegningen er i bildet, uten å skyve tegningen
@@ -696,6 +702,7 @@ const ar = areaActions(editorCtx); // «Hvor vil du lete?» med kart
 Object.assign(actions, ar.actions);
 Object.assign(changes, ar.changes);
 bindArea(app, editorCtx);
+bindFeedback(app, { state: () => state, later, env: fbEnv });
 
 app.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.dataset?.enter) return;
