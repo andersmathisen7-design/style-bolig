@@ -260,3 +260,8 @@ a.chip { text-decoration: none; color: var(--ink); }
 .gallery figcaption h2 { margin: 10px 0 4px; font-size: 1.125rem; }
 .gallery figcaption p { margin: 0 0 10px; color: var(--ink); font-size: 0.9375rem; }
 .gallery .credit { display: block; margin-top: 8px; font-size: 0.75rem; }
+
+.check.done[aria-pressed="true"] { background: var(--muted); border-color: var(--muted); }
+.bulk { gap: 18px; margin: -4px 0 6px; }
+.more .q-label { display: block; margin-top: 10px; }
+.more .chips { margin: 6px 0 4px; }

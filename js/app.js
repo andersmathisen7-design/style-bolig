@@ -1,4 +1,4 @@
-import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, LEVELS } from './data.js';
+import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, LEVELS, GROUPS } from './data.js';
 import {
   newState, roomsFromHome, roomLabel, roomM2, sizeFromM2, sizeRange, instances, defaultMax, maxOf,
   parseLife, wishOf, searchText, finnUrl, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
@@ -220,11 +220,11 @@ function budgetPanel(sum) {
 function itemRow(inst, sum) {
   const open = ui.open === inst.key;
   const max = maxOf(inst, state);
-  const tag = inst.st === 'bought' ? `kjøpt ${inst.saved.paid ? kr(inst.saved.paid) : ''}` : inst.st === 'have' ? 'har' : max === null ? 'ingen grense' : `inntil ${kr(max)}`;
+  const tag = inst.st === 'bought' ? `kjøpt ${inst.saved.paid ? kr(inst.saved.paid) : ''}` : inst.st === 'have' ? 'ikke med' : max === null ? 'ingen grense' : `inntil ${kr(max)}`;
   return `
   <li class="item is-${inst.st} ${open ? 'open' : ''}">
     <div class="item-head">
-      <button class="check" data-act="have" data-v="${inst.key}" aria-pressed="${inst.st === 'have'}" aria-label="Har ${esc(inst.item.name)} fra før"></button>
+      <button class="check ${inst.st === 'bought' ? 'done' : ''}" data-act="want" data-v="${inst.key}" aria-pressed="${inst.st !== 'have'}" aria-label="${esc(inst.item.name)} er med på lista"></button>
       <button class="item-main" data-act="open" data-v="${inst.key}" aria-expanded="${open}">
         <span class="item-name">${esc(inst.item.name)}</span>
         ${inst.v.label && inst.st === 'need' ? `<span class="item-size">${esc(inst.v.label)}</span>` : ''}
@@ -237,7 +237,7 @@ function itemRow(inst, sum) {
 
 function itemBody(inst, sum) {
   const k = inst.key;
-  if (inst.st === 'have') return `<div class="item-body"><p>Du har denne fra før.</p><button class="link" data-act="status" data-v="${k}" data-st="need">Jeg trenger den likevel</button></div>`;
+  if (inst.st === 'have') return `<div class="item-body"><p>Denne er ikke med på lista, fordi du har den eller ikke vil ha den.</p><button class="link" data-act="status" data-v="${k}" data-st="need">Ta den med likevel</button></div>`;
   if (inst.st === 'bought') return `<div class="item-body"><p>Kjøpt${inst.saved.paid ? ` for ${kr(inst.saved.paid)}` : ''}.</p><button class="link" data-act="status" data-v="${k}" data-st="need">Angre, jeg leter fortsatt</button></div>`;
   const w = wishOf(inst, state);
   const max = maxOf(inst, state);
@@ -308,8 +308,9 @@ function viewList() {
   const style = STYLES.find((s) => s.id === state.style);
   return `
   <h1>Lista di</h1>
-  <p class="lead">${sum.need === 0 ? 'Ingenting igjen å finne. Legg til ting under rommene, eller nyt et ferdig hjem.' : `${sum.need} ting igjen å finne.`}
-    ${sum.have ? ` ${sum.have} har du fra før.` : ''}${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Huk av det du har. Trykk på en ting for å søke.</p>
+  <p class="lead">${sum.need === 0 ? 'Ingenting på lista ennå. Huk av det du vil ha under hvert rom.' : `${sum.need} ting på lista.`}
+    ${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Haken betyr at du vil ha tingen. Vi har huket av det de fleste trenger, så fjern haken på det du har fra før. Trykk på en ting for å søke.</p>
+  <div class="row bulk"><button class="link" data-act="noneon">Fjern alle haker</button><button class="link" data-act="usualon">Huk av det vanlige</button></div>
   ${style
     ? `<div class="mystyle"><img src="${Number.isInteger(state.sub) ? photo(style.id, state.sub + 1) : photo(style.id, 1, true)}" alt="" width="480" height="360"><p><strong>${style.name}</strong>${subName() ? `<br>${esc(subName())}` : ''}<br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
     : `<p class="hint">Du har ikke valgt stil ennå. <button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
@@ -322,7 +323,10 @@ function viewList() {
     return `<section class="roomlist">
       <h2>${esc(roomLabel(state.rooms, room))}<small>${roomM2(room)} m²${state.floors.length > 1 && room.poly ? `, ${esc(state.floors[room.floor || 0])}` : ''}</small></h2>
       <ul class="items">${on.map((i) => itemRow(i, sum)).join('')}</ul>
-      ${off.length ? `<div class="more"><span class="q-label">Legg til</span><div class="chips">${off.map((i) => `<button class="chip mini add" data-act="status" data-v="${i.key}" data-st="need">+ ${esc(i.item.name)}</button>`).join('')}</div></div>` : ''}
+      ${off.length ? `<div class="more">${GROUPS.map(([gid, gname]) => {
+        const g = off.filter((i) => (i.item.group || 'mobler') === gid);
+        return g.length ? `<span class="q-label">${gname}</span><div class="chips">${g.map((i) => `<button class="chip mini add" data-act="status" data-v="${i.key}" data-st="need">+ ${esc(i.item.name)}</button>`).join('')}</div>` : '';
+      }).join('')}</div>` : ''}
       <div class="own"><div class="field"><label for="own-${room.id}">Noe annet? Beskriv hva du ser etter</label>
         <input id="own-${room.id}" data-enter="own" data-v="${room.id}" maxlength="60" placeholder="f.eks. grønn fløyelspuff"></div>
         <button class="btn ghost small" data-act="own" data-v="${room.id}">Legg til</button></div>
@@ -430,7 +434,22 @@ const actions = {
   fit() { state.items = fitBudget(state); commit(); },
   round() { ui.round = !ui.round; later(); window.scrollTo(0, 0); },
   open(v) { ui.open = ui.open === v ? null : v; later(); },
-  have(v) { const i = instByKey(v); if (i) setItem(v, { st: i.st === 'have' ? 'need' : 'have' }); },
+  // Haken betyr «vil ha». Uten hake er tingen ikke med: det vanlige blir stående grået ut, ekstra ting går tilbake til forslagene.
+  want(v) {
+    const i = instByKey(v);
+    if (!i) return;
+    if (i.st === 'have') setItem(v, { st: 'need' });
+    else if (i.item.custom) actions.status(v, { dataset: { st: 'off' } });
+    else setItem(v, { st: ROOMS[i.room.type].ess.includes(i.itemId) ? 'have' : 'off' });
+  },
+  noneon() {
+    for (const i of instances(state)) if (i.st === 'need' && !i.item.custom) state.items[i.key] = { ...state.items[i.key], st: ROOMS[i.room.type].ess.includes(i.itemId) ? 'have' : 'off' };
+    ui.open = null; commit();
+  },
+  usualon() {
+    for (const i of instances(state)) if (i.st === 'have' && ROOMS[i.room.type].ess.includes(i.itemId)) state.items[i.key] = { ...state.items[i.key], st: 'need' };
+    commit();
+  },
   status(v, el) {
     const [rid, id] = v.split(':');
     if (el.dataset.st === 'off') ui.open = null;

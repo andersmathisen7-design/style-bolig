@@ -267,7 +267,34 @@ export const ITEMS = {
   lekekasse: { name: 'Oppbevaring til leker', kind: 'wood', q: 'lekeoppbevaring', u: 300, n: 400 },
 
   utemobler: { name: 'Bord og stoler ute', kind: 'wood', cat: false, q: 'balkongmøbler', u: 800, n: 800 },
+
+  // Kjøkkenutstyr (group: 'utstyr')
+  glass: { name: 'Glass', kind: 'deco', group: 'utstyr', cat: false, q: 'drikkeglass', u: 100, n: 150 },
+  krus: { name: 'Kopper og krus', kind: 'deco', group: 'utstyr', cat: false, q: 'krus', u: 100, n: 150 },
+  kniver: { name: 'Kjøkkenkniver', kind: 'deco', group: 'utstyr', cat: false, q: 'kjøkkenkniver', u: 200, n: 300 },
+  redskaper: { name: 'Sleiver og redskaper', kind: 'deco', group: 'utstyr', cat: false, q: 'kjøkkenredskaper', u: 100, n: 200 },
+  fjol: { name: 'Skjærefjøl', kind: 'deco', group: 'utstyr', cat: false, q: 'skjærefjøl', u: 80, n: 100 },
+  former: { name: 'Boller og ildfaste former', kind: 'deco', group: 'utstyr', cat: false, q: 'ildfast form', u: 150, n: 200 },
+  bokser: { name: 'Bokser og oppbevaring', kind: 'deco', group: 'utstyr', cat: false, q: 'oppbevaringsbokser kjøkken', u: 100, n: 150 },
+  vannkoker: { name: 'Vannkoker', kind: 'deco', group: 'utstyr', cat: false, q: 'vannkoker', u: 100, n: 200 },
+  kaffetrakter: { name: 'Kaffetrakter', kind: 'deco', group: 'utstyr', cat: false, q: 'kaffetrakter', u: 250, n: 400 },
+  brodrister: { name: 'Brødrister', kind: 'deco', group: 'utstyr', cat: false, q: 'brødrister', u: 100, n: 200 },
+  mikro: { name: 'Mikrobølgeovn', kind: 'deco', group: 'utstyr', cat: false, q: 'mikrobølgeovn', u: 400, n: 800 },
+  kjokkenmaskin: { name: 'Kjøkkenmaskin eller mikser', kind: 'deco', group: 'utstyr', cat: false, q: 'kjøkkenmaskin', u: 800, n: 1500 },
+
+  // Pynt (group: 'pynt')
+  vase: { name: 'Vaser', kind: 'deco', group: 'pynt', q: 'vase', u: 100, n: 100 },
+  lysestaker: { name: 'Lysestaker og lykter', kind: 'deco', group: 'pynt', q: 'lysestake', u: 100, n: 100 },
+  veggklokke: { name: 'Veggklokke', kind: 'deco', group: 'pynt', q: 'veggklokke', u: 150, n: 150 },
+  kurver: { name: 'Kurver', kind: 'deco', group: 'pynt', q: 'kurv', u: 100, n: 150 },
+  fat: { name: 'Fat og skåler til pynt', kind: 'deco', group: 'pynt', q: 'pyntefat', u: 100, n: 150 },
+  figurer: { name: 'Figurer og skulpturer', kind: 'deco', group: 'pynt', q: 'skulptur', u: 150, n: 200 },
+  duk: { name: 'Duker og løpere', kind: 'deco', group: 'pynt', q: 'duk', u: 100, n: 150 },
 };
+// Ting som alt fantes, men som hører hjemme under pynt eller utstyr når de vises som forslag.
+for (const id of ['puter', 'bilder', 'planter', 'speil', 'gardiner', 'teppe']) ITEMS[id].group = 'pynt';
+for (const id of ['servise', 'bestikk', 'gryter']) ITEMS[id].group = 'utstyr';
+export const GROUPS = [['mobler', 'Møbler og lamper'], ['utstyr', 'Kjøkkenutstyr'], ['pynt', 'Pynt og tekstiler']];
 
 // Rom. ess = det de fleste trenger. extra = kjekt å ha, legges til med ett trykk.
 // m2 = tegnet størrelse per valg, lim = grenser når noen skriver inn kvadratmeter.
@@ -275,32 +302,32 @@ export const ROOMS = {
   ettrom: {
     name: 'Stue og soverom i ett', m2: { S: 16, M: 22, L: 30 }, lim: [19, 26],
     ess: ['seng', 'spisebord', 'spisestoler', 'garderobe', 'gulvlampe', 'gardiner'],
-    extra: ['sofa', 'sovesofa', 'sofabord', 'tvbenk', 'kommode', 'bokhylle', 'teppe', 'skrivebord', 'kontorstol', 'speil', 'bilder', 'planter', 'puter'],
+    extra: ['sofa', 'sovesofa', 'sofabord', 'tvbenk', 'kommode', 'bokhylle', 'teppe', 'skrivebord', 'kontorstol', 'speil', 'bilder', 'planter', 'puter', 'servise', 'bestikk', 'gryter', 'glass', 'krus', 'kniver', 'redskaper', 'fjol', 'former', 'bokser', 'vannkoker', 'kaffetrakter', 'brodrister', 'mikro', 'kjokkenmaskin', 'vase', 'lysestaker', 'veggklokke', 'kurver', 'fat', 'figurer'],
   },
   stue: {
     name: 'Stue', m2: { S: 12, M: 20, L: 30 }, lim: [15, 25],
     ess: ['sofa', 'sofabord', 'tvbenk', 'teppe', 'gulvlampe', 'gardiner'],
-    extra: ['lenestol', 'bokhylle', 'sovesofa', 'taklampe', 'bordlampe', 'puter', 'bilder', 'planter', 'speil'],
+    extra: ['lenestol', 'bokhylle', 'sovesofa', 'taklampe', 'bordlampe', 'puter', 'bilder', 'planter', 'speil', 'vase', 'lysestaker', 'veggklokke', 'kurver', 'fat', 'figurer'],
   },
   kjokken: {
     name: 'Kjøkken og spiseplass', m2: { S: 6, M: 10, L: 16 }, lim: [8, 13],
     ess: ['spisebord', 'spisestoler', 'servise', 'bestikk', 'gryter', 'taklampe'],
-    extra: ['barkrakker', 'kjokkentralle', 'barnestol', 'teppe', 'gardiner'],
+    extra: ['barkrakker', 'kjokkentralle', 'barnestol', 'teppe', 'gardiner', 'glass', 'krus', 'kniver', 'redskaper', 'fjol', 'former', 'bokser', 'vannkoker', 'kaffetrakter', 'brodrister', 'mikro', 'kjokkenmaskin', 'duk', 'vase', 'lysestaker', 'veggklokke', 'bilder', 'planter'],
   },
   soverom: {
     name: 'Soverom', m2: { S: 7, M: 10, L: 14 }, lim: [8.5, 12],
     ess: ['seng', 'nattbord', 'garderobe', 'bordlampe', 'gardiner'],
-    extra: ['kommode', 'speil', 'teppe', 'lenestol', 'taklampe', 'skrivebord', 'kontorstol', 'gjesteseng'],
+    extra: ['kommode', 'speil', 'teppe', 'lenestol', 'taklampe', 'skrivebord', 'kontorstol', 'gjesteseng', 'puter', 'bilder', 'planter', 'vase', 'lysestaker', 'kurver'],
   },
   gang: {
     name: 'Gang', m2: { S: 3, M: 5, L: 8 }, lim: [4, 6.5],
     ess: ['skohylle', 'knagger', 'speil'],
-    extra: ['benk', 'kommode', 'taklampe', 'teppe'],
+    extra: ['benk', 'kommode', 'taklampe', 'teppe', 'bilder', 'kurver', 'planter'],
   },
   bad: {
     name: 'Bad', m2: { S: 3, M: 5, L: 8 }, lim: [4, 6.5],
     ess: ['toykurv'],
-    extra: ['badhylle', 'speil'],
+    extra: ['badhylle', 'speil', 'kurver', 'planter', 'lysestaker'],
   },
   kontor: {
     name: 'Hjemmekontor', m2: { S: 5, M: 8, L: 12 }, lim: [6.5, 10],
