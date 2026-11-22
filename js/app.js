@@ -8,6 +8,7 @@ import {
 import { ai, initAI, readPlan, readLife } from './ai.js';
 import { drawView, furnishView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
 import { syncFurniture } from './arrange.js';
+import { funn, initFunn, funnTouch, setCheck, hideFind, currentFinds, checkPanel, findsBlock, osloDay } from './funn.js';
 
 const KEY = 'brukthjem.v2'; // v2: starter med blanke ark etter at tegningen ble lagt om
 const app = document.getElementById('app');
@@ -49,6 +50,7 @@ function save() {
   if (lastJson !== null && now !== lastJson) { undoStack.push(lastJson); if (undoStack.length > 50) undoStack.shift(); }
   lastJson = now;
   persist();
+  funnTouch(); // daglig sjekk på Finn følger lista
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -293,7 +295,7 @@ function budgetPanel(sum) {
   </section>`;
 }
 
-function itemRow(inst, sum) {
+function itemRow(inst, sum, finds) {
   const open = ui.open === inst.key;
   const max = maxOf(inst, state);
   const tag = inst.st === 'bought' ? `kjøpt ${inst.saved.paid ? kr(inst.saved.paid) : ''}` : inst.st === 'have' ? 'ikke med' : `${inst.qty > 1 ? `${inst.qty} × ` : ''}${max === null ? 'ingen grense' : `inntil ${kr(max)}`}`;
@@ -307,6 +309,7 @@ function itemRow(inst, sum) {
       </button>
       <span class="tag tag-${inst.st}">${esc(tag)}</span>
     </div>
+    ${finds && inst.st === 'need' ? findsBlock(inst.key, finds.things[inst.key], osloDay()) : ''}
     ${open ? itemBody(inst, sum) : ''}
   </li>`;
 }
@@ -411,6 +414,7 @@ function viewList() {
   if (ui.round) return `<h1>Finn tingene</h1>${viewRound(need)}`;
   const style = STYLES.find((s) => s.id === state.style);
   const rooms = state.rooms.map((room) => ({ room, mine: all.filter((i) => i.room.id === room.id && (i.st === 'need' || i.st === 'bought')) })).filter((x) => x.mine.length);
+  const finds = currentFinds(need.map((i) => i.key)); // null når daglig sjekk er av eller ikke finnes her
   return `
   <h1>Finn tingene</h1>
   <p class="lead">${sum.need === 0 ? 'Ingenting igjen å finne.' : `${sum.need} ting å finne.`}${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Trykk på en ting for å søke på Finn.
@@ -420,10 +424,11 @@ function viewList() {
     : `<p class="hint">Du har ikke valgt stil ennå. <button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
   ${budgetPanel(sum)}
   ${need.length ? `<button class="btn wide" data-act="round">Dagens runde: se hva som er nytt på Finn</button>` : ''}
+  ${need.length || funn.on ? checkPanel(funn, finds, osloDay()) : ''}
   ${rooms.length ? '' : `<section class="panel"><p>Lista er tom. Gå til «Ting» og huk av det du vil ha.</p><button class="btn small" data-act="step" data-v="2">Velg ting</button></section>`}
   ${rooms.map(({ room, mine }) => `<section class="roomlist">
       <h2>${esc(roomLabel(state.rooms, room))}<small>${roomM2(room)} m²${state.floors.length > 1 && room.poly ? `, ${esc(state.floors[room.floor || 0])}` : ''}</small></h2>
-      <ul class="items">${mine.map((i) => itemRow(i, sum)).join('')}</ul>
+      <ul class="items">${mine.map((i) => itemRow(i, sum, finds)).join('')}</ul>
     </section>`).join('')}
   <section class="roomlist decor">
     <h2>Pynt som passer stilen</h2>
@@ -432,7 +437,7 @@ function viewList() {
   </section>
   <section class="panel">
     <h2>Ta med deg lista</h2>
-    <p>Lista lagres bare i denne nettleseren.${canShare ? ' Med en lenke kan du åpne den på en annen enhet eller sende den til noen.' : ''}</p>
+    <p>${funn.on ? 'Lista lagres i denne nettleseren, og hos Claude så lenge daglig sjekk er på.' : 'Lista lagres bare i denne nettleseren.'}${canShare ? ' Med en lenke kan du åpne den på en annen enhet eller sende den til noen.' : ''}</p>
     <div class="row">${canShare ? '<button class="btn ghost small" data-act="share">Kopier lenke til lista</button>' : ''}${ui.sure
       ? `<span class="sure">Slette hele lista?</span><button class="btn small" data-act="reset">Ja, slett</button><button class="link" data-act="unsure">Avbryt</button>`
       : `<button class="link danger" data-act="sure">Start på nytt</button>`}</div>
@@ -469,7 +474,7 @@ function render() {
   ui.furnish = state.step === 3; // på «Plasser» kan bare møbler flyttes
   if (ui.furnish) ui.tool = 'move';
   app.innerHTML = `${header()}<main>${sharedBanner()}${views[state.step]()}</main>${footerNav()}
-    <footer class="foot"><p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
+    <footer class="foot"><p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${funn.on ? 'Lista lagres i nettleseren din, og hos Claude så lenge daglig sjekk er på.' : ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
   if (wantFocus) { document.getElementById(wantFocus)?.focus(); wantFocus = ''; }
   else if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
   else if (fsig) [...app.querySelectorAll('[data-act]')].find((el) => sig(el) === fsig)?.focus({ preventScroll: true });
@@ -625,6 +630,14 @@ const actions = {
   maxreset(v) { const it = { ...state.items[v] }; delete it.max; state.items[v] = it; commit(); },
   bought(v) { setItem(v, { st: 'bought', paid: num(document.getElementById(`paid-${v}`)?.value) }); ui.open = null; },
   seen(v) { setItem(v, { seen: today() }); },
+  // Daglig sjekk: et funn er enten kjøpt (da er tingen ferdig, med prisen fra annonsen) eller ikke interessant.
+  funnBought(v, el) {
+    const pick = currentFinds([v])?.things[v]?.find((p) => p.id === el.dataset.i);
+    if (!pick || !instByKey(v)) return;
+    setItem(v, { st: 'bought', paid: pick.price || null });
+    if (ui.open === v) ui.open = null;
+  },
+  funnHide(v, el) { hideFind(el.dataset.i); later(); },
   async share() {
     try { await navigator.clipboard.writeText(shareUrl()); ui.copied = 'ok'; } catch { ui.copied = 'manual'; }
     later();
@@ -673,6 +686,7 @@ const changes = {
   total(el) { state.total = num(el.value); },
   wish(el) { state.items[el.dataset.v] = { ...state.items[el.dataset.v], wish: el.value.slice(0, 300) }; },
   max(el) { state.items[el.dataset.v] = { ...state.items[el.dataset.v], max: num(el.value) }; },
+  funnOn(el) { setCheck(el.checked); },
   maxw(el) { const it = { ...state.items[el.dataset.v] }; const n = num(el.value); if (n && n <= 600) it.maxw = n; else delete it.maxw; state.items[el.dataset.v] = it; },
 };
 
@@ -714,3 +728,4 @@ persist();
 lastJson = snapshot();
 render();
 initAI().then((ok) => { if (ok) later(); });
+initFunn({ getState: () => state, changed: later }).then((ok) => { if (ok) later(); });

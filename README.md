@@ -22,10 +22,20 @@ Når siden vises inne i Claude (som en publisert artifact), kan den be Claude om
 
 På en vanlig nettside, som GitHub Pages, finnes ikke dette. Da skjules opplastingen, og friteksten tolkes av ordlistene.
 
+## Daglig sjekk på Finn
+
+Inne i Claude kan du slå på «Daglig sjekk på Finn» på siste steg. Da lagres lista di i databasen som følger med siden, og en planlagt Claude-økt går gjennom den én gang hver morgen: den henter «lagt ut i dag»-søkene, lar en billig modell vurdere annonsene, og legger inntil tre «Funn til deg» under hver ting. Oppdraget økta får, står i `docs/finn-jobb.md`. Koden på siden ligger i `js/funn.js`.
+
+- Sjekken leser titler, priser og steder. Den ser ikke på bildene og åpner ikke annonsene.
+- Den henter høyst 40 søkesider per kjøring, én om gangen. Svarer ikke Finn, hoppes søket over. Finns vilkår begrenser automatisert tilgang, så sjekken er holdt så liten som mulig og gjelder bare lister der den er slått på.
+- Sjekken bruker Claude-kvoten til den som eier siden, og eieren kan lese listene som er lagret. Slår du av, slettes både lista og funnene.
+- Sjekken følger lista slik den er på enheten du sist endret den på.
+- På en vanlig nettside, som GitHub Pages, finnes ikke databasen. Da vises ikke panelet, og alt annet er som før.
+
 ## Hva appen ikke gjør ennå
 
 - **Ingen AI på åpen nettside.** GitHub Pages serverer bare filer. En AI der trenger en liten server som holder på API-nøkkelen. Fritekst tolkes derfor med ordlister i `js/data.js` (`WISH_WORDS`, `LIFE`).
-- **Ingen automatisk overvåking av Finn.** Finns vilkår begrenser automatisert tilgang, og det offisielle API-et gir bare tilgang til egne annonser. Appen lager derfor lenker som du selv åpner. Varsler får du ved å trykke «Lagre søk» inne på Finn.
+- **Ingen overvåking av Finn på åpen nettside.** Finns vilkår begrenser automatisert tilgang, og det offisielle API-et gir bare tilgang til egne annonser. Appen lager derfor lenker som du selv åpner. Varsler får du ved å trykke «Lagre søk» inne på Finn. Unntaket er «Daglig sjekk på Finn» over, som bare finnes inne i Claude.
 
 ## Kjør lokalt
 
@@ -48,8 +58,11 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `js/plan.js` | Geometri for tegningen: retting av streker, veggmål, dører. |
 | `js/editor.js` | Tegneflaten og verktøyene, og møbleringen på steg 4. |
 | `js/arrange.js` | «Sett ut alt for meg»: regler for hvor møbler settes. |
+| `js/funn.js` | Daglig sjekk på Finn: profilen som lagres, funnene som vises, og koblingen til databasen. |
+| `docs/finn-jobb.md` | Oppdraget til den planlagte Claude-økta som gjør den daglige sjekken. |
 | `test/logic.test.mjs` | Tester for logikken. |
 | `test/variants.test.mjs` | Tester for varianter, kommentarer, bredt søk og U-sofa. |
+| `test/funn.test.mjs` | Tester for daglig sjekk: profil, vasking av funn, skjulte annonser og datotekst. |
 
 ## Om tallene
 

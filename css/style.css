@@ -320,3 +320,21 @@ a.chip { text-decoration: none; color: var(--ink); }
 .furnbar-name { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.15; overflow-wrap: anywhere; hyphens: auto; }
 .furnbar.shaped { gap: 6px; padding-left: 8px; padding-right: 8px; }
 .furnbar.shaped .barbtn { padding: 8px 10px; }
+
+/* Daglig sjekk på Finn: av/på-panelet og «Funn til deg» under hver ting. */
+.funn-switch { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 6px 0; font-weight: 700; cursor: pointer; }
+.funn-switch input { flex: none; width: 26px; height: 26px; margin: 1px 0 0; accent-color: var(--teal); }
+.funnpanel .status { margin: 4px 0 10px; }
+.funnpanel .hint { margin: 0 0 8px; }
+.funn { margin: 0 0 12px; padding: 10px 12px 4px; background: var(--teal-soft); border-radius: 6px; }
+.funn h3 { margin: 0 0 6px; font-size: 0.8125rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--teal); }
+.funn ul { list-style: none; margin: 0; padding: 0; }
+.funn li { padding: 8px 0 4px; border-top: 1px solid var(--line); }
+.funn li:first-child { border-top: 0; padding-top: 0; }
+.funn li > a { display: block; padding: 4px 0; color: var(--ink); font-weight: 700; line-height: 1.25; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.funn-meta, .funn-why { display: block; font-size: 0.875rem; line-height: 1.35; }
+.funn-meta { font-weight: 600; font-variant-numeric: tabular-nums; }
+.funn-why { color: var(--muted); }
+.funn-act { display: flex; flex-wrap: wrap; gap: 0 20px; }
+.funn-act .link { min-height: 44px; font-size: 0.875rem; }
+.funn-act .funn-no { color: var(--muted); }
