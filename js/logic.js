@@ -1,5 +1,5 @@
 // Ren logikk uten DOM, slik at den kan testes i Node.
-import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS, FOOT, PRIOS, COMFORT, CORNER } from './data.js';
+import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS, FOOT, PRIOS, COMFORT } from './data.js';
 import { wallFor, letter } from './plan.js';
 
 const FINN = 'https://www.finn.no/recommerce/forsale/search';
@@ -53,6 +53,18 @@ function variant(def, size) {
   return def.size ? def.size[size] : { label: '', q: def.q, u: def.u, n: def.n };
 }
 
+// Varianten som foreslås for en ting i et rom av en viss størrelse (S, M eller L).
+export function autoVariant(item, roomSize) {
+  if (!item.size) return roomSize;
+  const a = typeof item.auto === 'string' ? item.auto : (item.auto || {})[roomSize] || roomSize;
+  return item.size[a] ? a : Object.keys(item.size)[0];
+}
+
+// Variantene man kan velge mellom for en ting, i den rekkefølgen de skal vises: [nøkkel, kort tekst, full tekst].
+export function variantsOf(item) {
+  return Object.entries(item.size || {}).map(([k, v]) => [k, v.short || v.label.split(',')[0].replace(/^Ca\. /, ''), v.label]);
+}
+
 // Ting hverdagen din legger til, som nøkler «rom:ting».
 function lifeAdds(state) {
   const keys = new Set();
@@ -85,10 +97,12 @@ export function instances(state) {
       const item = ITEMS[itemId];
       const saved = state.items[key] || {};
       const dflt = def.ess.includes(itemId) || adds.has(key) ? 'need' : 'off';
-      const size = 'SML'.includes(saved.size || '?') ? saved.size : room.size; // egen størrelse går foran rommets
-      const dq = typeof item.qty === 'object' ? item.qty[size] : item.qty || 1;
+      // Valgt variant går foran forslaget ut fra rommet. Eldre lister har S, M eller L lagret, og de finnes fortsatt.
+      const size = item.size && item.size[saved.size] ? saved.size : autoVariant(item, room.size);
+      const v = variant(item, size);
+      const dq = v.qty || (typeof item.qty === 'object' ? item.qty[room.size] : item.qty || 1);
       out.push({
-        key, itemId, room, item, size, v: variant(item, size), qty: saved.qty || dq,
+        key, itemId, room, item, size, v, qty: saved.qty || dq,
         st: saved.st || dflt, saved,
       });
     }
@@ -123,7 +137,12 @@ export function maxOf(inst, state) {
 
 // ---------- Fritekst ----------
 
-const NEG = /\b(ikke|uten|ingen|aldri|unngå|slippe|slipper)\b/g;
+// \b i JavaScript regner ikke æ, ø, å og é som bokstaver, så «grå,» og «blå sofa» ble aldri funnet. nb() bytter
+// \b med en ordgrense som gjør det.
+const EDGE = '(?:(?<![a-zæøåé0-9])(?=[a-zæøåé0-9])|(?<=[a-zæøåé0-9])(?![a-zæøåé0-9]))';
+const nb = (rx) => new RegExp(rx.source.replace(/\\b/g, EDGE), rx.flags);
+const WISHES = WISH_WORDS.map((w) => ({ ...w, rx: nb(w.rx) }));
+const NEG = nb(/\b(ikke|uten|ingen|aldri|unngå|slippe|slipper)\b/g);
 const BREAK = /[,;:]|\bmen\b|\bheller\b|\bvil ha\b|\bønsker\b|\bgjerne\b/;
 
 function negated(text, index) {
@@ -139,7 +158,7 @@ export function parseWish(raw) {
   const text = ' ' + String(raw || '').toLowerCase() + ' ';
   const search = [], avoid = [], notes = [];
   const push = (arr, v) => { if (v && !arr.includes(v)) arr.push(v); };
-  for (const w of WISH_WORDS) {
+  for (const w of WISHES) {
     const m = w.rx.exec(text);
     if (!m) continue;
     if (negated(text, m.index)) push(avoid, w.label);
@@ -225,7 +244,7 @@ export function wishOf(inst, state) {
   }
   let replace = null;
   for (const [qid, idx] of Object.entries(inst.saved.picks || {})) {
-    const opt = QUESTIONS[qid]?.options[idx];
+    const opt = (inst.item.ask || []).includes(qid) ? QUESTIONS[qid]?.options[idx] : null;
     if (!opt) continue;
     if (opt.replace) replace = opt.replace;
     if (opt.q && !w.search.includes(opt.q)) w.search.push(opt.q);
@@ -244,18 +263,31 @@ export const prioOf = (inst, state) => inst.saved.prio || state.prio || null;
 export const kwOf = (inst, state) => inst.saved.kw ?? (prioOf(inst, state) === 'stil' ? styleWords(inst, state).slice(0, 1) : []);
 export const comfortFor = (inst, state) => (prioOf(inst, state) === 'komfort' ? COMFORT[inst.itemId] || null : null);
 
-export function searchText(inst, state) {
+// word = et annet ord for tingen (fra altWords). Ønskene til brukeren følger med uansett.
+export function searchText(inst, state, word) {
   const w = wishOf(inst, state);
-  const base = w.replace || inst.v.q;
+  const base = word || w.replace || inst.v.q;
   const extra = w.search.filter((s) => !base.split(' ').includes(s));
   return [base, ...extra].join(' ');
 }
 
+// Er hovedsøket begrenset til «Møbler og interiør»? Da finnes det også et bredere søk uten kategori.
+export const inCategory = (inst) => inst.item.cat !== false;
+
+// Andre ord folk bruker om samme ting i annonser. Variantens egne ord først, så tingens.
+export function altWords(inst, state) {
+  const base = (state && wishOf(inst, state).replace) || inst.v.q;
+  const all = [...(inst.v.alt || []), ...(inst.item.alt || [])];
+  return [...new Set(all)].filter((w) => w !== base).slice(0, 6);
+}
+
 // mode: 'all' = alt til salgs under makspris, 'today' = lagt ut i dag, 'free' = gis bort
-export function finnUrl(inst, state, mode = 'all') {
+// opt.broad = søk i hele Torget i stedet for bare «Møbler og interiør». Finner annonser som er lagt i feil kategori.
+// opt.word = søk med et annet ord for tingen. Slike søk er alltid brede.
+export function finnUrl(inst, state, mode = 'all', opt = {}) {
   const p = new URLSearchParams();
-  p.set('q', searchText(inst, state));
-  if (inst.item.cat !== false) p.set('category', FINN_FURNITURE);
+  p.set('q', searchText(inst, state, opt.word));
+  if (inCategory(inst) && !opt.broad && !opt.word) p.set('category', FINN_FURNITURE);
   if (state.area) p.set('location', state.area);
   if (mode === 'free') p.set('trade_type', '2');
   else {
@@ -265,6 +297,11 @@ export function finnUrl(inst, state, mode = 'all') {
   if (mode === 'today') p.set('published', '1');
   p.set('sort', 'PUBLISHED_DESC');
   return `${FINN}?${p.toString()}`;
+}
+
+// Ett ferdig søk per annet ord: [{ word, url }].
+export function altLinks(inst, state, mode = 'all') {
+  return altWords(inst, state).map((word) => ({ word, url: finnUrl(inst, state, mode, { word }) }));
 }
 
 export function ikeaUrl(inst, state) {
@@ -389,12 +426,21 @@ export function layoutPlan(rooms) {
 
 // ---------- Møbler på plantegningen ----------
 
+// size er nøkkelen til en variant. Eldre tegninger kan ha romstørrelsen (S, M, L) lagret for ting som siden
+// har fått egne varianter. Da brukes varianten som foreslås for et slikt rom.
 export function footprint(itemId, size) {
   const f = FOOT[itemId];
-  return !f ? null : Array.isArray(f) ? f : f[size];
+  if (!f) return null;
+  if (Array.isArray(f)) return f;
+  return f[size] || f[autoVariant(ITEMS[itemId], size)] || null;
 }
 
-export const isCorner = (itemId, size) => (CORNER[itemId] || []).includes(size);
+// Formen en variant tegnes med: 'L' = vinkel (hjørnesofa, sjeselong), 'U' = hestesko, null = firkant.
+export const shapeOf = (itemId, size) => ITEMS[itemId]?.size?.[size]?.shape || null;
+export const isCorner = (itemId, size) => shapeOf(itemId, size) === 'L';
+
+// Navnet på et møbel på tegningen: varianten når den har eget navn (hjørnesofa, U-sofa), ellers tingen.
+export const furnName = (itemId, size) => ITEMS[itemId]?.size?.[size]?.name || ITEMS[itemId]?.name || '';
 
 // Veggen møbelet til en ting på lista står mot, hvis det er satt ut på tegningen.
 export function placedWall(state, roomId, itemId) {
@@ -476,8 +522,9 @@ export function normalize(s) {
       && [f.x, f.y].every((v) => Number.isFinite(v) && v >= -500 && v <= 3000) && [f.w, f.d].every((v) => v >= 20 && v <= 600))
     .slice(0, 80).map((f) => ({
       id: f.id, room: f.room, item: f.item, x: Math.round(f.x), y: Math.round(f.y), w: Math.round(f.w), d: Math.round(f.d), r: f.r === 90 ? 90 : 0,
-      ...(['S', 'M', 'L'].includes(f.s) ? { s: f.s } : {}),                       // størrelsen møbelet ble tegnet for
-      ...(['nw', 'ne', 'sw', 'se'].includes(f.corner) ? { corner: f.corner } : {}), // hjørnesofa: hvilket hjørne som er åpent
+      ...(['S', 'M', 'L'].includes(f.s) || ITEMS[f.item].size?.[f.s] ? { s: f.s } : {}), // varianten møbelet ble tegnet for
+      ...(['nw', 'ne', 'sw', 'se'].includes(f.corner) && !f.u ? { corner: f.corner } : {}), // vinkel: hvilket hjørne som er åpent
+      ...((f.r === 90 ? ['e', 'w'] : ['n', 's']).includes(f.u) ? { u: f.u } : {}),        // hestesko: hvilken side som er åpen
     }));
   out.life = s.life.filter((id) => LIFE.some((l) => l.id === id));
   out.lifeText = typeof s.lifeText === 'string' ? s.lifeText.slice(0, 2000) : '';
@@ -500,7 +547,10 @@ export function normalize(s) {
     if (v.max === null) it.max = null; else if (n(v.max, 1e6)) it.max = n(v.max, 1e6);
     if (typeof v.wish === 'string') it.wish = v.wish.slice(0, 300);
     if (Number.isInteger(v.qty) && v.qty >= 1 && v.qty <= 12) it.qty = v.qty;
-    if (v.size === 'S' || v.size === 'M' || v.size === 'L') it.size = v.size;
+    if (typeof v.size === 'string' && ITEMS[itemId]?.size?.[v.size]) it.size = v.size;
+    // Før var sovesofa, sjeselong og modulsofa svar på et eget spørsmål. Nå er de varianter av sofaen.
+    const oldType = itemId === 'sofa' && !it.size && v.picks && typeof v.picks === 'object' ? { 1: 'sove', 2: 'chaise', 3: 'modul' }[v.picks.sofatype] : null;
+    if (oldType) it.size = oldType;
     if (PRIOS.some((x) => x[0] === v.prio)) it.prio = v.prio;
     if (n(v.maxw, 600)) it.maxw = n(v.maxw, 600);
     if (n(v.paid, 1e6)) it.paid = n(v.paid, 1e6);

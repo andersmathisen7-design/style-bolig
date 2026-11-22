@@ -1,12 +1,12 @@
 // Plantegningen: tegn rom på frihånd, rett dem opp, sett mål, dører, vinduer og møbler.
 // Mens man drar, endres bare det som vises. Tilstanden lagres når man slipper.
 import { ROOMS, ITEMS } from './data.js';
-import { roomLabel, sizeFromM2, footprint, instances, isCorner } from './logic.js';
+import { roomLabel, sizeFromM2, footprint, instances, shapeOf, furnName } from './logic.js';
 import {
   straighten, straightenLine, isLine, splitPoly, moveWall, moveCorner, dragAlong, valid, remapDoor, remapDoors, alignTo, fitSheet, canonical,
   area, areaM2, edges, letter, setEdgeLength, nearestEdge, labelPoint, pointInPoly, moved, opening, wallFor,
 } from './plan.js';
-import { arrangeRoom, armOf, localNotch, flipCorner, turned, keepInside } from './arrange.js';
+import { arrangeRoom, armOf, localNotch, localOpen, flipped, turned, keepInside } from './arrange.js';
 
 export const SHEETS = [1000, 1500, 2500];
 const TOOLS = [['draw', 'Tegn rom'], ['move', 'Velg og flytt'], ['door', 'Dør'], ['window', 'Vindu']];
@@ -70,10 +70,9 @@ function roomSvg(state, ui, r, k) {
     const sel = ui.furn === f.id;
     const fs = clamp(Math.min(f.w, f.d) * 0.34, 17 * k, 26 * k);
     const room = (f.r === 90 ? f.d : f.w) - 8 * k; // teksten står alltid vannrett
-    const full = ITEMS[f.item]?.name || '', word = full.split(' ')[0];
-    const fit = (t) => t.length * fs * 0.6 <= room;
-    const name = fit(full) ? full : fit(word) ? word : word.slice(0, Math.max(1, Math.floor(room / (fs * 0.6))));
+    if (f.u) return uSvg(f, sel, k);
     if (f.corner) return cornerSvg(f, sel, k);
+    const name = shortName(f, room, fs);
     return `<g class="furn ${sel ? 'on' : ''}" data-furn="${f.id}" transform="translate(${f.x} ${f.y}) rotate(${f.r})">
       <rect x="${-f.w / 2}" y="${-f.d / 2}" width="${f.w}" height="${f.d}" rx="${4 * k}" stroke-width="${2.5 * k}"/>
       <text font-size="${fs}" dy="${fs * 0.35}" transform="rotate(${-f.r})">${esc(name)}</text></g>`;
@@ -86,7 +85,28 @@ function roomSvg(state, ui, r, k) {
     ${furn}<g class="marks">${marks}</g></g>`;
 }
 
-// Hjørnesofa: en vinkel med ryggarm og sidearm. Tegnes i møbelets egen ramme, så den følger med når den dras og snus.
+// Navnet som får plass på møbelet: hele navnet på varianten, ellers navnet på tingen, ellers første ord.
+function shortName(f, room, fs) {
+  const fit = (t) => t.length * fs * 0.6 <= room;
+  const full = furnName(f.item, f.s), plain = ITEMS[f.item]?.name || '', word = plain.split(' ')[0];
+  return [full, plain, word].find(fit) || word.slice(0, Math.max(1, Math.floor(room / (fs * 0.6))));
+}
+
+// U-sofa: en hestesko med rygg og en arm i hver ende. Tegnes i møbelets egen ramme, som vinkelen under.
+function uSvg(f, sel, k) {
+  const t = armOf(f), sy = localOpen(f) === 'n' ? -1 : 1; // grunnformen er åpen nedover
+  const Y = (v) => v * sy;
+  const w2 = f.w / 2, d2 = f.d / 2;
+  const p = [[-w2, -d2], [w2, -d2], [w2, d2], [w2 - t, d2], [w2 - t, -d2 + t], [-w2 + t, -d2 + t], [-w2 + t, d2], [-w2, d2]].map(([x, y]) => `${x},${Y(y)}`).join(' ');
+  const fs = clamp(t * 0.34, 17 * k, 26 * k);
+  const seam = (x) => `<line class="seam" x1="${x}" y1="${Y(-d2)}" x2="${x}" y2="${Y(-d2 + t)}" stroke-width="${1.5 * k}"/>`;
+  return `<g class="furn ${sel ? 'on' : ''}" data-furn="${f.id}" data-shape="u" transform="translate(${f.x} ${f.y}) rotate(${f.r})">
+    <polygon points="${p}" stroke-width="${2.5 * k}" stroke-linejoin="round"/>
+    ${seam(-w2 + t)}${seam(w2 - t)}
+    <text font-size="${fs}" x="0" y="${Y(-d2 + t / 2)}" dy="${fs * 0.35}" transform="rotate(${-f.r} 0 ${Y(-d2 + t / 2)})">${esc(shortName(f, (f.r === 90 ? t : f.w) - 8 * k, fs))}</text></g>`;
+}
+
+// Vinkel (hjørnesofa, sofa med sjeselong, hjørnebord): ryggarm og sidearm. Tegnes i møbelets egen ramme, så den følger med når den dras og snus.
 function cornerSvg(f, sel, k) {
   const t = armOf(f), n = localNotch(f);
   const sx = n[1] === 'e' ? 1 : -1, sy = n[0] === 's' ? 1 : -1; // speiler grunnformen (åpent hjørne nede til høyre)
@@ -94,10 +114,10 @@ function cornerSvg(f, sel, k) {
   const w2 = f.w / 2, d2 = f.d / 2;
   const p = [[-w2, -d2], [w2, -d2], [w2, -d2 + t], [-w2 + t, -d2 + t], [-w2 + t, d2], [-w2, d2]].map(([x, y]) => `${X(x)},${Y(y)}`).join(' ');
   const fs = clamp(t * 0.34, 17 * k, 26 * k);
-  return `<g class="furn ${sel ? 'on' : ''}" data-furn="${f.id}" transform="translate(${f.x} ${f.y}) rotate(${f.r})">
+  return `<g class="furn ${sel ? 'on' : ''}" data-furn="${f.id}" data-shape="l" transform="translate(${f.x} ${f.y}) rotate(${f.r})">
     <polygon points="${p}" stroke-width="${2.5 * k}" stroke-linejoin="round"/>
     <line class="seam" x1="${X(-w2 + t)}" y1="${Y(-d2)}" x2="${X(-w2 + t)}" y2="${Y(-d2 + t)}" stroke-width="${1.5 * k}"/>
-    <text font-size="${fs}" x="${X(t / 2)}" y="${Y(-d2 + t / 2)}" dy="${fs * 0.35}" transform="rotate(${-f.r} ${X(t / 2)} ${Y(-d2 + t / 2)})">${f.r === 90 ? 'Sofa' : 'Hjørnesofa'}</text></g>`;
+    <text font-size="${fs}" x="${X(t / 2)}" y="${Y(-d2 + t / 2)}" dy="${fs * 0.35}" transform="rotate(${-f.r} ${X(t / 2)} ${Y(-d2 + t / 2)})">${esc(shortName(f, (f.r === 90 ? t : f.w - t) - 8 * k, fs))}</text></g>`;
 }
 
 // Plass til et nattbord ved hodeenden av senga. Hodeenden er den enden som står nærmest en vegg.
@@ -183,11 +203,11 @@ export function drawView(state, ui, canUndo) {
 function furnBar(state, ui) {
   const f = (state.furn || []).find((x) => x.id === ui.furn);
   if (!f) return '<div class="furnbar"><span class="furnbar-hint">Trykk på et møbel for å snu det eller ta det bort.</span></div>';
-  const name = f.corner ? 'Hjørnesofa' : ITEMS[f.item].name;
-  return `<div class="furnbar on" role="group" aria-label="Valgt møbel: ${esc(name)}">
+  const name = furnName(f.item, f.s);
+  return `<div class="furnbar on ${f.corner || f.u ? 'shaped' : ''}" role="group" aria-label="Valgt møbel: ${esc(name)}">
     <span class="furnbar-name">${esc(name)}</span>
     <button class="barbtn" data-act="rotfurn">Snu</button>
-    ${f.corner ? '<button class="barbtn" data-act="flipfurn">Snu hjørnet</button>' : ''}
+    ${f.corner ? '<button class="barbtn" data-act="flipfurn">Snu hjørnet</button>' : f.u ? '<button class="barbtn" data-act="flipfurn">Snu åpningen</button>' : ''}
     <button class="barbtn danger" data-act="delfurn">Ta bort</button>
   </div>`;
 }
@@ -199,7 +219,7 @@ function furnPanel(state, ui) {
   const w = wallFor(room.poly, room.doors, f);
   return `
   <section class="panel" aria-label="Valgt møbel">
-    <h2>${f.corner ? 'Hjørnesofa' : esc(ITEMS[f.item].name)}<small>${esc(roomLabel(state.rooms, room))}</small></h2>
+    <h2>${esc(furnName(f.item, f.s))}<small>${esc(roomLabel(state.rooms, room))}</small></h2>
     <div class="pair">
       <div class="field"><label for="fw">Bredde, cm</label><input id="fw" inputmode="numeric" data-ch="furnw" value="${f.w}"></div>
       <div class="field"><label for="fd">Dybde, cm</label><input id="fd" inputmode="numeric" data-ch="furnd" value="${f.d}"></div>
@@ -207,7 +227,7 @@ function furnPanel(state, ui) {
     <p class="tip">${w
       ? `Står mot vegg ${letter(w.e)}, som er ${m(w.len)} m.${w.free < w.len ? ` ${m(w.free)} m er fri for dører.` : ''} Lista bruker dette som største bredde.`
       : 'Står fritt i rommet. Dra det inntil en vegg, så regner lista ut hvor bredt det kan være.'}</p>
-    ${f.corner ? '<p class="hint">Målene gjelder hele vinkelen. Størrelsen velger du på lista.</p>' : ''}
+    ${f.corner || f.u ? `<p class="hint">Målene gjelder hele ${f.u ? 'hesteskoen' : 'vinkelen'}. Typen velger du på lista.</p>` : ''}
   </section>`;
 }
 
@@ -503,7 +523,7 @@ export function editorActions(ctx) {
         const missed = [];
         for (const r of s.rooms.filter((x) => x.poly)) {
           const existing = s.furn.filter((f) => f.room === r.id);
-          const wants = placeable(s, r).map((x) => { const fp = footprint(x.id, x.size); return { item: x.id, w: fp[0], d: fp[1], qty: Math.max(0, x.qty - x.count), s: x.size, corner: isCorner(x.id, x.size) }; });
+          const wants = placeable(s, r).map((x) => { const fp = footprint(x.id, x.size); return { item: x.id, w: fp[0], d: fp[1], qty: Math.max(0, x.qty - x.count), s: x.size, corner: shapeOf(x.id, x.size) === 'L', u: shapeOf(x.id, x.size) === 'U' }; });
           if (!wants.some((w) => w.qty > 0)) continue;
           // En dør tegnet i naborommet er også en dør her, når den står i veggen de deler.
           const shared = s.rooms.filter((o) => o !== r && o.poly && (o.floor || 0) === (r.floor || 0))
@@ -537,7 +557,7 @@ export function editorActions(ctx) {
         const bed = v === 'nattbord' ? s.furn.find((f) => f.room === r.id && f.item === 'seng') : null;
         if (bed) spot = besideBed(r.poly, bed, fp, have) || spot; // nattbord havner ved hodeenden, ett på hver side
         const id = 'f' + (s.seq = (s.seq || 100) + 1);
-        s.furn = [...s.furn, { id, room: r.id, item: v, x: spot.x, y: spot.y, w: fp[0], d: fp[1], r: spot.r, s: size, ...(isCorner(v, size) ? { corner: 'se' } : {}) }];
+        s.furn = [...s.furn, { id, room: r.id, item: v, x: spot.x, y: spot.y, w: fp[0], d: fp[1], r: spot.r, s: size, ...(shapeOf(v, size) === 'L' ? { corner: 'se' } : shapeOf(v, size) === 'U' ? { u: 's' } : {}) }];
         ui.furn = id; ui.room = null; ui.tool = 'move';
         ctx.commit();
       },
@@ -554,10 +574,10 @@ export function editorActions(ctx) {
       },
       flipfurn() {
         const s = ctx.state(), f = selFurn();
-        if (!f?.corner) return;
+        if (!f?.corner && !f?.u) return;
         const room = s.rooms.find((r) => r.id === f.room);
-        const flipped = { ...f, corner: flipCorner(f) };
-        Object.assign(f, (room?.poly && keepInside(room, flipped)) || flipped);
+        const next = flipped(f);
+        Object.assign(f, (room?.poly && keepInside(room, next)) || next);
         ui.note = ''; ctx.commit();
       },
       delfurn() { const s = ctx.state(); s.furn = s.furn.filter((f) => f.id !== ui.furn); ui.furn = null; ctx.commit(); },

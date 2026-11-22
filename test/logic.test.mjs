@@ -75,7 +75,7 @@ test('Finn-lenker', () => {
 test('valg og stilord i søket', () => {
   const s = newState();
   const key = get(s, 'sofa').key;
-  s.items[key] = { picks: { sofatype: 1, farge: 2 }, kw: ['lin'], max: null };
+  s.items[key] = { size: 'sove', picks: { farge: 2 }, kw: ['lin'], max: null }; // sovesofa er en variant av sofaen
   const sofa = get(s, 'sofa');
   assert.equal(searchText(sofa, s), 'sovesofa grønn lin');
   assert.equal(new URL(finnUrl(sofa, s)).searchParams.get('price_to'), null);

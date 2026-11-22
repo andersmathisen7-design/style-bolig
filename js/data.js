@@ -161,15 +161,6 @@ export const QUESTIONS = {
       { label: 'Hvitt', q: 'hvit' }, { label: 'Svart', q: 'svart' }, { label: 'Glass', q: 'glass' },
     ],
   },
-  sofatype: {
-    label: 'Type',
-    options: [
-      { label: 'Vanlig', },
-      { label: 'Sovesofa', replace: 'sovesofa' },
-      { label: 'Med sjeselong', q: 'sjeselong' },
-      { label: 'Modulsofa', replace: 'modulsofa' },
-    ],
-  },
   stoff: {
     label: 'Trekk',
     options: [
@@ -197,140 +188,204 @@ export const QUESTIONS = {
 };
 
 // Ting. kind styrer hvilke stilord som foreslås. cat:false = ligger ikke under «Møbler og interiør» på Finn.
-// size gir egne mål, søkeord og priser etter romstørrelse. wall = ting som bør måles mot en vegg (klaring i cm).
+// size = variantene man kan velge mellom (type eller størrelse), i den rekkefølgen de vises. Hver variant har
+// egen tekst (label, og short til knappen), eget søkeord (q) og egne priser. Nøklene S, M og L er variantene som
+// før fulgte romstørrelsen, og de er fortsatt forslaget for et lite, middels og stort rom. Har tingen ingen av
+// dem, sier auto hvilken variant som foreslås. pick = overskriften over valget.
+// shape: 'L' tegnes som en vinkel, 'U' som en hestesko. qty på en variant = vanlig antall av den.
+// name på en variant = hva den heter når den står alene (på tegningen og i lista), når det er noe annet enn tingen.
+// alt = andre ord folk bruker om det samme i annonser. Brukes til søk på tvers av kategorier.
+// wall = ting som bør måles mot en vegg (klaring i cm).
 export const ITEMS = {
   sofa: {
-    name: 'Sofa', kind: 'soft', ask: ['sofatype', 'stoff', 'farge'], wall: 40,
+    name: 'Sofa', kind: 'soft', ask: ['stoff', 'farge'], wall: 40, pick: 'Type', alt: ['sofagruppe', 'salong'],
     size: {
-      S: { label: '2-seter, ca. 150–180 cm bred', q: '2-seter sofa', u: 2000, n: 1500 },
-      M: { label: '3-seter, ca. 200–230 cm bred', q: '3-seter sofa', u: 3000, n: 2000 },
-      L: { label: 'Hjørnesofa, ca. 260 × 170 cm', q: 'hjørnesofa', u: 5000, n: 9000 },
+      S: { label: '2-seter, ca. 150–180 cm bred', q: '2-seter sofa', u: 2000, n: 1500, alt: ['toseter', '2 seter sofa'] },
+      M: { label: '3-seter, ca. 200–230 cm bred', q: '3-seter sofa', u: 3000, n: 2000, alt: ['treseter', '3 seter sofa'] },
+      x4: { label: '4-seter, ca. 240–270 cm bred', q: '4-seter sofa', u: 4000, n: 5000, alt: ['fireseter', '4 seter sofa'] },
+      L: { label: 'Hjørnesofa, ca. 260 × 170 cm', name: 'Hjørnesofa', q: 'hjørnesofa', u: 5000, n: 9000, shape: 'L', alt: ['vinkelsofa', 'sofa hjørne'] },
+      U: { label: 'U-sofa (hesteskosofa), ca. 320 × 210 cm', name: 'U-sofa', short: 'U-sofa', q: 'u-sofa', u: 7000, n: 12000, shape: 'U', alt: ['hesteskosofa', 'u-formet sofa', 'u sofa'] },
+      chaise: { label: 'Sofa med sjeselong, ca. 250 × 160 cm', name: 'Sofa med sjeselong', short: 'Med sjeselong', q: 'sofa sjeselong', u: 4000, n: 6000, shape: 'L', alt: ['sjeselongsofa', 'divansofa'] },
+      modul: { label: 'Modulsofa, ca. 280 cm bred', name: 'Modulsofa', q: 'modulsofa', u: 6000, n: 8000, alt: ['modul sofa', 'byggbar sofa'] },
+      sove: { label: 'Sovesofa, ca. 200 cm bred', name: 'Sovesofa', q: 'sovesofa', u: 2500, n: 3000, alt: ['sofaseng', 'dagseng'] },
     },
   },
   sovesofa: {
-    name: 'Sovesofa', kind: 'soft', ask: ['farge'], wall: 30,
+    name: 'Sovesofa', kind: 'soft', ask: ['farge'], wall: 30, pick: 'Størrelse', alt: ['sofaseng', 'dagseng', 'futon'],
     size: {
-      S: { label: 'Ca. 140 cm liggebredde', q: 'sovesofa', u: 2000, n: 3000 },
-      M: { label: 'Ca. 140–160 cm liggebredde', q: 'sovesofa', u: 2500, n: 3500 },
-      L: { label: 'Med sjeselong og oppbevaring', q: 'sovesofa sjeselong', u: 3500, n: 6000 },
+      S: { label: 'Ca. 140 cm liggebredde', short: 'Liten', q: 'sovesofa', u: 2000, n: 3000 },
+      M: { label: 'Ca. 140–160 cm liggebredde', short: 'Middels', q: 'sovesofa', u: 2500, n: 3500 },
+      L: { label: 'Med sjeselong og oppbevaring', short: 'Med sjeselong', q: 'sovesofa sjeselong', u: 3500, n: 6000 },
     },
   },
   sofabord: {
-    name: 'Sofabord', kind: 'wood', ask: ['form', 'tre'],
+    name: 'Sofabord', kind: 'wood', ask: ['form', 'tre'], pick: 'Størrelse', alt: ['stuebord', 'salongbord', 'kaffebord'],
     size: {
-      S: { label: 'Ca. 60–90 cm', q: 'sofabord', u: 600, n: 300 },
-      M: { label: 'Ca. 90–120 cm', q: 'sofabord', u: 800, n: 500 },
-      L: { label: 'Ca. 120–140 cm, eller to små', q: 'sofabord', u: 1200, n: 900 },
+      S: { label: 'Ca. 60–90 cm', short: '60–90 cm', q: 'sofabord', u: 600, n: 300 },
+      M: { label: 'Ca. 90–120 cm', short: '90–120 cm', q: 'sofabord', u: 800, n: 500 },
+      L: { label: 'Ca. 120–140 cm, eller to små', short: '120–140 cm', q: 'sofabord', u: 1200, n: 900 },
+      sett: { label: 'Settbord, flere små som skyves sammen', name: 'Settbord', short: 'Settbord', q: 'settbord', u: 500, n: 600, alt: ['innskuddsbord', 'sofabord sett'] },
+      side: { label: 'Sidebord, ca. 45 cm', name: 'Sidebord', short: 'Sidebord', q: 'sidebord', u: 300, n: 250, alt: ['lampebord', 'avlastningsbord'] },
     },
   },
   tvbenk: {
-    name: 'TV-benk', kind: 'wood', ask: ['tre'],
+    name: 'TV-benk', kind: 'wood', ask: ['tre'], pick: 'Størrelse', alt: ['tv-bord', 'mediabenk', 'tv-møbel', 'skjenk', 'sideboard'],
     size: {
-      S: { label: 'Ca. 100–120 cm', q: 'tv-benk', u: 500, n: 400 },
-      M: { label: 'Ca. 140–160 cm', q: 'tv-benk', u: 600, n: 700 },
-      L: { label: 'Ca. 180–200 cm', q: 'tv-benk', u: 900, n: 1300 },
+      S: { label: 'Ca. 100–120 cm', short: '100–120 cm', q: 'tv-benk', u: 500, n: 400 },
+      M: { label: 'Ca. 140–160 cm', short: '140–160 cm', q: 'tv-benk', u: 600, n: 700 },
+      L: { label: 'Ca. 180–200 cm', short: '180–200 cm', q: 'tv-benk', u: 900, n: 1300 },
+      x240: { label: 'Ekstra lang, ca. 240 cm', short: '240 cm', q: 'tv-benk', u: 1200, n: 2000 },
+      skjenk: { label: 'Skjenk, ca. 160 × 45 cm', name: 'Skjenk', short: 'Skjenk', q: 'skjenk', u: 1500, n: 2500, alt: ['sideboard', 'tv-benk'] },
     },
   },
-  lenestol: { name: 'Lenestol', kind: 'soft', ask: ['stoff', 'farge'], q: 'lenestol', u: 1500, n: 1000 },
-  bokhylle: { name: 'Bokhylle', kind: 'wood', ask: ['tre'], q: 'bokhylle', u: 500, n: 600 },
+  lenestol: {
+    name: 'Lenestol', kind: 'soft', ask: ['stoff', 'farge'], pick: 'Type', auto: 'std', alt: ['godstol', 'loungestol'],
+    size: {
+      std: { label: 'Lenestol', q: 'lenestol', u: 1500, n: 1000 },
+      ore: { label: 'Ørelappstol', name: 'Ørelappstol', q: 'ørelappstol', u: 1500, n: 2500, alt: ['øreklaffstol', 'lenestol'] },
+      recl: { label: 'Hvilestol (recliner)', name: 'Hvilestol', short: 'Hvilestol', q: 'hvilestol', u: 2500, n: 4000, alt: ['recliner', 'stressless', 'regulerbar lenestol'] },
+    },
+  },
+  bokhylle: {
+    name: 'Bokhylle', kind: 'wood', ask: ['tre'], pick: 'Type', auto: 'hoy', alt: ['reol', 'hylle', 'bokskap'],
+    size: {
+      lav: { label: 'Lav, ca. 80 cm bred og 100 cm høy', short: 'Lav', q: 'bokhylle lav', u: 400, n: 400, alt: ['lav hylle', 'bokhylle'] },
+      hoy: { label: 'Høy, ca. 80 cm bred og 200 cm høy', short: 'Høy', q: 'bokhylle', u: 500, n: 600 },
+      vegg: { label: 'Vegghylle', name: 'Vegghylle', q: 'vegghylle', u: 200, n: 200, alt: ['hylle vegg', 'stringhylle'] },
+      reol: { label: 'Reol over hele veggen, ca. 240 cm', name: 'Reol', short: 'Reol', q: 'reol', u: 1500, n: 2500, alt: ['hyllesystem', 'bokhyller', 'bokhylle'] },
+    },
+  },
   teppe: {
-    name: 'Teppe', kind: 'deco', ask: ['farge'],
+    name: 'Teppe', kind: 'deco', ask: ['farge'], pick: 'Størrelse', alt: ['gulvteppe', 'rye', 'ullteppe'],
     size: {
-      S: { label: 'Ca. 140 × 200 cm', q: 'teppe 140x200', u: 400, n: 400 },
-      M: { label: 'Ca. 160 × 230 cm', q: 'teppe 160x230', u: 600, n: 700 },
-      L: { label: 'Ca. 200 × 300 cm', q: 'teppe 200x300', u: 1000, n: 1300 },
+      S: { label: 'Ca. 140 × 200 cm', short: '140 × 200', q: 'teppe 140x200', u: 400, n: 400 },
+      M: { label: 'Ca. 160 × 230 cm', short: '160 × 230', q: 'teppe 160x230', u: 600, n: 700 },
+      L: { label: 'Ca. 200 × 300 cm', short: '200 × 300', q: 'teppe 200x300', u: 1000, n: 1300 },
+      rund: { label: 'Rundt, ca. 160–200 cm', short: 'Rundt', q: 'rundt teppe', u: 500, n: 600, alt: ['teppe rundt'] },
+      lop: { label: 'Løper, ca. 80 × 250 cm', name: 'Løper', short: 'Løper', q: 'teppeløper', u: 300, n: 300, alt: ['løper', 'gangteppe'] },
     },
   },
-  gulvlampe: { name: 'Gulvlampe', kind: 'light', q: 'gulvlampe', u: 500, n: 200 },
-  taklampe: { name: 'Taklampe', kind: 'light', q: 'taklampe', u: 400, n: 200 },
-  bordlampe: { name: 'Bordlampe', kind: 'light', q: 'bordlampe', u: 250, n: 150 },
-  gardiner: { name: 'Gardiner', kind: 'deco', ask: ['farge'], q: 'gardiner', u: 200, n: 250 },
-  puter: { name: 'Puter og pledd', kind: 'deco', q: 'pledd', u: 150, n: 200 },
-  bilder: { name: 'Bilder og veggpynt', kind: 'deco', q: 'bilde ramme', u: 300, n: 200 },
-  planter: { name: 'Planter og potter', kind: 'deco', q: 'potte', u: 150, n: 150 },
+  gulvlampe: {
+    name: 'Gulvlampe', kind: 'light', pick: 'Type', auto: 'std', alt: ['stålampe', 'lampe'],
+    size: {
+      std: { label: 'Vanlig gulvlampe', short: 'Vanlig', q: 'gulvlampe', u: 500, n: 200 },
+      bue: { label: 'Buelampe', q: 'buelampe', u: 800, n: 700, alt: ['gulvlampe bue'] },
+      lese: { label: 'Leselampe', q: 'leselampe', u: 400, n: 300, alt: ['gulvlampe leselampe'] },
+    },
+  },
+  taklampe: {
+    name: 'Taklampe', kind: 'light', pick: 'Type', auto: 'std', alt: ['lampe'],
+    size: {
+      std: { label: 'Vanlig taklampe', short: 'Vanlig', q: 'taklampe', u: 400, n: 200, alt: ['pendel'] },
+      pendel: { label: 'Pendel', q: 'pendel', u: 500, n: 300, alt: ['pendellampe', 'taklampe'] },
+      krone: { label: 'Lysekrone', q: 'lysekrone', u: 800, n: 1000, alt: ['krystallkrone', 'taklampe'] },
+      plafond: { label: 'Plafond', q: 'plafond', u: 200, n: 150, alt: ['taklampe'] },
+    },
+  },
+  bordlampe: { name: 'Bordlampe', kind: 'light', q: 'bordlampe', u: 250, n: 150, alt: ['nattbordlampe', 'vinduslampe', 'lampe'] },
+  gardiner: { name: 'Gardiner', kind: 'deco', ask: ['farge'], q: 'gardiner', u: 200, n: 250, alt: ['gardin', 'gardinlengder', 'lysdempende gardiner'] },
+  puter: { name: 'Puter og pledd', kind: 'deco', q: 'pledd', u: 150, n: 200, alt: ['pyntepute', 'sofapute', 'ullpledd'] },
+  bilder: { name: 'Bilder og veggpynt', kind: 'deco', q: 'bilde ramme', u: 300, n: 200, alt: ['maleri', 'plakat', 'litografi'] },
+  planter: { name: 'Planter og potter', kind: 'deco', q: 'potte', u: 150, n: 150, alt: ['blomsterpotte', 'krukke', 'stueplante'] },
 
   spisebord: {
-    name: 'Spisebord', kind: 'wood', ask: ['form', 'uttrekk', 'tre'], wall: 150,
+    name: 'Spisebord', kind: 'wood', ask: ['form', 'uttrekk', 'tre'], wall: 150, pick: 'Størrelse', alt: ['kjøkkenbord', 'langbord', 'spisestue'],
     size: {
-      S: { label: '2–4 personer, ca. 80–120 cm', q: 'spisebord', u: 800, n: 600 },
-      M: { label: '4–6 personer, ca. 140–160 cm', q: 'spisebord', u: 1500, n: 2800 },
-      L: { label: '6–8 personer, ca. 180–220 cm', q: 'spisebord', u: 2500, n: 3600 },
+      S: { label: '2–4 personer, ca. 80–120 cm', short: '2–4 pers.', q: 'spisebord', u: 800, n: 600 },
+      M: { label: '4–6 personer, ca. 140–160 cm', short: '4–6 pers.', q: 'spisebord', u: 1500, n: 2800 },
+      L: { label: '6–8 personer, ca. 180–220 cm', short: '6–8 pers.', q: 'spisebord', u: 2500, n: 3600 },
+      x10: { label: '8–10 personer, ca. 240–300 cm', short: '8–10 pers.', q: 'spisebord', u: 3500, n: 6000 },
     },
   },
-  spisestoler: { name: 'Spisestoler', kind: 'wood', ask: ['tre'], q: 'spisestoler', u: 300, n: 300, qty: { S: 2, M: 4, L: 6 } },
-  servise: { name: 'Servise og glass', kind: 'deco', cat: false, q: 'servise', u: 400, n: 500 },
-  bestikk: { name: 'Bestikk', kind: 'deco', cat: false, q: 'bestikk', u: 200, n: 200 },
-  gryter: { name: 'Gryter og panner', kind: 'deco', cat: false, q: 'gryter', u: 300, n: 500 },
-  barkrakker: { name: 'Barkrakker', kind: 'wood', q: 'barkrakker', u: 300, n: 300, qty: 2 },
-  kjokkentralle: { name: 'Kjøkkentralle', kind: 'wood', q: 'kjøkkentralle', u: 500, n: 600 },
-  barnestol: { name: 'Barnestol', kind: 'wood', cat: false, q: 'barnestol', u: 900, n: 500 },
+  spisestoler: {
+    name: 'Spisestoler', kind: 'wood', ask: ['tre'], qty: { S: 2, M: 4, L: 6 }, pick: 'Type', auto: 'stol', alt: ['stoler'],
+    size: {
+      stol: { label: 'Stoler', q: 'spisestoler', u: 300, n: 300, alt: ['spisestol', 'kjøkkenstoler'] },
+      benk: { label: 'Benk til spisebordet', name: 'Spisebenk', short: 'Benk', q: 'spisebenk', u: 800, n: 1000, qty: 1, alt: ['sittebenk', 'kjøkkenbenk'] },
+    },
+  },
+  servise: { name: 'Servise og glass', kind: 'deco', cat: false, q: 'servise', u: 400, n: 500, alt: ['tallerkener', 'middagsservise', 'porselen'] },
+  bestikk: { name: 'Bestikk', kind: 'deco', cat: false, q: 'bestikk', u: 200, n: 200, alt: ['spisebestikk', 'bestikksett'] },
+  gryter: { name: 'Gryter og panner', kind: 'deco', cat: false, q: 'gryter', u: 300, n: 500, alt: ['kjele', 'kasserolle', 'stekepanne', 'grytesett'] },
+  barkrakker: { name: 'Barkrakker', kind: 'wood', q: 'barkrakker', u: 300, n: 300, qty: 2, alt: ['barstol', 'barstoler', 'barkrakk'] },
+  kjokkentralle: { name: 'Kjøkkentralle', kind: 'wood', q: 'kjøkkentralle', u: 500, n: 600, alt: ['rullebord', 'trillebord', 'serveringsvogn'] },
+  barnestol: { name: 'Barnestol', kind: 'wood', cat: false, q: 'barnestol', u: 900, n: 500, alt: ['tripp trapp', 'høystol'] },
 
   seng: {
-    name: 'Seng med madrass', kind: 'soft', ask: ['sengtype'], wall: 100,
+    name: 'Seng med madrass', kind: 'soft', ask: ['sengtype'], wall: 100, pick: 'Bredde', alt: ['rammemadrass', 'kontinentalseng'],
     size: {
-      S: { label: '120 cm bred', q: 'seng 120', u: 1200, n: 2000 },
-      M: { label: '150–160 cm bred', q: 'dobbeltseng', u: 2000, n: 3500 },
-      L: { label: '180 cm bred', q: 'dobbeltseng 180', u: 3000, n: 5000 },
+      x90: { label: '90 cm bred (enkeltseng)', short: '90 cm', q: 'seng 90', u: 800, n: 1500, alt: ['enkeltseng', 'seng 90x200'] },
+      S: { label: '120 cm bred', short: '120 cm', q: 'seng 120', u: 1200, n: 2000, alt: ['seng 120x200'] },
+      x150: { label: '150 cm bred', short: '150 cm', q: 'dobbeltseng', u: 1800, n: 3000, alt: ['seng 150', 'seng 150x200', 'dobbeltseng 150'] },
+      M: { label: '160 cm bred', short: '160 cm', q: 'dobbeltseng', u: 2000, n: 3500, alt: ['seng 160', 'seng 160x200', 'dobbeltseng 160'] },
+      L: { label: '180 cm bred', short: '180 cm', q: 'dobbeltseng 180', u: 3000, n: 5000, alt: ['seng 180', 'seng 180x200', 'dobbeltseng'] },
+      fam: { label: 'Familieseng, 200 cm eller bredere', name: 'Familieseng', short: 'Familieseng', q: 'familieseng', u: 4000, n: 8000, alt: ['seng 200x200', 'seng 210'] },
+      koye: { label: 'Køyeseng', name: 'Køyeseng', q: 'køyeseng', u: 1500, n: 2500, alt: ['etasjeseng', 'køye'] },
     },
   },
-  gjesteseng: { name: 'Gjesteseng', kind: 'soft', q: 'gjesteseng', u: 500, n: 800 },
-  nattbord: { name: 'Nattbord', kind: 'wood', ask: ['tre'], q: 'nattbord', u: 400, n: 300, qty: { S: 1, M: 2, L: 2 } }, // ett på hver side av en dobbeltseng
+  gjesteseng: { name: 'Gjesteseng', kind: 'soft', q: 'gjesteseng', u: 500, n: 800, alt: ['feltseng', 'sammenleggbar seng', 'gjestemadrass'] },
+  nattbord: { name: 'Nattbord', kind: 'wood', ask: ['tre'], q: 'nattbord', u: 400, n: 300, qty: { S: 1, M: 2, L: 2 }, alt: ['sengebord', 'sidebord'] }, // ett på hver side av en dobbeltseng
   garderobe: {
-    name: 'Garderobeskap', kind: 'wood', ask: ['tre'], wall: 10,
+    name: 'Garderobeskap', kind: 'wood', ask: ['tre'], wall: 10, pick: 'Type', alt: ['klesskap', 'garderobe'],
     size: {
-      S: { label: 'Ca. 80–100 cm bredt', q: 'garderobeskap', u: 800, n: 1000 },
-      M: { label: 'Ca. 150 cm bredt', q: 'garderobeskap', u: 1200, n: 2500 },
-      L: { label: 'Ca. 200 cm eller mer', q: 'garderobeskap', u: 2000, n: 4000 },
+      S: { label: 'Skap, ca. 80–100 cm bredt', short: 'Skap 100', q: 'garderobeskap', u: 800, n: 1000 },
+      M: { label: 'Skap, ca. 150 cm bredt', short: 'Skap 150', q: 'garderobeskap', u: 1200, n: 2500 },
+      L: { label: 'Skap, ca. 200 cm eller mer', short: 'Skap 200', q: 'garderobeskap', u: 2000, n: 4000 },
+      skyv: { label: 'Skyvedørsgarderobe, ca. 200 cm', name: 'Skyvedørsgarderobe', short: 'Skyvedører', q: 'skyvedørsgarderobe', u: 2500, n: 5000, alt: ['garderobe skyvedører', 'pax skyvedører'] },
+      kles: { label: 'Kommode til klær, ca. 100 cm', name: 'Kommode', short: 'Kleskommode', q: 'kommode', u: 600, n: 700, alt: ['skuffeseksjon', 'kleskommode'] },
+      stativ: { label: 'Klesstativ', name: 'Klesstativ', q: 'klesstativ', u: 150, n: 200, alt: ['stativ klær', 'garderobestativ'] },
     },
   },
-  kommode: { name: 'Kommode', kind: 'wood', ask: ['tre'], q: 'kommode', u: 500, n: 600 },
-  speil: { name: 'Speil', kind: 'deco', q: 'speil', u: 300, n: 200 },
+  kommode: { name: 'Kommode', kind: 'wood', ask: ['tre'], q: 'kommode', u: 500, n: 600, alt: ['skuffeseksjon', 'skuffemøbel', 'kleskommode'] },
+  speil: { name: 'Speil', kind: 'deco', q: 'speil', u: 300, n: 200, alt: ['veggspeil', 'helfigurspeil', 'gulvspeil'] },
 
-  skohylle: { name: 'Skohylle', kind: 'wood', q: 'skohylle', u: 200, n: 150 },
-  knagger: { name: 'Knaggrekke eller stumtjener', kind: 'wood', q: 'knaggrekke', u: 150, n: 100 },
-  benk: { name: 'Benk', kind: 'wood', q: 'benk gang', u: 500, n: 600 },
+  skohylle: { name: 'Skohylle', kind: 'wood', q: 'skohylle', u: 200, n: 150, alt: ['skoskap', 'skostativ', 'skobenk'] },
+  knagger: { name: 'Knaggrekke eller stumtjener', kind: 'wood', q: 'knaggrekke', u: 150, n: 100, alt: ['stumtjener', 'knagger', 'hattehylle'] },
+  benk: { name: 'Benk', kind: 'wood', q: 'benk gang', u: 500, n: 600, alt: ['sittebenk', 'skobenk', 'entrebenk'] },
 
   skrivebord: {
-    name: 'Skrivebord', kind: 'wood', ask: ['tre'], wall: 10,
+    name: 'Skrivebord', kind: 'wood', ask: ['tre'], wall: 10, pick: 'Type', alt: ['arbeidsbord', 'pult', 'kontorpult'],
     size: {
-      S: { label: 'Ca. 100 cm', q: 'skrivebord', u: 500, n: 500 },
-      M: { label: 'Ca. 120–140 cm', q: 'skrivebord', u: 700, n: 800 },
-      L: { label: 'Ca. 160 cm, gjerne hev/senk', q: 'skrivebord hev senk', u: 2000, n: 3000 },
+      S: { label: 'Lite, ca. 100 cm', short: '100 cm', q: 'skrivebord', u: 500, n: 500 },
+      M: { label: 'Vanlig, ca. 120–140 cm', short: '120–140 cm', q: 'skrivebord', u: 700, n: 800 },
+      x160: { label: 'Stort, ca. 160 cm', short: '160 cm', q: 'skrivebord', u: 900, n: 1300 },
+      L: { label: 'Hev/senk, ca. 160 cm', short: 'Hev/senk', q: 'skrivebord hev senk', u: 2000, n: 3000, alt: ['hev senk bord', 'heve senke skrivebord', 'ståbord'] },
+      hjorne: { label: 'Hjørneskrivebord, ca. 160 × 120 cm', name: 'Hjørneskrivebord', short: 'Hjørne', q: 'hjørneskrivebord', u: 1200, n: 2000, shape: 'L', alt: ['skrivebord hjørne', 'l-formet skrivebord'] },
     },
   },
-  kontorstol: { name: 'Kontorstol', kind: 'soft', q: 'kontorstol', u: 600, n: 600 },
-  skrivebordslampe: { name: 'Skrivebordslampe', kind: 'light', q: 'skrivebordslampe', u: 200, n: 150 },
+  kontorstol: { name: 'Kontorstol', kind: 'soft', q: 'kontorstol', u: 600, n: 600, alt: ['skrivebordsstol', 'arbeidsstol', 'gamingstol'] },
+  skrivebordslampe: { name: 'Skrivebordslampe', kind: 'light', q: 'skrivebordslampe', u: 200, n: 150, alt: ['arbeidslampe', 'leselampe', 'arkitektlampe'] },
 
-  badhylle: { name: 'Hylle eller skap til bad', kind: 'wood', q: 'baderomshylle', u: 300, n: 300 },
-  toykurv: { name: 'Skittentøyskurv', kind: 'deco', q: 'skittentøyskurv', u: 100, n: 150 },
+  badhylle: { name: 'Hylle eller skap til bad', kind: 'wood', q: 'baderomshylle', u: 300, n: 300, alt: ['baderomsskap', 'badeskap', 'hylle bad'] },
+  toykurv: { name: 'Skittentøyskurv', kind: 'deco', q: 'skittentøyskurv', u: 100, n: 150, alt: ['skittentøykurv', 'vaskekurv', 'kleskurv'] },
 
-  barneseng: { name: 'Barneseng', kind: 'wood', q: 'barneseng', u: 800, n: 1000 },
-  lekekasse: { name: 'Oppbevaring til leker', kind: 'wood', q: 'lekeoppbevaring', u: 300, n: 400 },
+  barneseng: { name: 'Barneseng', kind: 'wood', q: 'barneseng', u: 800, n: 1000, alt: ['juniorseng', 'sprinkelseng'] },
+  lekekasse: { name: 'Oppbevaring til leker', kind: 'wood', q: 'lekeoppbevaring', u: 300, n: 400, alt: ['lekekasse', 'lekekiste', 'oppbevaring barnerom'] },
 
-  utemobler: { name: 'Bord og stoler ute', kind: 'wood', cat: false, q: 'balkongmøbler', u: 800, n: 800 },
+  utemobler: { name: 'Bord og stoler ute', kind: 'wood', cat: false, q: 'balkongmøbler', u: 800, n: 800, alt: ['hagemøbler', 'utemøbler', 'kafébord'] },
 
   // Kjøkkenutstyr (group: 'utstyr')
-  glass: { name: 'Glass', kind: 'deco', group: 'utstyr', cat: false, q: 'drikkeglass', u: 100, n: 150 },
-  krus: { name: 'Kopper og krus', kind: 'deco', group: 'utstyr', cat: false, q: 'krus', u: 100, n: 150 },
-  kniver: { name: 'Kjøkkenkniver', kind: 'deco', group: 'utstyr', cat: false, q: 'kjøkkenkniver', u: 200, n: 300 },
-  redskaper: { name: 'Sleiver og redskaper', kind: 'deco', group: 'utstyr', cat: false, q: 'kjøkkenredskaper', u: 100, n: 200 },
-  fjol: { name: 'Skjærefjøl', kind: 'deco', group: 'utstyr', cat: false, q: 'skjærefjøl', u: 80, n: 100 },
-  former: { name: 'Boller og ildfaste former', kind: 'deco', group: 'utstyr', cat: false, q: 'ildfast form', u: 150, n: 200 },
-  bokser: { name: 'Bokser og oppbevaring', kind: 'deco', group: 'utstyr', cat: false, q: 'oppbevaringsbokser kjøkken', u: 100, n: 150 },
-  vannkoker: { name: 'Vannkoker', kind: 'deco', group: 'utstyr', cat: false, q: 'vannkoker', u: 100, n: 200 },
-  kaffetrakter: { name: 'Kaffetrakter', kind: 'deco', group: 'utstyr', cat: false, q: 'kaffetrakter', u: 250, n: 400 },
-  brodrister: { name: 'Brødrister', kind: 'deco', group: 'utstyr', cat: false, q: 'brødrister', u: 100, n: 200 },
-  mikro: { name: 'Mikrobølgeovn', kind: 'deco', group: 'utstyr', cat: false, q: 'mikrobølgeovn', u: 400, n: 800 },
-  kjokkenmaskin: { name: 'Kjøkkenmaskin eller mikser', kind: 'deco', group: 'utstyr', cat: false, q: 'kjøkkenmaskin', u: 800, n: 1500 },
+  glass: { name: 'Glass', kind: 'deco', group: 'utstyr', cat: false, q: 'drikkeglass', u: 100, n: 150, alt: ['vannglass', 'vinglass'] },
+  krus: { name: 'Kopper og krus', kind: 'deco', group: 'utstyr', cat: false, q: 'krus', u: 100, n: 150, alt: ['kopper', 'kaffekopper', 'tekopper'] },
+  kniver: { name: 'Kjøkkenkniver', kind: 'deco', group: 'utstyr', cat: false, q: 'kjøkkenkniver', u: 200, n: 300, alt: ['kokkekniv', 'knivsett', 'knivblokk'] },
+  redskaper: { name: 'Sleiver og redskaper', kind: 'deco', group: 'utstyr', cat: false, q: 'kjøkkenredskaper', u: 100, n: 200, alt: ['kjøkkenutstyr', 'sleiver', 'stekespade'] },
+  fjol: { name: 'Skjærefjøl', kind: 'deco', group: 'utstyr', cat: false, q: 'skjærefjøl', u: 80, n: 100, alt: ['skjærebrett', 'kuttebrett', 'fjøl'] },
+  former: { name: 'Boller og ildfaste former', kind: 'deco', group: 'utstyr', cat: false, q: 'ildfast form', u: 150, n: 200, alt: ['bakebolle', 'ildfast fat', 'kakeform'] },
+  bokser: { name: 'Bokser og oppbevaring', kind: 'deco', group: 'utstyr', cat: false, q: 'oppbevaringsbokser kjøkken', u: 100, n: 150, alt: ['matbokser', 'norgesglass', 'oppbevaringsglass'] },
+  vannkoker: { name: 'Vannkoker', kind: 'deco', group: 'utstyr', cat: false, q: 'vannkoker', u: 100, n: 200, alt: ['vannkjele', 'tekjele'] },
+  kaffetrakter: { name: 'Kaffetrakter', kind: 'deco', group: 'utstyr', cat: false, q: 'kaffetrakter', u: 250, n: 400, alt: ['kaffemaskin', 'moccamaster', 'presskanne'] },
+  brodrister: { name: 'Brødrister', kind: 'deco', group: 'utstyr', cat: false, q: 'brødrister', u: 100, n: 200, alt: ['toaster'] },
+  mikro: { name: 'Mikrobølgeovn', kind: 'deco', group: 'utstyr', cat: false, q: 'mikrobølgeovn', u: 400, n: 800, alt: ['mikro', 'mikroovn'] },
+  kjokkenmaskin: { name: 'Kjøkkenmaskin eller mikser', kind: 'deco', group: 'utstyr', cat: false, q: 'kjøkkenmaskin', u: 800, n: 1500, alt: ['kitchenaid', 'kenwood', 'håndmikser'] },
 
   // Pynt (group: 'pynt')
-  vase: { name: 'Vaser', kind: 'deco', group: 'pynt', q: 'vase', u: 100, n: 100 },
-  lysestaker: { name: 'Lysestaker og lykter', kind: 'deco', group: 'pynt', q: 'lysestake', u: 100, n: 100 },
-  veggklokke: { name: 'Veggklokke', kind: 'deco', group: 'pynt', q: 'veggklokke', u: 150, n: 150 },
-  kurver: { name: 'Kurver', kind: 'deco', group: 'pynt', q: 'kurv', u: 100, n: 150 },
-  fat: { name: 'Fat og skåler til pynt', kind: 'deco', group: 'pynt', q: 'pyntefat', u: 100, n: 150 },
-  figurer: { name: 'Figurer og skulpturer', kind: 'deco', group: 'pynt', q: 'skulptur', u: 150, n: 200 },
-  duk: { name: 'Duker og løpere', kind: 'deco', group: 'pynt', q: 'duk', u: 100, n: 150 },
+  vase: { name: 'Vaser', kind: 'deco', group: 'pynt', q: 'vase', u: 100, n: 100, alt: ['blomstervase', 'glassvase', 'keramikkvase'] },
+  lysestaker: { name: 'Lysestaker og lykter', kind: 'deco', group: 'pynt', q: 'lysestake', u: 100, n: 100, alt: ['lykt', 'telysholder', 'lyslykt'] },
+  veggklokke: { name: 'Veggklokke', kind: 'deco', group: 'pynt', q: 'veggklokke', u: 150, n: 150, alt: ['veggur', 'klokke'] },
+  kurver: { name: 'Kurver', kind: 'deco', group: 'pynt', q: 'kurv', u: 100, n: 150, alt: ['oppbevaringskurv', 'flettet kurv', 'sjøgresskurv'] },
+  fat: { name: 'Fat og skåler til pynt', kind: 'deco', group: 'pynt', q: 'pyntefat', u: 100, n: 150, alt: ['pynteskål', 'fruktfat', 'skål'] },
+  figurer: { name: 'Figurer og skulpturer', kind: 'deco', group: 'pynt', q: 'skulptur', u: 150, n: 200, alt: ['pyntefigur', 'figur', 'statue'] },
+  duk: { name: 'Duker og løpere', kind: 'deco', group: 'pynt', q: 'duk', u: 100, n: 150, alt: ['bordløper', 'linduk', 'spisebrikker'] },
 };
 // Ting som alt fantes, men som hører hjemme under pynt eller utstyr når de vises som forslag.
 for (const id of ['puter', 'bilder', 'planter', 'speil', 'gardiner', 'teppe']) ITEMS[id].group = 'pynt';
@@ -408,7 +463,7 @@ export const LIFE = [
     tips: {
       spisebord: 'Du har ofte gjester: se etter et bord som kan forlenges.',
       spisestoler: 'Ta gjerne to ekstra stoler til gjester.',
-      sofa: 'Overnatter gjestene? Velg «Sovesofa» under Type, så slipper du egen gjesteseng.',
+      sofa: 'Overnatter gjestene? Velg «Sovesofa» som type, så slipper du egen gjesteseng.',
     },
   },
   {
@@ -456,7 +511,7 @@ export const LIFE = [
 export const ITEM_WORDS = [
   ['sofabord', 'sofabord'], ['stuebord', 'sofabord'], ['salongbord', 'sofabord'],
   ['spisebord', 'spisebord'], ['kjøkkenbord', 'spisebord'], ['skrivebord', 'skrivebord'], ['nattbord', 'nattbord'],
-  ['sovesofa', 'sovesofa'], ['hjørnesofa', 'sofa'], ['sofa', 'sofa'],
+  ['sovesofa', 'sovesofa'], ['hjørnesofa', 'sofa'], ['hesteskosofa', 'sofa'], ['u-sofa', 'sofa'], ['sofa', 'sofa'],
   ['spisestol', 'spisestoler'], ['kjøkkenstol', 'spisestoler'], ['kontorstol', 'kontorstol'], ['lenestol', 'lenestol'], ['godstol', 'lenestol'],
   ['dobbeltseng', 'seng'], ['barneseng', 'barneseng'], ['seng', 'seng'],
   ['tv-benk', 'tvbenk'], ['tvbenk', 'tvbenk'], ['tv benk', 'tvbenk'],
@@ -485,9 +540,9 @@ export const WISH_WORDS = [
   { rx: /\b(skinn|lær)\b/, q: 'skinn', label: 'skinn' }, { rx: /\b(fløyel|velur)\b/, q: 'fløyel', label: 'fløyel' },
   { rx: /\bboucl[eé]\b/, q: 'bouclé', label: 'bouclé' }, { rx: /\bull\b/, q: 'ull', label: 'ull' },
   { rx: /\bhvit[te]?\b/, q: 'hvit', label: 'hvit' }, { rx: /\b(svart|sort)e?\b/, q: 'svart', label: 'svart' },
-  { rx: /\bgrå[tr]?\b/, q: 'grå', label: 'grå' }, { rx: /\bbeige\b/, q: 'beige', label: 'beige' },
+  { rx: /\bgrå(tt?|e|r)?\b/, q: 'grå', label: 'grå' }, { rx: /\bbeige\b/, q: 'beige', label: 'beige' },
   { rx: /\bbrun[te]?\b/, q: 'brun', label: 'brun' }, { rx: /\bgrøn[nt]e?\b/, q: 'grønn', label: 'grønn' },
-  { rx: /\bblå[tr]?\b/, q: 'blå', label: 'blå' }, { rx: /\brosa\b/, q: 'rosa', label: 'rosa' },
+  { rx: /\bblå(tt?|e|r)?\b/, q: 'blå', label: 'blå' }, { rx: /\brosa\b/, q: 'rosa', label: 'rosa' },
   { rx: /\bgul[te]?\b/, q: 'gul', label: 'gul' }, { rx: /\brød[te]?\b/, q: 'rød', label: 'rød' },
   { rx: /\b(lys|lyst|lyse)\b/, label: 'lys farge' }, { rx: /\b(mørk|mørkt|mørke)\b/, label: 'mørk farge' },
   { rx: /\b(lav|lavt|lave)\b/, label: 'lav' }, { rx: /\b(høy|høyt|høye)\b/, label: 'høy' },
@@ -502,21 +557,27 @@ export const LEVELS = [
 ];
 
 // Omtrentlig fotavtrykk i cm (bredde × dybde) for møbler som kan settes ut på plantegningen.
-// Ting med flere størrelser følger romstørrelsen (S, M, L).
+// Ting med flere varianter har ett sett mål per variant (samme nøkler som i ITEMS). For vinkler og hestesko er
+// målene hele formen.
 export const FOOT = {
-  sofa: { S: [160, 90], M: [210, 90], L: [260, 170] }, // L er hjørnesofa: målene er hele vinkelen
-  sovesofa: [200, 95], sofabord: [100, 60], lenestol: [80, 80], bokhylle: [80, 30], gulvlampe: [35, 35],
-  tvbenk: { S: [120, 40], M: [150, 40], L: [180, 40] },
-  teppe: { S: [200, 140], M: [230, 160], L: [300, 200] },
-  spisebord: { S: [100, 70], M: [150, 90], L: [200, 95] },
+  sofa: { S: [160, 90], M: [210, 90], x4: [260, 95], L: [260, 170], U: [320, 210], chaise: [250, 160], modul: [280, 100], sove: [200, 95] },
+  sovesofa: [200, 95], lenestol: { std: [80, 80], ore: [80, 85], recl: [85, 100] }, gulvlampe: [35, 35],
+  sofabord: { S: [80, 50], M: [100, 60], L: [130, 70], sett: [70, 50], side: [45, 45] },
+  bokhylle: { lav: [80, 30], hoy: [80, 30], vegg: [80, 25], reol: [240, 35] },
+  tvbenk: { S: [120, 40], M: [150, 40], L: [180, 40], x240: [240, 40], skjenk: [160, 45] },
+  teppe: { S: [200, 140], M: [230, 160], L: [300, 200], rund: [180, 180], lop: [250, 80] },
+  spisebord: { S: [100, 70], M: [150, 90], L: [200, 95], x10: [260, 100] },
   barkrakker: [120, 40], kjokkentralle: [60, 40],
-  seng: { S: [120, 200], M: [160, 200], L: [180, 200] },
+  seng: { x90: [90, 200], S: [120, 200], x150: [150, 200], M: [160, 200], L: [180, 200], fam: [200, 200], koye: [95, 200] },
   gjesteseng: [90, 200], nattbord: [45, 40], kommode: [80, 45],
-  garderobe: { S: [100, 60], M: [150, 60], L: [200, 60] },
+  garderobe: { S: [100, 60], M: [150, 60], L: [200, 60], skyv: [200, 65], kles: [100, 45], stativ: [100, 45] },
   skohylle: [80, 30], benk: [100, 35],
-  skrivebord: { S: [100, 60], M: [130, 65], L: [160, 80] }, kontorstol: [60, 60],
+  skrivebord: { S: [100, 60], M: [130, 65], x160: [160, 80], L: [160, 80], hjorne: [160, 120] }, kontorstol: [60, 60],
   badhylle: [40, 30], barneseng: [70, 140], lekekasse: [80, 40], utemobler: [120, 70],
 };
+
+// Hvor dype armene er på møbler som tegnes som vinkel eller hestesko. Sofaer bruker 95 cm.
+export const ARM = { skrivebord: 65 };
 
 // Hva som er viktigst når man velger. Kan settes for alt under Ønsker, og overstyres per ting.
 export const PRIOS = [
@@ -536,6 +597,3 @@ export const COMFORT = {
   gjesteseng: { tip: 'Sjekk at madrassen er hel og tørr.', words: ['madrass'] },
   barneseng: { tip: 'Kjøp gjerne madrassen ny.', words: [] },
 };
-
-// Ting og størrelser som tegnes som en vinkel (hjørnesofa) i stedet for en firkant.
-export const CORNER = { sofa: ['L'] };

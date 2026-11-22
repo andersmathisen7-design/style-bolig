@@ -1,8 +1,8 @@
 // «Sett ut alt for meg»: et fornuftig utgangspunkt for møbleringen av ett rom. Ren logikk uten DOM.
 // Møbler står rett (0 eller 90 grader) inntil rette vegger. Det som ikke får en god plass, blir stående igjen.
 import { edges, pointInPoly, opening, labelPoint } from './plan.js';
-import { FOOT } from './data.js';
-import { instances, footprint, isCorner } from './logic.js';
+import { FOOT, ARM } from './data.js';
+import { instances, footprint, shapeOf } from './logic.js';
 
 const GAP = 5;                       // luft mellom møbel og vegg
 const TALL = ['garderobe', 'bokhylle']; // høye ting skal ikke stå foran vinduer
@@ -19,15 +19,25 @@ export const boxOf = (f) => {
 };
 const hits = (a, b, pad = 0) => a[0] < b[2] + pad && a[2] > b[0] - pad && a[1] < b[3] + pad && a[3] > b[1] - pad;
 
-// ---------- Hjørnesofa ----------
-// w og d er målene på hele vinkelen. corner sier hvilket hjørne av den som er åpent, sett på tegningen
-// ('nw', 'ne', 'sw', 'se'). Sofaen er da de to armene langs sidene motsatt det åpne hjørnet.
+// ---------- Vinkel og hestesko ----------
+// w og d er målene på hele formen.
+// Vinkel (hjørnesofa, sofa med sjeselong, hjørneskrivebord): corner sier hvilket hjørne som er åpent, sett på
+// tegningen ('nw', 'ne', 'sw', 'se'). Møbelet er da de to armene langs sidene motsatt det åpne hjørnet.
+// Hestesko (U-sofa): u sier hvilken side som er åpen ('n', 'e', 's', 'w'). Møbelet er ryggen på motsatt side
+// og en arm i hver ende.
 
-export const armOf = (f) => Math.max(20, Math.min(95, f.w - 20, f.d - 20)); // dybden på hver arm
+export const armOf = (f) => Math.max(20, Math.min(ARM[f.item] || 95, f.w - 20, f.d - 20)); // dybden på hver arm
 
-// Flatene møbelet dekker: én for vanlige møbler, to armer for en hjørnesofa.
+// Flatene møbelet dekker: én for vanlige møbler, to armer for en vinkel, rygg og to armer for en hestesko.
 export function boxesOf(f) {
   const b = boxOf(f);
+  if (f.u) {
+    const t = armOf(f);
+    const back = { n: [b[0], b[3] - t, b[2], b[3]], s: [b[0], b[1], b[2], b[1] + t], w: [b[2] - t, b[1], b[2], b[3]], e: [b[0], b[1], b[0] + t, b[3]] }[f.u];
+    return f.u === 'n' || f.u === 's'
+      ? [back, [b[0], b[1], b[0] + t, b[3]], [b[2] - t, b[1], b[2], b[3]]]
+      : [back, [b[0], b[1], b[2], b[1] + t], [b[0], b[3] - t, b[2], b[3]]];
+  }
   if (!f.corner) return [b];
   const t = armOf(f);
   return [
@@ -38,6 +48,29 @@ export function boxesOf(f) {
 
 // Åpent hjørne når ryggen står mot en vegg med retning n inn i rommet. Vinkelen peker da ut i rommet.
 export const notchFor = (n) => (n[1] > 0 ? 'se' : n[1] < 0 ? 'ne' : n[0] > 0 ? 'se' : 'sw');
+
+// Åpent hjørne når sidearmen skal stå i en bestemt ende av veggen (end = -1 ved starten, 1 ved slutten).
+// Brukes for hjørnebord, som skal ha sidearmen inn mot hjørnet i rommet.
+export function notchAt(wall, end) {
+  return wall.o === 'H'
+    ? (wall.n[1] > 0 ? 's' : 'n') + (-end * wall.u[0] > 0 ? 'e' : 'w')
+    : (-end * wall.u[1] > 0 ? 's' : 'n') + (wall.n[0] > 0 ? 'e' : 'w');
+}
+
+// Åpen side for en hestesko med ryggen mot en vegg med retning n inn i rommet: åpningen vender ut i rommet.
+export const openFor = (n) => (n[1] > 0 ? 's' : n[1] < 0 ? 'n' : n[0] > 0 ? 'e' : 'w');
+
+// Snu 90 grader med klokka: den åpne siden flytter seg ett hakk rundt.
+export const turnU = (u) => ({ n: 'e', e: 's', s: 'w', w: 'n' }[u]);
+
+// Speilvend et møbel med form: vinkelen bytter side, hesteskoen åpner seg motsatt vei.
+export function flipped(f) {
+  if (f.u) return { ...f, u: { n: 's', s: 'n', e: 'w', w: 'e' }[f.u] };
+  return f.corner ? { ...f, corner: flipCorner(f) } : f;
+}
+
+// Den åpne siden sett fra møbelets egen ramme (før det er snudd), til bruk når det tegnes.
+export const localOpen = (f) => (f.r !== 90 ? f.u : f.u === 'e' ? 'n' : 's');
 
 // Snu 90 grader med klokka: det åpne hjørnet flytter seg ett hakk rundt.
 export const turnCorner = (c) => ({ nw: 'ne', ne: 'se', se: 'sw', sw: 'nw' }[c]);
@@ -115,7 +148,7 @@ export function arrangeRoom(room, wants, existing = []) {
   };
   const put = (w, f, opts) => {
     if (!f || !fits(f, opts)) return null;
-    const piece = { item: w.item, x: Math.round(f.x), y: Math.round(f.y), w: w.w, d: w.d, r: f.r, ...(w.s ? { s: w.s } : {}), ...(f.corner ? { corner: f.corner } : {}) };
+    const piece = { item: w.item, x: Math.round(f.x), y: Math.round(f.y), w: w.w, d: w.d, r: f.r, ...(w.s ? { s: w.s } : {}), ...(f.corner ? { corner: f.corner } : {}), ...(f.u ? { u: f.u } : {}) };
     placed.push(piece); taken.push({ boxes: boxesOf(piece), rug: w.item === 'teppe', f: piece });
     w.qty -= 1;
     return piece;
@@ -166,11 +199,26 @@ export function arrangeRoom(room, wants, existing = []) {
     return { x: f.x + wall.u[0] * side * t / 2 + wall.n[0] * out, y: f.y + wall.u[1] * side * t / 2 + wall.n[1] * out, w: w.w, d: w.d, r: f.r };
   };
 
+  // Inne i en hestesko: midt mellom armene, foran ryggen. Null når bordet er for stort til å stå der.
+  const inU = (f, wall, w) => {
+    const t = armOf(f), deep = f.d - t;
+    if (w.w > f.w - 2 * t - 20 || w.d > deep - 10) return null;
+    const out = -f.d / 2 + t + Math.min(30, (deep - w.d) / 2) + w.d / 2;
+    return { x: f.x + wall.n[0] * out, y: f.y + wall.n[1] * out, w: w.w, d: w.d, r: f.r };
+  };
+  // Gir møbelet formen sin når det står mot en vegg: åpningen eller vinkelen peker ut i rommet.
+  // end = sidearmen på en vinkel skal stå i den enden av veggen møbelet står nærmest (for hjørnebord).
+  const shaped = (w, hit, end = false) => {
+    if (w.u) return { ...hit.f, u: openFor(hit.wall.n) };
+    if (w.corner) return { ...hit.f, corner: end ? notchAt(hit.wall, hit.pos < hit.wall.len / 2 ? -1 : 1) : notchFor(hit.wall.n) };
+    return hit.f;
+  };
+
   // 1. Sofagruppa: sofa midt på det lengste ledige veggstrekket, TV-benk rett overfor, bord foran og teppe under.
   const sofaWant = want('sofa') || (!standing('sofa') && want('sovesofa'));
   if (sofaWant && !standing(sofaWant.item)) {
     const hit = alongWall(sofaWant);
-    if (hit) put(sofaWant, sofaWant.corner ? { ...hit.f, corner: notchFor(hit.wall.n) } : hit.f); // vinkelen peker ut i rommet
+    if (hit) put(sofaWant, shaped(sofaWant, hit));
   }
   const sofa = standing('sofa') || standing('sovesofa');
   const sofaWall = sofa && backWall(sofa);
@@ -186,7 +234,8 @@ export function arrangeRoom(room, wants, existing = []) {
   const bord = want('sofabord');
   let front = null;
   if (sofaWall) {
-    front = sofa.corner ? inAngle(sofa, sofaWall, bord || { w: 100, d: 60 }, 30) : inFront(sofa, sofaWall, bord || { w: 100, d: 60 }, 35);
+    const b = bord || { w: 100, d: 60 };
+    front = (sofa.u && inU(sofa, sofaWall, b)) || (sofa.corner ? inAngle(sofa, sofaWall, b, 30) : inFront(sofa, sofaWall, b, 35));
     if (bord && !standing('sofabord')) put(bord, front);
   }
   const rug = want('teppe');
@@ -239,12 +288,12 @@ export function arrangeRoom(room, wants, existing = []) {
     if (!w) continue;
     while (w.qty > 0) {
       const hit = alongWall(w, { prefer, tall: TALL.includes(id) });
-      if (!hit || !put(w, hit.f, { tall: TALL.includes(id) })) break;
+      if (!hit || !put(w, shaped(w, hit, true), { tall: TALL.includes(id) })) break;
     }
   }
   // 5. Kontorstol foran skrivebordet.
   const chair = want('kontorstol'), desk = standing('skrivebord'), deskWall = desk && backWall(desk);
-  if (chair && deskWall) put(chair, inFront(desk, deskWall, chair, 10));
+  if (chair && deskWall) put(chair, desk.corner ? inAngle(desk, deskWall, chair, 10) : inFront(desk, deskWall, chair, 10));
 
   return { placed, skipped: left.filter((w) => w.qty > 0).map((w) => w.item) };
 }
@@ -258,7 +307,7 @@ const SHIFTS = (() => {
   return out.sort((a, b) => a[2] - b[2] || Math.abs(a[0] * a[1]) - Math.abs(b[0] * b[1])); // ved likt: rett bortover eller nedover først
 })();
 
-// Står hele møbelet inne i rommet? For en hjørnesofa sjekkes de to armene hver for seg.
+// Står hele møbelet inne i rommet? For vinkler og hestesko sjekkes armene hver for seg.
 export const fitsRoom = (room, f) => boxesOf(f).every((b) => insideRoom(room.poly, b));
 
 // Flytter møbelet kortest mulig vei slik at det står inne i rommet. Gir samme objekt tilbake når det alt står
@@ -277,6 +326,7 @@ export function keepInside(room, f) {
 export function turned(room, f) {
   const next = { ...f, r: f.r === 90 ? 0 : 90 };
   if (f.corner) next.corner = turnCorner(f.corner);
+  if (f.u) next.u = turnU(f.u);
   return keepInside(room, next);
 }
 
@@ -290,7 +340,7 @@ function sizedFor(f, listSize) {
   const fp = FOOT[f.item];
   if (!fp || Array.isArray(fp)) return { s: listSize, stale: false };
   const same = (a) => a && a[0] === f.w && a[1] === f.d;
-  const hit = ['S', 'M', 'L'].find((k) => same(fp[k]));
+  const hit = same(fp[listSize]) ? listSize : Object.keys(fp).find((k) => same(fp[k]));
   if (hit) return { s: hit, stale: false };
   const old = Object.keys(OLD_FOOT[f.item] || {}).find((k) => same(OLD_FOOT[f.item][k]));
   return old ? { s: old, stale: true } : { s: listSize, stale: false }; // ellers har brukeren skrevet egne mål
@@ -298,7 +348,8 @@ function sizedFor(f, listSize) {
 
 // Gir møbelet nye mål. Står det med ryggen mot en vegg, blir ryggen stående der, og møbelet skyves langs
 // veggen hvis det ellers ville stukket ut av rommet eller inn i en dør. Står det fritt, beholder det midtpunktet.
-function resized(room, f, fp, corner) {
+// shape: 'L' = vinkel, 'U' = hestesko, null = firkant. Bytter møbelet form, beholder det ryggen der den sto.
+function resized(room, f, fp, shape) {
   const next = { ...f, w: fp[0], d: fp[1] };
   const walls = wallsOf(room.poly);
   const wall = backWallOf(walls, f);
@@ -317,14 +368,17 @@ function resized(room, f, fp, corner) {
     }
     next.x = best.x; next.y = best.y;
   }
-  if (corner) next.corner = f.corner || (wall ? notchFor(wall.n) : 'se'); else delete next.corner;
+  delete next.corner; delete next.u;
+  const open = f.u || (f.corner && (f.r === 90 ? f.corner[1] : f.corner[0])); // siden som alt vender ut i rommet
+  if (shape === 'L') next.corner = f.corner || (wall ? notchFor(wall.n) : f.u ? (f.r === 90 ? 's' + f.u : f.u + 'e') : 'se');
+  if (shape === 'U') next.u = open || (wall ? openFor(wall.n) : f.r === 90 ? 'e' : 's');
   return next;
 }
 
 // Holder møblene på tegningen i takt med lista. Kalles etter hver endring.
 // - Ting som ikke lenger er med på lista, tas bort (kjøpte ting blir stående).
 // - Står det flere enn antallet på lista, tas de sist utsatte bort.
-// - Er størrelsen på lista endret, får møbelet nye mål (og hjørnesofa blir en vinkel).
+// - Er varianten på lista endret, får møbelet nye mål og ny form (hjørnesofa blir en vinkel, U-sofa en hestesko).
 // Gir samme liste tilbake når ingenting må endres, og rører aldri møbler som alt stemmer.
 export function syncFurniture(state) {
   const furn = state.furn || [];
@@ -346,9 +400,9 @@ export function syncFurniture(state) {
     const fp = footprint(f.item, inst.size);
     if (!fp || !room?.poly) { out.push(f); continue; }
     const { s, stale } = sizedFor(f, inst.size);
-    const was = footprint(f.item, s), corner = isCorner(f.item, inst.size);
-    const moved = s !== inst.size && (!was || was[0] !== fp[0] || was[1] !== fp[1] || corner !== !!f.corner);
-    if (stale || moved) { out.push({ ...resized(room, f, fp, corner), s: inst.size }); changed = true; }
+    const was = footprint(f.item, s), shape = shapeOf(f.item, inst.size), has = f.u ? 'U' : f.corner ? 'L' : null;
+    const moved = s !== inst.size && (!was || was[0] !== fp[0] || was[1] !== fp[1] || shape !== has);
+    if (stale || moved) { out.push({ ...resized(room, f, fp, shape), s: inst.size }); changed = true; }
     else if (!f.s) { out.push({ ...f, s }); changed = true; } // merk eldre møbler, uten å røre målene
     else out.push(f);
   }

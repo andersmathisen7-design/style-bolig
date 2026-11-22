@@ -1,7 +1,7 @@
 import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LEVELS, GROUPS, PRIOS } from './data.js';
 import {
   newState, roomsFromHome, roomLabel, roomM2, sizeFromM2, sizeRange, instances, defaultMax, maxOf,
-  parseLife, parseOwned, wishOf, searchText, finnUrl, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
+  parseLife, parseOwned, wishOf, searchText, finnUrl, altLinks, inCategory, variantsOf, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
   newHint, layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
   prioOf, kwOf, comfortFor, footprint, withDrawing, placedWall,
 } from './logic.js';
@@ -20,7 +20,9 @@ let state = load();
 const ui = {
   open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, style: null,
   tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: sheetFor(state, window.innerWidth < 600 ? 1000 : 1500), furn: null, note: '', info: '', write: false, furnish: false,
+  cmt: null, // tingen på «Ting» som har kommentarfeltet åpent
 };
+let wantFocus = ''; // feltet som skal få fokus etter neste tegning av siden
 
 function load() {
   let saved = null;
@@ -183,8 +185,12 @@ function styleDetail(s) {
     <button class="link" data-act="styleopen" data-v="">Se de andre stilene</button></div>`;
 }
 
-// Kort navn på en størrelse, så tre valg får plass på én linje: «3-seter, ca. 200–230 cm bred» blir «3-seter».
-const shortSize = (label) => label.split(',')[0].replace(/^Ca\. /, '');
+// Variantene av en ting som knapper med korte navn: «3-seter, ca. 200–230 cm bred» blir «3-seter».
+function variantChips(inst) {
+  return variantsOf(inst.item).map(([z, short, full]) => `<button class="chip mini ${inst.size === z ? 'on' : ''}" data-act="isize" data-v="${inst.key}" data-s="${z}" aria-pressed="${inst.size === z}" title="${esc(full)}">${esc(short)}</button>`).join('');
+}
+
+const CMT_HELP = 'f.eks. ikke rundt, gjerne eik, maks 180 cm';
 
 // Valgfri hjelp på «Ting»: skriv med egne ord, så huker vi av.
 function writeHelp() {
@@ -222,8 +228,10 @@ function thingRow(inst) {
         ${inst.st === 'bought' ? '<span class="item-size">Kjøpt</span>' : inst.st === 'have' ? '<span class="item-size">Ikke med</span>' : ''}</span>
       ${on ? `<div class="stepper mini" role="group" aria-label="Antall ${esc(inst.item.name)}"><button data-act="qty" data-v="${k}" data-d="-1" aria-label="Færre" ${inst.qty <= 1 ? 'disabled' : ''}>−</button><span aria-live="polite">${inst.qty}</span><button data-act="qty" data-v="${k}" data-d="1" aria-label="Flere">+</button></div>` : ''}
     </div>
-    ${on && inst.item.size ? `<div class="chips thing-size" role="group" aria-label="Størrelse på ${esc(inst.item.name)}">
-      ${['S', 'M', 'L'].map((z) => `<button class="chip mini ${inst.size === z ? 'on' : ''}" data-act="isize" data-v="${k}" data-s="${z}" aria-pressed="${inst.size === z}">${esc(shortSize(inst.item.size[z].label))}</button>`).join('')}</div>` : ''}
+    ${on && inst.item.size ? `<div class="chips thing-size" role="group" aria-label="${esc(inst.item.pick || 'Størrelse')} på ${esc(inst.item.name)}">${variantChips(inst)}</div>` : ''}
+    ${!on ? '' : inst.saved.wish || ui.cmt === k
+      ? `<div class="field thing-cmt"><label for="cmt-${k}">Kommentar</label><input id="cmt-${k}" data-ch="wish" data-v="${k}" maxlength="300" value="${esc(inst.saved.wish || '')}" placeholder="${CMT_HELP}"></div>`
+      : `<button class="link thing-cmt-link" data-act="cmt" data-v="${k}" aria-label="Skriv en kommentar til ${esc(inst.item.name)}">Kommentar</button>`}
   </li>`;
 }
 
@@ -232,7 +240,7 @@ function viewThings() {
   const n = all.filter((i) => i.st === 'need').length;
   return `
   <h1>Hva vil du ha?</h1>
-  <p class="lead">Haken betyr at tingen er med. Vi har huket av det de fleste trenger, så fjern haken på det du har fra før. Velg antall og størrelse der det passer.</p>
+  <p class="lead">Haken betyr at tingen er med. Vi har huket av det de fleste trenger, så fjern haken på det du har fra før. Velg antall og type der det passer. Under «Kommentar» kan du skrive hva du ser etter, så tar vi det med i søket.</p>
   <div class="row bulk"><button class="link" data-act="noneon">Fjern alle haker</button><button class="link" data-act="usualon">Huk av det vanlige</button></div>
   <div class="q"><span class="q-label">Hva er viktigst når du velger?</span>
     <div class="chips" role="group" aria-label="Viktigst">
@@ -295,6 +303,7 @@ function itemRow(inst, sum) {
       <button class="item-main" data-act="open" data-v="${inst.key}" aria-expanded="${open}">
         <span class="item-name">${esc(inst.item.name)}</span>
         ${inst.v.label && inst.st === 'need' ? `<span class="item-size">${esc(inst.v.label)}</span>` : ''}
+        ${inst.saved.wish && inst.st === 'need' ? `<span class="item-cmt">«${esc(inst.saved.wish)}»</span>` : ''}
       </button>
       <span class="tag tag-${inst.st}">${esc(tag)}</span>
     </div>
@@ -317,6 +326,7 @@ function itemBody(inst, sum) {
   const pw = canPlace ? placedWall(state, inst.room.id, inst.itemId) : null;
   const isPlaced = canPlace && state.furn.some((f) => f.room === inst.room.id && f.item === inst.itemId);
   const notes = [...w.avoid.map((a) => `ikke ${a}`), ...w.notes];
+  const alts = altLinks(inst, state), broad = inCategory(inst);
   return `
   <div class="item-body">
     ${[wallNote(inst, state), ...tipsFor(inst, state)].filter(Boolean).map((t) => `<p class="tip">${esc(t)}</p>`).join('')}
@@ -326,6 +336,12 @@ function itemBody(inst, sum) {
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'free'))}" target="_blank" rel="noopener">Gis bort</a>
     </div>
     <p class="hint">Søker etter «${esc(searchText(inst, state))}» i ${esc(area)}${max ? `, inntil ${kr(max)}${inst.qty > 1 ? ' per stk' : ''}` : ''}.${inst.qty > 1 ? ` Du skal ha ${inst.qty}. Like møbler selges ofte samlet, så prøv også å legge til «par» eller «2 stk».` : ''}</p>
+    ${broad || alts.length ? `<div class="wider">
+      ${broad ? `<a class="btn ghost small" href="${esc(finnUrl(inst, state, 'all', { broad: true }))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Søk bredere</a>
+      <p class="hint">«Søk på Finn» ser bare i «Møbler og interiør». «Søk bredere»${alts.length ? ' og ordene under' : ''} ser i alle kategorier, i tilfelle annonsen er lagt feil.</p>` : ''}
+      ${alts.length ? `<span class="q-label">Andre ord folk bruker</span>
+      <div class="chips">${alts.map((a) => `<a class="chip mini" href="${esc(a.url)}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">${esc(a.word)}</a>`).join('')}</div>` : ''}
+    </div>` : ''}
     ${prio === 'pris' ? '<p class="tip">Pris er viktigst: sjekk «Gis bort» først.</p>' : ''}
     ${comfort ? `<p class="tip">Komfort er viktigst: ${esc(comfort.tip)}</p>` : ''}
 
@@ -334,9 +350,8 @@ function itemBody(inst, sum) {
         <div class="stepper"><button data-act="qty" data-v="${k}" data-d="-1" aria-label="Færre" ${inst.qty <= 1 ? 'disabled' : ''}>−</button><span aria-live="polite">${inst.qty}</span><button data-act="qty" data-v="${k}" data-d="1" aria-label="Flere">+</button></div></div>
       <div class="field"><label for="maxw-${k}">Maks bredde, cm</label><input id="maxw-${k}" inputmode="numeric" data-ch="maxw" data-v="${k}" value="${inst.saved.maxw ?? ''}" placeholder="valgfritt"></div>
     </div>
-    ${inst.item.size ? `<div class="q"><span class="q-label">Størrelse</span><div class="chips">
-      ${['S', 'M', 'L'].map((z) => `<button class="chip mini ${inst.size === z ? 'on' : ''}" data-act="isize" data-v="${k}" data-s="${z}" aria-pressed="${inst.size === z}">${esc(inst.item.size[z].label)}</button>`).join('')}</div>
-      ${inst.saved.size ? '' : '<p class="hint">Foreslått ut fra størrelsen på rommet.</p>'}</div>` : ''}
+    ${inst.item.size ? `<div class="q"><span class="q-label">${esc(inst.item.pick || 'Størrelse')}</span><div class="chips">${variantChips(inst)}</div>
+      <p class="hint">${esc(inst.v.label)}.${inst.saved.size ? '' : ' Foreslått ut fra størrelsen på rommet.'}</p></div>` : ''}
     ${canPlace ? `<div class="q"><span class="q-label">Plassering</span>
       <p class="hint">${pw ? `Står mot vegg ${pw.letter} på tegningen.` : isPlaced ? 'Står fritt i rommet på tegningen.' : 'Ikke satt ut ennå. Sett den ut på tegningen, så regner vi ut hvor stor den kan være.'}</p>
       <button class="btn ghost small" data-act="place" data-v="${k}">${isPlaced ? 'Flytt på tegningen' : 'Bestem hvor den skal stå'}</button></div>` : ''}
@@ -351,8 +366,9 @@ function itemBody(inst, sum) {
     ${(inst.item.ask || []).map((qid) => `<div class="q"><span class="q-label">${QUESTIONS[qid].label}</span><div class="chips">
       ${QUESTIONS[qid].options.map((o, i) => `<button class="chip mini ${picks[qid] === i ? 'on' : ''}" data-act="pick" data-v="${k}" data-q="${qid}" data-i="${i}" aria-pressed="${picks[qid] === i}">${o.label}</button>`).join('')}</div></div>`).join('')}
     <div class="field">
-      <label for="wish-${k}">Egne ønsker</label>
-      <input id="wish-${k}" data-ch="wish" data-v="${k}" value="${esc(inst.saved.wish || '')}" placeholder="f.eks. ikke rundt, gjerne eik, maks 180 cm">
+      <label for="wish-${k}">Kommentar</label>
+      <input id="wish-${k}" data-ch="wish" data-v="${k}" maxlength="300" value="${esc(inst.saved.wish || '')}" placeholder="${CMT_HELP}">
+      <p class="hint">Ord vi kan søke på, legges i søket. Resten står under «Se etter selv».</p>
     </div>
     <div class="pair">
       <div class="field"><label for="max-${k}">Makspris, kr</label><input id="max-${k}" inputmode="numeric" data-ch="max" data-v="${k}" value="${max ?? ''}" placeholder="ingen grense"></div>
@@ -377,9 +393,9 @@ function viewRound(need) {
   return `
   <section class="panel">
     <h2>Dagens runde</h2>
-    <p>Én rask titt om dagen holder. Hver lenke viser bare det som er lagt ut i dag. Vil du ha varsel, trykk «Lagre søk» inne på Finn.</p>
+    <p>Én rask titt om dagen holder. Hver lenke viser det som er lagt ut i dag, i alle kategorier. Vil du ha varsel, trykk «Lagre søk» inne på Finn.</p>
     <ul class="round">
-      ${need.map((i) => `<li><a href="${esc(finnUrl(i, state, 'today'))}" target="_blank" rel="noopener" data-act="seen" data-v="${i.key}">${esc(i.item.name)}<small>${esc(roomLabel(state.rooms, i.room))}</small></a>
+      ${need.map((i) => `<li><a href="${esc(finnUrl(i, state, 'today', { broad: true }))}" target="_blank" rel="noopener" data-act="seen" data-v="${i.key}">${esc(i.item.name)}<small>${esc(roomLabel(state.rooms, i.room))}</small></a>
         <span class="seen ${i.saved.seen === today() ? 'yes' : ''}">${i.saved.seen === today() ? 'sett i dag' : 'ikke sett'}</span></li>`).join('')}
     </ul>
     <h2>Pynt lagt ut i dag</h2>
@@ -447,14 +463,15 @@ function ensureDrawing() {
 function render() {
   const active = document.activeElement;
   const fid = active && active !== document.body ? active.id : '';
-  const sig = (el) => ['act', 'v', 'q', 'i', 'w', 'st'].map((k) => el.dataset[k] ?? '').join('|');
+  const sig = (el) => ['act', 'v', 'q', 'i', 'w', 'st', 's'].map((k) => el.dataset[k] ?? '').join('|');
   const fsig = !fid && active?.dataset?.act ? sig(active) : '';
   const views = [viewHome, viewStyle, viewThings, viewPlace, viewList];
   ui.furnish = state.step === 3; // på «Plasser» kan bare møbler flyttes
   if (ui.furnish) ui.tool = 'move';
   app.innerHTML = `${header()}<main>${sharedBanner()}${views[state.step]()}</main>${footerNav()}
     <footer class="foot"><p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
-  if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
+  if (wantFocus) { document.getElementById(wantFocus)?.focus(); wantFocus = ''; }
+  else if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
   else if (fsig) [...app.querySelectorAll('[data-act]')].find((el) => sig(el) === fsig)?.focus({ preventScroll: true });
   if (ui.furnish && ui.furn && ui.furn !== shownFurn) revealBar();
   shownFurn = ui.furnish ? ui.furn : null;
@@ -581,8 +598,10 @@ const actions = {
     const id = 'c' + (state.seq = (state.seq || 100) + 1);
     state.custom = [...state.custom, { id, room: v, name: name[0].toUpperCase() + name.slice(1) }];
     ui.open = `${v}:${id}`;
+    if (state.step === 2) { ui.cmt = ui.open; wantFocus = `cmt-${ui.open}`; } // på «Ting»: rett til kommentaren
     commit();
   },
+  cmt(v) { ui.cmt = v; wantFocus = `cmt-${v}`; later(); },
   kw(v, el) { const i = instByKey(v); const w = el.dataset.w; const kw = kwOf(i, state); setItem(v, { kw: kw.includes(w) ? kw.filter((x) => x !== w) : [...kw, w] }); },
   qty(v, el) { const i = instByKey(v); if (i) setItem(v, { qty: Math.min(12, Math.max(1, i.qty + Number(el.dataset.d))) }); },
   isize(v, el) { const i = instByKey(v); if (!i) return; const it = { ...state.items[v] }; if (i.saved.size === el.dataset.s) delete it.size; else it.size = el.dataset.s; state.items[v] = it; commit(); },

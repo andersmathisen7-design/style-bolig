@@ -10,9 +10,9 @@ Fem steg:
 
 1. **Bolig.** Velg hybel, 1-roms, 2-roms og så videre, eller tegn boligen selv. Tegn rundt boligen eller et rom på frihånd, så rettes strekene opp til rette vegger. Dra en strek tvers over et rom for å dele det i to; streken kan ha en knekk. Rom kan ha vinkler og skrå vegger, og boligen kan ha flere etasjer. Dra i hjørner og vegger for å endre formen, skriv inn mål bare på de veggene du har mål på, og sett inn dører og vinduer.
 2. **Stil.** Fjorten stiler med bilder. Hver stil har tre retninger du kan velge mellom, med egne søkeord. Stilen gir også forslag til pynt.
-3. **Ting.** Hva vil du ha? En avkrysningsliste per rom, der haken betyr at tingen er med. Det vanlige er huket av på forhånd. Velg antall og størrelse rett på raden, legg til møbler, kjøkkenutstyr, pynt og egne ting, og si om stil, komfort eller pris er viktigst. Du kan også skrive hva du har og hva du vil ha, så huker appen av.
-4. **Plasser.** Hvor skal tingene stå? Sett møblene ut på tegningen og dra dem på plass, eller trykk «Sett ut alt for meg» for et utgangspunkt. Har du ikke tegnet boligen, lages en enkel tegning av rommene. Møbler som står inntil en vegg, gir lista største bredde for den tingen. Steget er valgfritt. Tegningen følger lista: bytter du størrelse, antall eller tar noe bort på lista, endres møblene på tegningen også. Hjørnesofa tegnes som en vinkel og kan speilvendes. Knappene for å snu og ta bort det valgte møbelet ligger rett under tegningen. Et møbel som snus, blir stående inne i rommet: treffer det en vegg, skyves det inntil den.
-5. **Finn.** Lista over det som skal skaffes. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk.
+3. **Ting.** Hva vil du ha? En avkrysningsliste per rom, der haken betyr at tingen er med. Det vanlige er huket av på forhånd. Velg antall og variant rett på raden: sofaen kan for eksempel være 2-, 3- eller 4-seter, hjørnesofa, U-sofa (hesteskosofa), med sjeselong, modulsofa eller sovesofa, og senga finnes fra 90 cm til familieseng og køyeseng. Rommets størrelse foreslår en variant, og du kan velge en annen. Hver ting, også dine egne, har en «Kommentar» der du skriver hva du ser etter. Legg til møbler, kjøkkenutstyr, pynt og egne ting, og si om stil, komfort eller pris er viktigst. Du kan også skrive hva du har og hva du vil ha, så huker appen av.
+4. **Plasser.** Hvor skal tingene stå? Sett møblene ut på tegningen og dra dem på plass, eller trykk «Sett ut alt for meg» for et utgangspunkt. Har du ikke tegnet boligen, lages en enkel tegning av rommene. Møbler som står inntil en vegg, gir lista største bredde for den tingen. Steget er valgfritt. Tegningen følger lista: bytter du variant, antall eller tar noe bort på lista, endres møblene på tegningen også. Hjørnesofa, sofa med sjeselong og hjørneskrivebord tegnes som en vinkel, og U-sofa som en hestesko med åpningen ut i rommet. Begge kan snus og speilvendes. Knappene for å snu og ta bort det valgte møbelet ligger rett under tegningen. Et møbel som snus, blir stående inne i rommet: treffer det en vegg, skyves det inntil den.
+5. **Finn.** Lista over det som skal skaffes. Hver ting har makspris, ferdige Finn-søk (alt, lagt ut i dag, gis bort), en nypris å sammenligne med, og «Dagens runde» for en rask daglig sjekk. Hovedsøket ser bare i «Møbler og interiør». «Søk bredere» bruker de samme ordene i alle kategorier, og «Andre ord folk bruker» gir ett søk per synonym (sofabord: stuebord, salongbord, kaffebord), også de i alle kategorier. Slik finner du annonser som er lagt i feil kategori eller kaller tingen noe annet. «Dagens runde» søker bredt. Ord fra kommentaren som kan brukes i et søk, legges i søket. Resten står som «Se etter selv».
 
 Alt lagres i nettleseren (`localStorage`). Ingenting sendes noe sted. Lista kan deles som en lenke.
 
@@ -49,12 +49,15 @@ Det er ingen byggesteg og ingen avhengigheter.
 | `js/editor.js` | Tegneflaten og verktøyene, og møbleringen på steg 4. |
 | `js/arrange.js` | «Sett ut alt for meg»: regler for hvor møbler settes. |
 | `test/logic.test.mjs` | Tester for logikken. |
+| `test/variants.test.mjs` | Tester for varianter, kommentarer, bredt søk og U-sofa. |
 
 ## Om tallene
 
 - Bruktprisene (`u`) er anslag ut fra stikkprøver av Finn-annonser i november 2026.
 - Nyprisene (`n`) er omtrentlige laveste priser, delvis hentet fra ikea.no i november 2026.
 - Områdekodene for fylker er sjekket mot finn.no i november 2026.
+- Prisene på de nyeste variantene (U-sofa, modulsofa, familieseng, hev/senk-bord og lignende) er grove anslag, og er ikke sjekket mot annonser.
+- «Andre ord folk bruker» (`alt` i `js/data.js`) er satt opp etter skjønn. Det er ikke målt hvilke ord som faktisk gir flest treff på Finn.
 
 Prisene endrer seg. Se over `js/data.js` med jevne mellomrom.
 

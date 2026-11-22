@@ -304,3 +304,19 @@ a.chip { text-decoration: none; color: var(--ink); }
 .draw:not(.furnishing) .furn { pointer-events: none; } /* på «Bolig» vises møblene bare; de flyttes på «Plasser» */
 
 .furnishing .wlen { display: none; } /* på «Plasser» skal ikke veggmålene ligge oppå møblene */
+
+/* Ting: varianter og kommentar på hver rad. Finn: bredere søk og andre ord. */
+.thing-size { flex-wrap: wrap; }
+.thing-cmt-link { display: block; margin: -4px 0 8px 40px; padding: 4px 0; font-size: 0.8125rem; font-weight: 600; color: var(--muted); }
+.thing-cmt { margin: 0 0 12px 40px; }
+.thing-cmt label { font-size: 0.8125rem; color: var(--muted); }
+.item-cmt { font-size: 0.8125rem; color: var(--muted); font-style: italic; line-height: 1.3; overflow-wrap: anywhere; }
+.wider { border-left: 3px solid var(--line); padding: 2px 0 2px 12px; margin: 0 0 14px; }
+.wider .btn { margin-bottom: 6px; }
+.wider .hint { margin: 0 0 8px; }
+.wider .q-label { display: block; margin-bottom: 6px; }
+.wider .chips { margin: 0; }
+/* Møbler med form har en knapp til på linja. Navnet får gå over to linjer, så det ikke blir kuttet. */
+.furnbar-name { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.15; overflow-wrap: anywhere; hyphens: auto; }
+.furnbar.shaped { gap: 6px; padding-left: 8px; padding-right: 8px; }
+.furnbar.shaped .barbtn { padding: 8px 10px; }
