@@ -204,7 +204,7 @@ export const ITEMS = {
     size: {
       S: { label: '2-seter, ca. 150–180 cm bred', q: '2-seter sofa', u: 2000, n: 1500 },
       M: { label: '3-seter, ca. 200–230 cm bred', q: '3-seter sofa', u: 3000, n: 2000 },
-      L: { label: 'Hjørnesofa eller stor 3-seter', q: 'hjørnesofa', u: 5000, n: 9000 },
+      L: { label: 'Hjørnesofa, ca. 260 × 170 cm', q: 'hjørnesofa', u: 5000, n: 9000 },
     },
   },
   sovesofa: {
@@ -504,7 +504,7 @@ export const LEVELS = [
 // Omtrentlig fotavtrykk i cm (bredde × dybde) for møbler som kan settes ut på plantegningen.
 // Ting med flere størrelser følger romstørrelsen (S, M, L).
 export const FOOT = {
-  sofa: { S: [160, 90], M: [210, 90], L: [260, 100] },
+  sofa: { S: [160, 90], M: [210, 90], L: [260, 170] }, // L er hjørnesofa: målene er hele vinkelen
   sovesofa: [200, 95], sofabord: [100, 60], lenestol: [80, 80], bokhylle: [80, 30], gulvlampe: [35, 35],
   tvbenk: { S: [120, 40], M: [150, 40], L: [180, 40] },
   teppe: { S: [200, 140], M: [230, 160], L: [300, 200] },
@@ -536,3 +536,6 @@ export const COMFORT = {
   gjesteseng: { tip: 'Sjekk at madrassen er hel og tørr.', words: ['madrass'] },
   barneseng: { tip: 'Kjøp gjerne madrassen ny.', words: [] },
 };
+
+// Ting og størrelser som tegnes som en vinkel (hjørnesofa) i stedet for en firkant.
+export const CORNER = { sofa: ['L'] };

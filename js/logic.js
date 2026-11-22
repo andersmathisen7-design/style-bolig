@@ -1,5 +1,5 @@
 // Ren logikk uten DOM, slik at den kan testes i Node.
-import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS, FOOT, PRIOS, COMFORT } from './data.js';
+import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, ITEM_WORDS, WISH_WORDS, LEVELS, FOOT, PRIOS, COMFORT, CORNER } from './data.js';
 import { wallFor, letter } from './plan.js';
 
 const FINN = 'https://www.finn.no/recommerce/forsale/search';
@@ -394,6 +394,8 @@ export function footprint(itemId, size) {
   return !f ? null : Array.isArray(f) ? f : f[size];
 }
 
+export const isCorner = (itemId, size) => (CORNER[itemId] || []).includes(size);
+
 // Veggen møbelet til en ting på lista står mot, hvis det er satt ut på tegningen.
 export function placedWall(state, roomId, itemId) {
   const room = state.rooms.find((r) => r.id === roomId);
@@ -472,7 +474,11 @@ export function normalize(s) {
   out.furn = (Array.isArray(s.furn) ? s.furn : [])
     .filter((f) => f && /^f\d{1,6}$/.test(f.id) && ITEMS[f.item] && out.rooms.some((r) => r.id === f.room && r.poly)
       && [f.x, f.y].every((v) => Number.isFinite(v) && v >= -500 && v <= 3000) && [f.w, f.d].every((v) => v >= 20 && v <= 600))
-    .slice(0, 80).map((f) => ({ id: f.id, room: f.room, item: f.item, x: Math.round(f.x), y: Math.round(f.y), w: Math.round(f.w), d: Math.round(f.d), r: f.r === 90 ? 90 : 0 }));
+    .slice(0, 80).map((f) => ({
+      id: f.id, room: f.room, item: f.item, x: Math.round(f.x), y: Math.round(f.y), w: Math.round(f.w), d: Math.round(f.d), r: f.r === 90 ? 90 : 0,
+      ...(['S', 'M', 'L'].includes(f.s) ? { s: f.s } : {}),                       // størrelsen møbelet ble tegnet for
+      ...(['nw', 'ne', 'sw', 'se'].includes(f.corner) ? { corner: f.corner } : {}), // hjørnesofa: hvilket hjørne som er åpent
+    }));
   out.life = s.life.filter((id) => LIFE.some((l) => l.id === id));
   out.lifeText = typeof s.lifeText === 'string' ? s.lifeText.slice(0, 2000) : '';
   out.autoWish = {};

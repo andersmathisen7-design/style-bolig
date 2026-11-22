@@ -286,3 +286,9 @@ a.chip { text-decoration: none; color: var(--ink); }
 .item.find .item-head { grid-template-columns: 1fr auto; }
 .lead .link { display: inline; padding: 0; }
 @media (min-width: 560px) { .step { font-size: 0.875rem; } }
+
+/* Hjørnesofa på tegningen */
+.furn polygon { fill: var(--pink-soft); stroke: var(--pink); }
+.furn.on polygon { fill: var(--pink); }
+.furn .seam { stroke: var(--pink); opacity: 0.5; pointer-events: none; }
+.furn.on .seam { stroke: #fff; }

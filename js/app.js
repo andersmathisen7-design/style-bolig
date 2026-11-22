@@ -7,6 +7,7 @@ import {
 } from './logic.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
 import { drawView, furnishView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
+import { syncFurniture } from './arrange.js';
 
 const KEY = 'brukthjem.v2'; // v2: starter med blanke ark etter at tegningen ble lagt om
 const app = document.getElementById('app');
@@ -33,7 +34,15 @@ const snapshot = () => JSON.stringify({ ...state, step: 0 });
 function persist() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* lagring er bare en bekvemmelighet */ }
 }
+// Tegningen følger lista: størrelse, antall og hva som er med. Gjøres før alt lagres, så det aldri blir uenighet.
+function syncDrawing() {
+  const furn = syncFurniture(state);
+  if (furn === state.furn) return;
+  state.furn = furn;
+  if (ui.furn && !furn.some((f) => f.id === ui.furn)) ui.furn = null;
+}
 function save() {
+  syncDrawing();
   const now = snapshot();
   if (lastJson !== null && now !== lastJson) { undoStack.push(lastJson); if (undoStack.length > 50) undoStack.shift(); }
   lastJson = now;
@@ -175,7 +184,7 @@ function styleDetail(s) {
 }
 
 // Kort navn på en størrelse, så tre valg får plass på én linje: «3-seter, ca. 200–230 cm bred» blir «3-seter».
-const shortSize = (label) => label.split(',')[0].replace(/^Ca\. /, '').replace(' eller stor 3-seter', '');
+const shortSize = (label) => label.split(',')[0].replace(/^Ca\. /, '');
 
 // Valgfri hjelp på «Ting»: skriv med egne ord, så huker vi av.
 function writeHelp() {
@@ -665,6 +674,8 @@ if (hash) {
   else if (shared) ui.shared = shared;
 }
 if (state.step === 3) ensureDrawing();
+syncDrawing(); // retter også opp tegninger som ble lagret før tegningen fulgte lista
+persist();
 lastJson = snapshot();
 render();
 initAI().then((ok) => { if (ok) later(); });
