@@ -164,7 +164,8 @@ export function roomPanel(state, ui, r) {
 // ---------- Hendelser ----------
 
 let drag = null;
-export const isDragging = () => !!drag;
+// En tegning som ikke har fått bevegelse på tre sekunder regnes som avbrutt, så appen aldri blir stående låst.
+export const isDragging = () => !!drag && performance.now() - drag.t < 3000;
 
 export function bindEditor(app, ctx) {
   const { ui } = ctx;
@@ -180,11 +181,12 @@ export function bindEditor(app, ctx) {
 
   app.addEventListener('pointerdown', (e) => {
     const svg = e.target.closest?.('#draw');
-    if (!svg || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (!svg || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (drag) { drag.ink?.setAttribute('points', ''); drag = null; } // forrige strek ble aldri avsluttet (fingeren slapp utenfor siden)
     const state = ctx.state();
     const p = toCm(e, svg);
     const pxToCm = ui.sheet / svg.getBoundingClientRect().width;
-    drag = { tool: ui.tool, svg, id: e.pointerId, start: p, last: p, far: false, slop: 8 * pxToCm };
+    drag = { tool: ui.tool, svg, id: e.pointerId, start: p, last: p, far: false, slop: 8 * pxToCm, t: performance.now() };
     if (ui.tool === 'draw') {
       drag.pts = [p];
       drag.ink = svg.querySelector('#ink');
@@ -205,6 +207,7 @@ export function bindEditor(app, ctx) {
 
   window.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
+    drag.t = performance.now();
     const p = toCm(e, drag.svg);
     if (Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) > drag.slop) drag.far = true;
     if (drag.tool === 'draw') {
@@ -221,8 +224,8 @@ export function bindEditor(app, ctx) {
     }
   });
 
-  const end = (e, cancelled) => {
-    if (!drag || e.pointerId !== drag.id) return;
+  const finish = (cancelled) => {
+    if (!drag) return;
     const d = drag;
     drag = null;
     const state = ctx.state();
@@ -279,8 +282,15 @@ export function bindEditor(app, ctx) {
     }
     ctx.save(); ctx.render();
   };
-  window.addEventListener('pointerup', (e) => end(e, false));
-  window.addEventListener('pointercancel', (e) => end(e, true));
+  window.addEventListener('pointerup', (e) => { if (drag && e.pointerId === drag.id) finish(false); });
+  window.addEventListener('pointercancel', (e) => { if (drag && e.pointerId === drag.id) finish(true); });
+  // Sikkerhetsnett: noen ganger kommer aldri «slipp» fram, for eksempel når fingeren løftes utenfor siden.
+  const lifted = (e) => { if (drag && !(e.touches && e.touches.length)) setTimeout(() => finish(false), 60); };
+  window.addEventListener('touchend', lifted);
+  window.addEventListener('touchcancel', () => setTimeout(() => finish(true), 60));
+  window.addEventListener('blur', () => finish(true));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) finish(true); });
+  app.addEventListener('click', () => { if (drag && performance.now() - drag.t > 400) finish(true); }, true);
 }
 
 // Knapper og felt som hører til tegningen. Kobles inn i appens vanlige hendelser.

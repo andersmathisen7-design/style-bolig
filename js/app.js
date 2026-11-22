@@ -7,7 +7,7 @@ import {
 import { ai, initAI, readPlan, readLife } from './ai.js';
 import { drawView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
 
-const KEY = 'brukthjem.v1';
+const KEY = 'brukthjem.v2'; // v2: starter med blanke ark etter at tegningen ble lagt om
 const app = document.getElementById('app');
 const STEPS = ['Bolig', 'Stil', 'Ønsker', 'Lista'];
 const canShare = !window.__noShare; // forhåndsvisninger uten egen adresse kan ikke dele lenker
