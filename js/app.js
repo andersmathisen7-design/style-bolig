@@ -1,23 +1,24 @@
-import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LIFE, LEVELS, GROUPS, PRIOS } from './data.js';
+import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LEVELS, GROUPS, PRIOS } from './data.js';
 import {
   newState, roomsFromHome, roomLabel, roomM2, sizeFromM2, sizeRange, instances, defaultMax, maxOf,
-  parseLife, wishOf, searchText, finnUrl, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
+  parseLife, parseOwned, wishOf, searchText, finnUrl, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
   newHint, layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
   prioOf, kwOf, comfortFor, footprint, withDrawing, placedWall,
 } from './logic.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
-import { drawView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
+import { drawView, furnishView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
 
 const KEY = 'brukthjem.v2'; // v2: starter med blanke ark etter at tegningen ble lagt om
 const app = document.getElementById('app');
-const STEPS = ['Bolig', 'Stil', 'Ønsker', 'Lista'];
+const STEPS = ['Bolig', 'Stil', 'Ting', 'Plasser', 'Finn'];
+const LAST = STEPS.length - 1;
 const canShare = !window.__noShare; // forhåndsvisninger uten egen adresse kan ikke dele lenker
 const SIZE_NAME = { S: 'Lite', M: 'Middels', L: 'Stort' };
 
 let state = load();
 const ui = {
   open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, style: null,
-  tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: sheetFor(state, window.innerWidth < 600 ? 1000 : 1500), furn: null, note: '',
+  tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: sheetFor(state, window.innerWidth < 600 ? 1000 : 1500), furn: null, note: '', info: '', write: false, furnish: false,
 };
 
 function load() {
@@ -173,36 +174,88 @@ function styleDetail(s) {
     <button class="link" data-act="styleopen" data-v="">Se de andre stilene</button></div>`;
 }
 
-function viewLife() {
+// Kort navn på en størrelse, så tre valg får plass på én linje: «3-seter, ca. 200–230 cm bred» blir «3-seter».
+const shortSize = (label) => label.split(',')[0].replace(/^Ca\. /, '').replace(' eller stor 3-seter', '');
+
+// Valgfri hjelp på «Ting»: skriv med egne ord, så huker vi av.
+function writeHelp() {
   const got = Object.entries(state.autoWish);
   const all = instances(state);
   return `
-  <h1>Hva ser du etter?</h1>
-  <p class="lead">Beskriv hva du vil ha og hvordan du bor, med egne ord. Du kan også bare trykke på det som passer.</p>
-  <div class="field">
-    <label for="life">Beskriv hva du vil ha</label>
-    <textarea id="life" rows="4" data-ch="life" placeholder="F.eks. «Jeg har seng og sofa fra før. Jobber hjemmefra og har ofte venner på middag. Vil ikke ha rundt bord, og gjerne en grønn lenestol.»">${esc(state.lifeText)}</textarea>
-    <button class="btn small" data-act="read" ${ui.busy ? 'disabled' : ''}>Les teksten</button>
-    ${status('life')}
-  </div>
-  <div class="chips" role="group" aria-label="Hverdagen din">
-    ${LIFE.map((l) => `<button class="chip ${state.life.includes(l.id) ? 'on' : ''}" data-act="life" data-v="${l.id}" aria-pressed="${state.life.includes(l.id)}">${l.label}</button>`).join('')}
-  </div>
+  <div class="write">
+    <button class="link" data-act="write" aria-expanded="${ui.write}">${ui.write ? 'Skjul skrivefeltet' : 'Vil du heller skrive det?'}</button>
+    ${ui.write ? `<div class="field">
+      <label for="life">Beskriv hva du har og hva du vil ha, så huker vi av for deg</label>
+      <textarea id="life" rows="3" data-ch="life" placeholder="F.eks. «Jeg har seng og sofa fra før. Vil ikke ha rundt bord, og gjerne en grønn lenestol.»">${esc(state.lifeText)}</textarea>
+      <button class="btn small" data-act="read" ${ui.busy ? 'disabled' : ''}>Les teksten</button>
+      ${status('life')}
+    </div>
+    ${got.length ? `<ul class="got">
+      ${got.map(([itemId]) => {
+        const inst = all.find((i) => i.itemId === itemId) || { itemId, saved: {}, v: {}, item: ITEMS[itemId] };
+        const w = wishOf({ ...inst, saved: {} }, state);
+        const parts = [w.search.length ? `søker etter ${w.search.join(', ')}` : '', w.avoid.length ? `unngår ${w.avoid.join(', ')}` : '', w.notes.length ? `ser etter ${w.notes.join(', ')}` : ''].filter(Boolean);
+        return `<li><strong>${esc(ITEMS[itemId].name)}:</strong> ${esc(parts.join('. '))}. <button class="link" data-act="dropWish" data-v="${itemId}">Fjern</button></li>`;
+      }).join('')}</ul>` : ''}
+    <p class="hint">${ai.ready
+      ? 'Claude leser teksten når du trykker på knappen. Det bruker litt av Claude-kvoten din.'
+      : 'Teksten leses av enkle regler i nettleseren din, ikke av en AI. Ord vi ikke kjenner igjen, hopper vi over.'}</p>` : ''}
+  </div>`;
+}
+
+function thingRow(inst) {
+  const k = inst.key, on = inst.st === 'need';
+  return `
+  <li class="item thing is-${inst.st}">
+    <div class="item-head">
+      <button class="check ${inst.st === 'bought' ? 'done' : ''}" data-act="want" data-v="${k}" aria-pressed="${inst.st !== 'have'}" aria-label="${esc(inst.item.name)} er med på lista"></button>
+      <span class="item-main"><span class="item-name">${esc(inst.item.name)}</span>
+        ${inst.st === 'bought' ? '<span class="item-size">Kjøpt</span>' : inst.st === 'have' ? '<span class="item-size">Ikke med</span>' : ''}</span>
+      ${on ? `<div class="stepper mini" role="group" aria-label="Antall ${esc(inst.item.name)}"><button data-act="qty" data-v="${k}" data-d="-1" aria-label="Færre" ${inst.qty <= 1 ? 'disabled' : ''}>−</button><span aria-live="polite">${inst.qty}</span><button data-act="qty" data-v="${k}" data-d="1" aria-label="Flere">+</button></div>` : ''}
+    </div>
+    ${on && inst.item.size ? `<div class="chips thing-size" role="group" aria-label="Størrelse på ${esc(inst.item.name)}">
+      ${['S', 'M', 'L'].map((z) => `<button class="chip mini ${inst.size === z ? 'on' : ''}" data-act="isize" data-v="${k}" data-s="${z}" aria-pressed="${inst.size === z}">${esc(shortSize(inst.item.size[z].label))}</button>`).join('')}</div>` : ''}
+  </li>`;
+}
+
+function viewThings() {
+  const all = instances(state);
+  const n = all.filter((i) => i.st === 'need').length;
+  return `
+  <h1>Hva vil du ha?</h1>
+  <p class="lead">Haken betyr at tingen er med. Vi har huket av det de fleste trenger, så fjern haken på det du har fra før. Velg antall og størrelse der det passer.</p>
+  <div class="row bulk"><button class="link" data-act="noneon">Fjern alle haker</button><button class="link" data-act="usualon">Huk av det vanlige</button></div>
   <div class="q"><span class="q-label">Hva er viktigst når du velger?</span>
     <div class="chips" role="group" aria-label="Viktigst">
       ${PRIOS.map(([id, name]) => `<button class="chip ${state.prio === id ? 'on' : ''}" data-act="prio" data-v="${id}" aria-pressed="${state.prio === id}">${name}</button>`).join('')}
     </div>
-    <p class="hint">${state.prio ? esc(PRIOS.find((x) => x[0] === state.prio)[2]) + ' Du kan velge noe annet for enkeltting i lista.' : 'Valgfritt. Du kan også velge dette for hver enkelt ting i lista.'}</p></div>
-  ${got.length ? `<section class="panel"><h2>Dette fikk vi med oss</h2><ul class="got">
-    ${got.map(([itemId, text]) => {
-      const inst = all.find((i) => i.itemId === itemId) || { itemId, saved: {}, v: {}, item: ITEMS[itemId] };
-      const w = wishOf({ ...inst, saved: {} }, state);
-      const parts = [w.search.length ? `søker etter ${w.search.join(', ')}` : '', w.avoid.length ? `unngår ${w.avoid.join(', ')}` : '', w.notes.length ? `ser etter ${w.notes.join(', ')}` : ''].filter(Boolean);
-      return `<li><strong>${esc(ITEMS[itemId].name)}:</strong> ${esc(parts.join('. '))}. <button class="link" data-act="dropWish" data-v="${itemId}">Fjern</button></li>`;
-    }).join('')}</ul></section>` : ''}
-  <p class="hint">${ai.ready
-    ? 'Når du trykker «Les teksten», tolker Claude den. Det bruker litt av Claude-kvoten din. På hver ting i lista kan du rette og legge til.'
-    : 'Teksten leses av enkle regler i nettleseren din, ikke av en AI. Ord vi ikke kjenner igjen, hopper vi over. På hver ting i lista kan du rette og legge til.'}</p>`;
+    <p class="hint">${state.prio ? esc(PRIOS.find((x) => x[0] === state.prio)[2]) + ' Du kan velge noe annet for enkeltting senere.' : 'Valgfritt. Du kan også velge dette for hver enkelt ting senere.'}</p></div>
+  ${writeHelp()}
+  ${state.rooms.map((room) => {
+    const mine = all.filter((i) => i.room.id === room.id);
+    const on = mine.filter((i) => i.st !== 'off');
+    const off = mine.filter((i) => i.st === 'off');
+    return `<section class="roomlist">
+      <h2>${esc(roomLabel(state.rooms, room))}<small>${roomM2(room)} m²${state.floors.length > 1 && room.poly ? `, ${esc(state.floors[room.floor || 0])}` : ''}</small></h2>
+      <ul class="items">${on.map(thingRow).join('')}</ul>
+      ${off.length ? `<div class="more">${GROUPS.map(([gid, gname]) => {
+        const g = off.filter((i) => (i.item.group || 'mobler') === gid);
+        return g.length ? `<span class="q-label">${gname}</span><div class="chips">${g.map((i) => `<button class="chip mini add" data-act="status" data-v="${i.key}" data-st="need">+ ${esc(i.item.name)}</button>`).join('')}</div>` : '';
+      }).join('')}</div>` : ''}
+      <div class="own"><div class="field"><label for="own-${room.id}">Noe annet? Beskriv hva du ser etter</label>
+        <input id="own-${room.id}" data-enter="own" data-v="${room.id}" maxlength="60" placeholder="f.eks. grønn fløyelspuff"></div>
+        <button class="btn ghost small" data-act="own" data-v="${room.id}">Legg til</button></div>
+    </section>`;
+  }).join('')}
+  <p class="plan-sum">${n} ting er med på lista.</p>`;
+}
+
+// ----- steg 4: Plasser -----
+function viewPlace() {
+  return `
+  <h1>Hvor skal tingene stå?</h1>
+  <p class="lead">Sett ut det viktigste omtrent der det skal stå. Da vet vi hvilken vegg sofaen har og hvor bred den kan være. Steget er valgfritt, så du kan gå rett videre.</p>
+  ${furnishView(state, ui, undoStack.length > 0)}`;
 }
 
 function budgetPanel(sum) {
@@ -228,9 +281,8 @@ function itemRow(inst, sum) {
   const max = maxOf(inst, state);
   const tag = inst.st === 'bought' ? `kjøpt ${inst.saved.paid ? kr(inst.saved.paid) : ''}` : inst.st === 'have' ? 'ikke med' : `${inst.qty > 1 ? `${inst.qty} × ` : ''}${max === null ? 'ingen grense' : `inntil ${kr(max)}`}`;
   return `
-  <li class="item is-${inst.st} ${open ? 'open' : ''}">
+  <li class="item find is-${inst.st} ${open ? 'open' : ''}">
     <div class="item-head">
-      <button class="check ${inst.st === 'bought' ? 'done' : ''}" data-act="want" data-v="${inst.key}" aria-pressed="${inst.st !== 'have'}" aria-label="${esc(inst.item.name)} er med på lista"></button>
       <button class="item-main" data-act="open" data-v="${inst.key}" aria-expanded="${open}">
         <span class="item-name">${esc(inst.item.name)}</span>
         ${inst.v.label && inst.st === 'need' ? `<span class="item-size">${esc(inst.v.label)}</span>` : ''}
@@ -243,7 +295,6 @@ function itemRow(inst, sum) {
 
 function itemBody(inst, sum) {
   const k = inst.key;
-  if (inst.st === 'have') return `<div class="item-body"><p>Denne er ikke med på lista, fordi du har den eller ikke vil ha den.</p><button class="link" data-act="status" data-v="${k}" data-st="need">Ta den med likevel</button></div>`;
   if (inst.st === 'bought') return `<div class="item-body"><p>Kjøpt${inst.saved.paid ? ` for ${kr(inst.saved.paid)}` : ''}.</p><button class="link" data-act="status" data-v="${k}" data-st="need">Angre, jeg leter fortsatt</button></div>`;
   const w = wishOf(inst, state);
   const max = maxOf(inst, state);
@@ -308,7 +359,7 @@ function itemBody(inst, sum) {
     <div class="done">
       <div class="field"><label for="paid-${k}">Fant du en? Skriv prisen</label><input id="paid-${k}" inputmode="numeric" placeholder="kr"></div>
       <button class="btn small" data-act="bought" data-v="${k}">Merk som kjøpt</button>
-      <button class="link" data-act="status" data-v="${k}" data-st="off">${inst.item.custom ? 'Fjern fra lista' : 'Trenger ikke'}</button>
+      <button class="link" data-act="status" data-v="${k}" data-st="${!inst.item.custom && ROOMS[inst.room.type].ess.includes(inst.itemId) ? 'have' : 'off'}">Ta bort fra lista</button>
     </div>
   </div>`;
 }
@@ -332,34 +383,23 @@ function viewList() {
   const all = instances(state);
   const sum = summary(state);
   const need = all.filter((i) => i.st === 'need');
-  if (ui.round) return `<h1>Lista di</h1>${viewRound(need)}`;
+  if (ui.round) return `<h1>Finn tingene</h1>${viewRound(need)}`;
   const style = STYLES.find((s) => s.id === state.style);
+  const rooms = state.rooms.map((room) => ({ room, mine: all.filter((i) => i.room.id === room.id && (i.st === 'need' || i.st === 'bought')) })).filter((x) => x.mine.length);
   return `
-  <h1>Lista di</h1>
-  <p class="lead">${sum.need === 0 ? 'Ingenting på lista ennå. Huk av det du vil ha under hvert rom.' : `${sum.need} ting på lista.`}
-    ${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Haken betyr at du vil ha tingen. Vi har huket av det de fleste trenger, så fjern haken på det du har fra før. Trykk på en ting for å søke.</p>
-  <div class="row bulk"><button class="link" data-act="noneon">Fjern alle haker</button><button class="link" data-act="usualon">Huk av det vanlige</button></div>
+  <h1>Finn tingene</h1>
+  <p class="lead">${sum.need === 0 ? 'Ingenting igjen å finne.' : `${sum.need} ting å finne.`}${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Trykk på en ting for å søke på Finn.
+    <button class="link" data-act="step" data-v="2">Endre hva som er med</button></p>
   ${style
     ? `<div class="mystyle"><img src="${Number.isInteger(state.sub) ? photo(style.id, state.sub + 1) : photo(style.id, 1, true)}" alt="" width="480" height="360"><p><strong>${style.name}</strong>${subName() ? `<br>${esc(subName())}` : ''}<br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
     : `<p class="hint">Du har ikke valgt stil ennå. <button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
   ${budgetPanel(sum)}
   ${need.length ? `<button class="btn wide" data-act="round">Dagens runde: se hva som er nytt på Finn</button>` : ''}
-  ${state.rooms.map((room) => {
-    const mine = all.filter((i) => i.room.id === room.id);
-    const on = mine.filter((i) => i.st !== 'off');
-    const off = mine.filter((i) => i.st === 'off');
-    return `<section class="roomlist">
+  ${rooms.length ? '' : `<section class="panel"><p>Lista er tom. Gå til «Ting» og huk av det du vil ha.</p><button class="btn small" data-act="step" data-v="2">Velg ting</button></section>`}
+  ${rooms.map(({ room, mine }) => `<section class="roomlist">
       <h2>${esc(roomLabel(state.rooms, room))}<small>${roomM2(room)} m²${state.floors.length > 1 && room.poly ? `, ${esc(state.floors[room.floor || 0])}` : ''}</small></h2>
-      <ul class="items">${on.map((i) => itemRow(i, sum)).join('')}</ul>
-      ${off.length ? `<div class="more">${GROUPS.map(([gid, gname]) => {
-        const g = off.filter((i) => (i.item.group || 'mobler') === gid);
-        return g.length ? `<span class="q-label">${gname}</span><div class="chips">${g.map((i) => `<button class="chip mini add" data-act="status" data-v="${i.key}" data-st="need">+ ${esc(i.item.name)}</button>`).join('')}</div>` : '';
-      }).join('')}</div>` : ''}
-      <div class="own"><div class="field"><label for="own-${room.id}">Noe annet? Beskriv hva du ser etter</label>
-        <input id="own-${room.id}" data-enter="own" data-v="${room.id}" maxlength="60" placeholder="f.eks. grønn fløyelspuff"></div>
-        <button class="btn ghost small" data-act="own" data-v="${room.id}">Legg til</button></div>
-    </section>`;
-  }).join('')}
+      <ul class="items">${mine.map((i) => itemRow(i, sum)).join('')}</ul>
+    </section>`).join('')}
   <section class="roomlist decor">
     <h2>Pynt som passer stilen</h2>
     <p>Bilder, veggpynt og småting${style && style.id !== 'fri' ? ` i stilen ${style.name.toLowerCase()}` : ''}. Verdt en titt når du likevel er inne på Finn.</p>
@@ -376,15 +416,23 @@ function viewList() {
 }
 
 function footerNav() {
-  if (state.step === 3) return '';
+  if (state.step === LAST) return '';
+  const next = state.step === LAST - 1 ? 'Finn tingene' : `Neste: ${STEPS[state.step + 1].toLowerCase()}`;
   return `<div class="nav">
     ${state.step > 0 ? `<button class="btn ghost" data-act="step" data-v="${state.step - 1}">Tilbake</button>` : '<span></span>'}
-    <button class="btn" data-act="step" data-v="${state.step + 1}">${state.step === 2 ? 'Lag lista' : `Neste: ${STEPS[state.step + 1].toLowerCase()}`}</button>
+    <button class="btn" data-act="step" data-v="${state.step + 1}">${next}</button>
   </div>`;
 }
 
 function shareUrl() {
-  return `${location.origin}${location.pathname}#l=${encodeState({ ...state, step: 3 })}`;
+  return `${location.origin}${location.pathname}#l=${encodeState({ ...state, step: LAST })}`;
+}
+
+// «Plasser» trenger en tegning. Finnes det ingen, lages den av rommene fra «Velg bolig».
+function ensureDrawing() {
+  if (!state.drawn && state.rooms.length) { state.rooms = withDrawing(state.rooms); state.drawn = true; }
+  ui.sheet = sheetFor(state, ui.sheet);
+  if (!state.rooms.some((r) => r.poly && (r.floor || 0) === ui.floor)) ui.floor = 0;
 }
 
 function render() {
@@ -392,7 +440,9 @@ function render() {
   const fid = active && active !== document.body ? active.id : '';
   const sig = (el) => ['act', 'v', 'q', 'i', 'w', 'st'].map((k) => el.dataset[k] ?? '').join('|');
   const fsig = !fid && active?.dataset?.act ? sig(active) : '';
-  const views = [viewHome, viewStyle, viewLife, viewList];
+  const views = [viewHome, viewStyle, viewThings, viewPlace, viewList];
+  ui.furnish = state.step === 3; // på «Plasser» kan bare møbler flyttes
+  if (ui.furnish) ui.tool = 'move';
   app.innerHTML = `${header()}<main>${sharedBanner()}${views[state.step]()}</main>${footerNav()}
     <footer class="foot"><p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
   if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
@@ -407,6 +457,18 @@ function later() {
 function commit() { save(); later(); }
 function setItem(key, patch) { state.items[key] = { ...state.items[key], ...patch }; commit(); }
 const instByKey = (key) => instances(state).find((i) => i.key === key);
+// Tar bort haken på det brukeren har fra før, og setter hake på det de sier de mangler.
+function applyOwned(have, need) {
+  const all = instances(state);
+  for (const id of have) for (const i of all.filter((x) => x.itemId === id && x.st === 'need')) state.items[i.key] = { ...state.items[i.key], st: ROOMS[i.room.type].ess.includes(id) ? 'have' : 'off' };
+  for (const id of need) {
+    if (all.some((x) => x.itemId === id && x.st === 'need')) continue;
+    const i = all.find((x) => x.itemId === id);
+    if (i) state.items[i.key] = { ...state.items[i.key], st: 'need' };
+  }
+  const names = (list) => list.filter((id) => all.some((x) => x.itemId === id)).map((id) => ITEMS[id].name.toLowerCase()).join(', ');
+  return [names(have) ? `Tok bort haken på ${names(have)}.` : '', names(need) ? `La til ${names(need)}.` : ''].filter(Boolean).join(' ');
+}
 
 // ---------- Hendelser ----------
 
@@ -415,29 +477,29 @@ const actions = {
     const el = document.getElementById('life');
     if (!el || ui.busy) return;
     changes.life(el); // ordlistene først, så det alltid kommer noe
-    ui.msg = null;
+    const rules = parseOwned(state.lifeText);
+    const said = applyOwned(rules.have, rules.need);
+    ui.msg = state.lifeText.trim() ? { where: 'life', text: said || 'Lest. Vi fant ingen ting å huke av eller ta bort.' } : null;
     if (!ai.ready || !state.lifeText.trim()) { commit(); return; }
     ui.busy = 'life'; commit();
     try {
       const r = await readLife(state.lifeText);
       state.life = [...new Set([...state.life, ...r.life])];
       state.autoWish = r.wishes;
-      const all = instances(state);
-      for (const id of r.have) for (const i of all.filter((x) => x.itemId === id)) state.items[i.key] = { ...state.items[i.key], st: 'have' };
-      for (const id of r.need) {
-        if (all.some((x) => x.itemId === id && x.st === 'need')) continue;
-        const i = all.find((x) => x.itemId === id);
-        if (i) state.items[i.key] = { ...state.items[i.key], st: 'need' };
-      }
-      const n = (list) => list.map((id) => ITEMS[id].name.toLowerCase()).join(', ');
-      const parts = [r.have.length ? `Har fra før: ${n(r.have)}.` : '', r.need.length ? `Lagt til: ${n(r.need)}.` : ''].filter(Boolean);
-      ui.msg = { where: 'life', text: parts.join(' ') || 'Lest. Se hva vi fikk med oss under.' };
+      const more = applyOwned(r.have, r.need);
+      ui.msg = { where: 'life', text: [said, more].filter(Boolean).join(' ') || 'Lest. Vi fant ingen ting å huke av eller ta bort.' };
     } catch (e) {
-      if (e.message) ui.msg = { where: 'life', bad: true, text: `${e.message} Vi brukte de enkle reglene i stedet.` };
+      if (e.message) ui.msg = { where: 'life', bad: true, text: `${e.message} Vi brukte de enkle reglene i stedet.${said ? ` ${said}` : ''}` };
     }
     ui.busy = ''; commit();
   },
-  step(v) { state.step = Math.min(3, Math.max(0, Number(v))); ui.round = false; ui.room = null; ui.style = null; commit(); window.scrollTo(0, 0); },
+  step(v) {
+    state.step = Math.min(LAST, Math.max(0, Number(v) || 0));
+    ui.round = false; ui.room = null; ui.furn = null; ui.style = null; ui.open = null; ui.note = ''; ui.info = '';
+    if (state.step === 3) ensureDrawing();
+    commit(); window.scrollTo(0, 0);
+  },
+  write() { ui.write = !ui.write; later(); },
   home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; state.drawn = false; state.furn = []; state.floors = ['1. etasje']; ui.room = null; ui.furn = null; ui.floor = 0; ui.msg = null; commit(); },
   undo() {
     const json = undoStack.pop();
@@ -456,7 +518,6 @@ const actions = {
   delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.furn = state.furn.filter((f) => f.room !== ui.room); state.drawn = state.rooms.some((r) => r.poly); state.custom = state.custom.filter((c) => c.room !== ui.room); ui.room = null; commit(); },
   style(v, el) { state.style = v; state.sub = el?.dataset.i !== undefined ? Number(el.dataset.i) : null; ui.style = null; commit(); window.scrollTo(0, 0); },
   styleopen(v) { ui.style = v || null; later(); window.scrollTo(0, 0); },
-  life(v) { state.life = state.life.includes(v) ? state.life.filter((x) => x !== v) : [...state.life, v]; commit(); },
   dropWish(v) { delete state.autoWish[v]; commit(); },
   level(v) { state.level = v; commit(); },
   fit() { state.items = fitBudget(state); commit(); },
@@ -502,15 +563,14 @@ const actions = {
   iprio(v, el) { const i = instByKey(v); if (!i) return; const it = { ...state.items[v] }; if (i.saved.prio === el.dataset.p) delete it.prio; else it.prio = el.dataset.p; state.items[v] = it; commit(); },
   prio(v) { state.prio = state.prio === v ? null : v; commit(); },
   usepreset() { if (!state.drawn) { state.rooms = withDrawing(state.rooms); state.drawn = true; ui.sheet = sheetFor(state, ui.sheet); commit(); } },
-  // Fra lista og rett til tegningen: lager en tegning av rommene om den mangler, og setter ut møbelet.
+  // Fra «Finn» og rett til «Plasser», med møbelet satt ut og valgt.
   place(v) {
     const i = instByKey(v);
     if (!i) return;
-    if (!state.drawn) { state.rooms = withDrawing(state.rooms); state.drawn = true; }
+    state.step = 3; ui.open = null; ui.round = false; ui.furn = null; ui.note = ''; ui.info = '';
+    ensureDrawing();
     const room = state.rooms.find((r) => r.id === i.room.id);
-    state.step = 0; ui.tab = 'draw'; ui.open = null; ui.round = false; ui.furn = null; ui.note = '';
-    ui.sheet = sheetFor(state, ui.sheet);
-    if (!room.poly) { ui.tool = 'draw'; ui.room = null; ui.note = `${roomLabel(state.rooms, room)} er ikke tegnet ennå. Tegn rommet først, så kan du sette ut møbler i det.`; commit(); window.scrollTo(0, 0); return; }
+    if (!room?.poly) { ui.room = null; ui.note = `${roomLabel(state.rooms, i.room)} er ikke tegnet ennå. Tegn rommet under «Bolig», så kan du sette ut møbler i det.`; commit(); window.scrollTo(0, 0); return; }
     ui.tool = 'move'; ui.floor = room.floor || 0; ui.room = room.id;
     actions.addfurn(i.itemId);
     commit(); window.scrollTo(0, 0);
@@ -526,7 +586,7 @@ const actions = {
   },
   sure() { ui.sure = true; later(); },
   unsure() { ui.sure = false; later(); },
-  reset() { state = newState(); ui.open = ui.room = null; ui.sure = false; ui.copied = ''; ui.tab = 'pick'; ui.floor = 0; ui.furn = null; commit(); window.scrollTo(0, 0); },
+  reset() { state = newState(); ui.open = ui.room = null; ui.sure = false; ui.copied = ''; ui.tab = 'pick'; ui.floor = 0; ui.furn = null; ui.info = ''; ui.write = false; commit(); window.scrollTo(0, 0); },
   useShared() { state = ui.shared; ui.tab = state.drawn ? 'draw' : 'pick'; ui.shared = null; history.replaceState(null, '', location.pathname); commit(); },
   dropShared() { ui.shared = null; history.replaceState(null, '', location.pathname); later(); },
 };
@@ -562,7 +622,7 @@ const changes = {
   life(el) {
     state.lifeText = el.value.slice(0, 2000);
     const p = parseLife(state.lifeText);
-    state.life = [...new Set([...state.life, ...p.life])];
+    state.life = p.life; // følger teksten, siden det ikke lenger finnes egne knapper for dette
     state.autoWish = p.wishes;
   },
   total(el) { state.total = num(el.value); },
@@ -603,6 +663,7 @@ if (hash) {
   if (shared && !hasOwn) { state = shared; history.replaceState(null, '', location.pathname); save(); }
   else if (shared) ui.shared = shared;
 }
+if (state.step === 3) ensureDrawing();
 lastJson = snapshot();
 render();
 initAI().then((ok) => { if (ok) later(); });

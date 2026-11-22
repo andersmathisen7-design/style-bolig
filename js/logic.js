@@ -197,6 +197,23 @@ export function cleanWish(w) {
   return out.search.length + out.avoid.length + out.notes.length ? out : null;
 }
 
+// Finner ting brukeren sier de har fra før, og ting de sier de mangler: «Jeg har seng og sofa. Trenger en lenestol.»
+export function parseOwned(raw) {
+  const have = new Set(), need = new Set();
+  for (const sentence of String(raw || '').toLowerCase().split(/[.!?\n]+/)) {
+    let rest = sentence;
+    const found = [];
+    for (const [word, itemId] of ITEM_WORDS) { // lengste ord først, og hvert ord brukes bare én gang
+      const rx = new RegExp('(^|[^a-zæøå])' + word + '[a-zæøå]*');
+      if (rx.test(rest)) { found.push(itemId); rest = rest.replace(rx, ' '); }
+    }
+    if (!found.length || /\b(ikke|ingen|uten|aldri)\b/.test(sentence)) continue;
+    if (/\b(trenger|mangler|ønsker meg|vil ha|skal ha|må ha)\b/.test(sentence)) found.forEach((id) => need.add(id));
+    else if (/\b(har|eier|fått|arvet|beholder)\b/.test(sentence)) found.forEach((id) => have.add(id));
+  }
+  return { have: [...have].filter((id) => !need.has(id)), need: [...need] };
+}
+
 // Alt vi vet om hva brukeren vil ha for én ting.
 // autoWish er enten en setning (tolket av ordlistene) eller et ferdig oppdelt ønske (tolket av AI).
 export function wishOf(inst, state) {
@@ -426,7 +443,7 @@ export function decodeState(str) {
 export function normalize(s) {
   if (!validState(s)) return null;
   const n = (v, max) => (typeof v === 'number' && v > 0 && v <= max ? Math.round(v) : null);
-  const out = { ...newState(), step: [0, 1, 2, 3].includes(s.step) ? s.step : 0, area: s.area };
+  const out = { ...newState(), step: [0, 1, 2, 3, 4].includes(s.step) ? s.step : 0, area: s.area };
   out.home = HOMES.some((h) => h.id === s.home) ? s.home : '';
   out.style = STYLES.some((x) => x.id === s.style) ? s.style : null;
   out.sub = out.style && [0, 1, 2].includes(s.sub) ? s.sub : null;

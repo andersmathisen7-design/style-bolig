@@ -6,6 +6,7 @@ import {
   straighten, straightenLine, isLine, splitPoly, moveWall, moveCorner, dragAlong, valid, remapDoor, remapDoors, alignTo, fitSheet, canonical,
   area, areaM2, edges, letter, setEdgeLength, nearestEdge, labelPoint, pointInPoly, moved, opening, wallFor,
 } from './plan.js';
+import { arrangeRoom } from './arrange.js';
 
 export const SHEETS = [1000, 1500, 2500];
 const TOOLS = [['draw', 'Tegn rom'], ['move', 'Velg og flytt'], ['door', 'Dør'], ['window', 'Vindu']];
@@ -40,7 +41,8 @@ function guessType(rooms, m2) {
 // ---------- Visning ----------
 
 function roomSvg(state, ui, r, k) {
-  const on = ui.room === r.id;
+  const picked = (state.furn || []).find((f) => f.id === ui.furn);
+  const on = ui.room === r.id || picked?.room === r.id; // rommet til det valgte møbelet viser også veggbokstavene
   const c = labelPoint(r.poly);
   const doors = (r.doors || []).map((d) => {
     const o = opening(r.poly, d);
@@ -52,7 +54,7 @@ function roomSvg(state, ui, r, k) {
     const sweep = o.u[0] * o.n[1] - o.u[1] * o.n[0] > 0 ? 0 : 1;
     return `${gap}<path class="door" d="M${a[0]} ${a[1]}L${tip[0]} ${tip[1]}A${w} ${w} 0 0 ${sweep} ${b[0]} ${b[1]}" stroke-width="${2 * k}"/>`;
   }).join('');
-  const shape = on && ui.tool === 'move';
+  const shape = ui.room === r.id && ui.tool === 'move' && !ui.furnish;
   const marks = on ? edges(r.poly).map((e, i) => {
     const mid = [(e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2];
     const u = [(e.b[0] - e.a[0]) / (e.len || 1), (e.b[1] - e.a[1]) / (e.len || 1)];
@@ -119,11 +121,27 @@ export function sheetFor(state, fallback) {
   return far ? (SHEETS.find((s) => s >= far) || SHEETS[SHEETS.length - 1]) : fallback;
 }
 
-export function drawView(state, ui, canUndo) {
+// Selve arket med rutenett, rom, dører og møbler.
+function sheetSvg(state, ui, rooms, emptyText) {
   const S = ui.sheet, k = S / 1000;
+  const sorted = [...rooms].sort((a, b) => (a.id === ui.room) - (b.id === ui.room));
+  return `
+  <div class="sheet"><svg class="draw tool-${ui.tool}" id="draw" viewBox="0 0 ${S} ${S}" role="img" aria-label="Plantegning av ${esc(state.floors[ui.floor])}">
+    <defs>
+      <pattern id="g50" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" class="g-thin" stroke-width="${1.2 * k}"/></pattern>
+      <pattern id="g100" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0H0V100" fill="none" class="g-bold" stroke-width="${1.6 * k}"/></pattern>
+    </defs>
+    <rect width="${S}" height="${S}" fill="url(#g50)"/><rect width="${S}" height="${S}" fill="url(#g100)"/>
+    ${sorted.map((r) => roomSvg(state, ui, r, k)).join('')}
+    ${rooms.length ? '' : `<text class="empty" x="${S / 2}" y="${S / 2}" font-size="${36 * k}">${emptyText}</text>`}
+    <polyline id="ink" fill="none" stroke-width="${5 * k}" points=""/>
+  </svg></div>`;
+}
+
+export function drawView(state, ui, canUndo) {
+  const S = ui.sheet;
   const rooms = state.rooms.filter((r) => r.poly && (r.floor || 0) === ui.floor);
   const all = state.rooms.filter((r) => r.poly);
-  const sorted = [...rooms].sort((a, b) => (a.id === ui.room) - (b.id === ui.room));
   return `
   <div class="floors" role="group" aria-label="Etasje">
     ${state.floors.map((f, i) => `<button class="chip mini ${ui.floor === i ? 'on' : ''}" data-act="floor" data-v="${i}" aria-pressed="${ui.floor === i}">${esc(f)}</button>`).join('')}
@@ -136,16 +154,7 @@ export function drawView(state, ui, canUndo) {
   <div class="row undo-row"><button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
     ${state.drawn ? '' : '<button class="btn ghost small" data-act="usepreset">Start med rommene fra «Velg bolig»</button>'}
     ${ui.room && rooms.some((r) => r.id === ui.room) ? '<button class="link danger" data-act="delroom">Fjern valgt rom</button>' : ''}</div>
-  <div class="sheet"><svg class="draw tool-${ui.tool}" id="draw" viewBox="0 0 ${S} ${S}" role="img" aria-label="Plantegning av ${esc(state.floors[ui.floor])}">
-    <defs>
-      <pattern id="g50" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" class="g-thin" stroke-width="${1.2 * k}"/></pattern>
-      <pattern id="g100" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0H0V100" fill="none" class="g-bold" stroke-width="${1.6 * k}"/></pattern>
-    </defs>
-    <rect width="${S}" height="${S}" fill="url(#g50)"/><rect width="${S}" height="${S}" fill="url(#g100)"/>
-    ${sorted.map((r) => roomSvg(state, ui, r, k)).join('')}
-    ${rooms.length ? '' : `<text class="empty" x="${S / 2}" y="${S / 2}" font-size="${36 * k}">Tegn rundt boligen eller et rom her</text>`}
-    <polyline id="ink" fill="none" stroke-width="${5 * k}" points=""/>
-  </svg></div>
+  ${sheetSvg(state, ui, rooms, 'Tegn rundt boligen eller et rom her')}
   ${ui.note ? `<p class="status bad" role="status">${esc(ui.note)}</p>` : ''}
   <div class="sheetrow"><span class="plan-sum">${all.length ? `Omtrent ${all.reduce((s, r) => s + r.m2, 0)} m² i ${all.length} rom.` : (state.drawn ? '' : 'Det første rommet du tegner, erstatter rommene fra «Velg bolig».')} Store ruter er 1 meter.</span>
     <span class="chips" role="group" aria-label="Arkstørrelse">${SHEETS.map((s) => `<button class="chip mini ${S === s ? 'on' : ''}" data-act="sheet" data-v="${s}" aria-pressed="${S === s}">${s / 100} m</button>`).join('')}</span></div>
@@ -174,12 +183,6 @@ function furnPanel(state, ui) {
 }
 
 export function roomPanel(state, ui, r) {
-  const mine = instances(state).filter((i) => i.room.id === r.id);
-  const info = (id) => mine.find((i) => i.itemId === id);
-  const placeable = [...new Set([...mine.filter((i) => i.st === 'need' || i.st === 'bought').map((i) => i.itemId), ...ROOMS[r.type].ess, ...ROOMS[r.type].extra])]
-    .filter((id) => ITEMS[id] && footprint(id, info(id)?.size || r.size));
-  const count = (id) => (state.furn || []).filter((f) => f.room === r.id && f.item === id).length;
-  const want = (id) => info(id)?.qty || 1;
   return `
   <section class="panel" aria-label="Valgt rom">
     <h2>${esc(roomLabel(state.rooms, r))}<small>${r.m2} m²</small></h2>
@@ -193,13 +196,55 @@ export function roomPanel(state, ui, r) {
     <div class="chips" role="group" aria-label="Type rom">
       ${Object.entries(ROOMS).map(([id, t]) => `<button class="chip mini ${r.type === id ? 'on' : ''}" data-act="rtype" data-v="${id}" aria-pressed="${r.type === id}">${t.name}</button>`).join('')}
     </div>
-    <span class="q-label">Sett ut møbler</span>
-    <p class="hint">Sett ut det viktigste omtrent der det skal stå. Da vet lista hvilken vegg sofaen har og hvor bred den kan være.</p>
-    <div class="chips" role="group" aria-label="Møbler">
-      ${placeable.map((id) => { const c = count(id), q = want(id); return `<button class="chip mini ${c ? 'on' : 'add'}" data-act="addfurn" data-v="${id}">${c >= q ? '' : '+ '}${ITEMS[id].name}${q > 1 ? ` ${c}/${q}` : ''}</button>`; }).join('')}
-    </div>
     <button class="link danger" data-act="delroom">Fjern rommet</button>
   </section>`;
+}
+
+// Tingene på lista som kan settes ut i et rom, med hvor mange som alt står der.
+function placeable(state, r) {
+  return instances(state)
+    .filter((i) => i.room.id === r.id && (i.st === 'need' || i.st === 'bought') && !i.item.custom && footprint(i.itemId, i.size))
+    .map((i) => ({ id: i.itemId, name: i.item.name, qty: i.qty, size: i.size, count: (state.furn || []).filter((f) => f.room === r.id && f.item === i.itemId).length }));
+}
+
+function placePanel(state, ui, r) {
+  const list = placeable(state, r);
+  return `
+  <section class="panel" aria-label="Sett ut i rommet">
+    <h2>${esc(roomLabel(state.rooms, r))}<small>${r.m2} m²</small></h2>
+    ${list.length ? `<span class="q-label">Sett ut</span>
+    <div class="chips" role="group" aria-label="Ting som kan settes ut">
+      ${list.map((x) => `<button class="chip mini ${x.count ? 'on' : 'add'}" data-act="addfurn" data-v="${x.id}">${x.count >= x.qty ? '' : '+ '}${esc(x.name)}${x.qty > 1 ? ` ${x.count}/${x.qty}` : ''}</button>`).join('')}
+    </div>
+    <p class="hint">Mørke knapper står allerede på tegningen. Trykk for å finne dem igjen.</p>`
+    : `<p class="hint">Ingenting på lista for dette rommet kan settes ut. <button class="link" data-act="step" data-v="2">Velg ting</button></p>`}
+  </section>`;
+}
+
+// Steget «Plasser»: samme tegning, men bare for å sette ut og flytte møbler.
+export function furnishView(state, ui, canUndo) {
+  const S = ui.sheet;
+  const rooms = state.rooms.filter((r) => r.poly && (r.floor || 0) === ui.floor);
+  const picked = (state.furn || []).find((f) => f.id === ui.furn);
+  const cur = rooms.find((r) => r.id === (ui.room || picked?.room));
+  const out = (state.furn || []).length;
+  return `
+  ${state.floors.length > 1 ? `<div class="floors" role="group" aria-label="Etasje">
+    ${state.floors.map((f, i) => `<button class="chip mini ${ui.floor === i ? 'on' : ''}" data-act="floor" data-v="${i}" aria-pressed="${ui.floor === i}">${esc(f)}</button>`).join('')}</div>` : ''}
+  <div class="row undo-row">
+    <button class="btn small" data-act="arrange">Sett ut alt for meg</button>
+    <button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
+    ${out ? '<button class="link danger" data-act="clearfurn">Ta bort alle</button>' : ''}
+  </div>
+  <p class="hint tool-hint">Trykk på et rom for å velge hva som skal stå der. Trykk på et møbel for å velge det, og dra for å flytte.</p>
+  ${sheetSvg(state, ui, rooms, 'Ingen rom på denne etasjen')}
+  ${ui.note ? `<p class="status bad" role="status">${esc(ui.note)}</p>` : ''}
+  ${ui.info ? `<p class="status" role="status">${esc(ui.info)}</p>` : ''}
+  <div class="sheetrow"><span class="plan-sum">${out ? `${out} møbler er satt ut.` : 'Ingen møbler er satt ut ennå.'} Store ruter er 1 meter.</span>
+    <span class="chips" role="group" aria-label="Arkstørrelse">${SHEETS.map((s) => `<button class="chip mini ${S === s ? 'on' : ''}" data-act="sheet" data-v="${s}" aria-pressed="${S === s}">${s / 100} m</button>`).join('')}</span></div>
+  ${rooms.length ? `<div class="chips" role="group" aria-label="Rom på denne etasjen">${rooms.map((r) => `<button class="chip mini ${cur?.id === r.id ? 'on' : ''}" data-act="room" data-v="${r.id}" aria-pressed="${cur?.id === r.id}">${esc(roomLabel(state.rooms, r))}</button>`).join('')}</div>` : ''}
+  ${furnPanel(state, ui)}
+  ${cur ? placePanel(state, ui, cur) : ''}`;
 }
 
 // ---------- Hendelser ----------
@@ -248,6 +293,7 @@ export function bindEditor(app, ctx) {
         drag.room = state.rooms.find((r) => r.id === rEl.dataset.room);
         drag.el = svg.querySelector(`[data-g="${rEl.dataset.room}"]`);
         drag.delta = [0, 0];
+        drag.fixed = !!ui.furnish; // på «Plasser» står rommene i ro: der flytter man bare møbler
       }
     }
     try { svg.setPointerCapture(e.pointerId); } catch { /* går fint uten */ }
@@ -272,7 +318,7 @@ export function bindEditor(app, ctx) {
       drag.np = drag.shape.kind === 'corner' ? moveCorner(drag.poly0, drag.shape.i, dx, dy) : moveWall(drag.poly0, drag.shape.i, dx, dy);
       drag.el.setAttribute('points', pts(drag.np));
       drag.g.classList.add('shaping');
-    } else if (drag.room && drag.far) {
+    } else if (drag.room && drag.far && !drag.fixed) {
       drag.delta = [Math.round((p[0] - drag.start[0]) / 10) * 10, Math.round((p[1] - drag.start[1]) / 10) * 10];
       drag.el.setAttribute('transform', `translate(${drag.delta[0]} ${drag.delta[1]})`);
     }
@@ -311,7 +357,7 @@ export function bindEditor(app, ctx) {
     const d = drag;
     drag = null;
     const state = ctx.state();
-    ui.note = '';
+    ui.note = ''; ui.info = '';
     if (cancelled) { ctx.render(); return; }
 
     if (d.tool === 'draw') {
@@ -342,7 +388,7 @@ export function bindEditor(app, ctx) {
         if (d.far) { d.furn.x = d.pos[0]; d.furn.y = d.pos[1]; }
         ui.furn = d.furn.id; ui.room = null;
       } else if (d.room) {
-        if (d.far && (d.delta[0] || d.delta[1])) {
+        if (d.far && !d.fixed && (d.delta[0] || d.delta[1])) {
           const from = d.room.poly[0];
           d.room.poly = fitSheet(moved(d.room.poly, d.delta[0], d.delta[1]), ui.sheet);
           const dx = d.room.poly[0][0] - from[0], dy = d.room.poly[0][1] - from[1];
@@ -410,8 +456,32 @@ export function editorActions(ctx) {
         ui.floor = Math.max(0, ui.floor - 1); ctx.commit();
       },
       rtype(v) { const r = sel(); if (r && ROOMS[v]) { r.type = v; if (r.poly) refit(r); else r.size = sizeFromM2(v, r.m2 || ROOMS[v].m2[r.size]); ctx.commit(); } },
+      // Setter ut alt på lista som mangler på tegningen, rom for rom. Det som alt står der, blir stående.
+      arrange() {
+        const s = ctx.state();
+        let added = 0;
+        const missed = [];
+        for (const r of s.rooms.filter((x) => x.poly)) {
+          const existing = s.furn.filter((f) => f.room === r.id);
+          const wants = placeable(s, r).map((x) => { const fp = footprint(x.id, x.size); return { item: x.id, w: fp[0], d: fp[1], qty: Math.max(0, x.qty - x.count) }; });
+          if (!wants.some((w) => w.qty > 0)) continue;
+          // En dør tegnet i naborommet er også en dør her, når den står i veggen de deler.
+          const shared = s.rooms.filter((o) => o !== r && o.poly && (o.floor || 0) === (r.floor || 0))
+            .flatMap((o) => (o.doors || []).map((d) => remapDoor(o.poly, d, r.poly)).filter(Boolean));
+          const res = arrangeRoom({ poly: r.poly, doors: [...(r.doors || []), ...shared] }, wants, existing);
+          const fresh = res.placed.slice(0, Math.max(0, 80 - s.furn.length)).map((f) => ({ id: 'f' + (s.seq = (s.seq || 100) + 1), room: r.id, ...f }));
+          s.furn = [...fresh.filter((f) => f.item === 'teppe'), ...s.furn, ...fresh.filter((f) => f.item !== 'teppe')]; // tepper tegnes underst
+          added += fresh.length;
+          for (const id of new Set(res.skipped)) missed.push(`${ITEMS[id].name.toLowerCase()} i ${roomLabel(s.rooms, r).toLowerCase()}`);
+        }
+        const rest = missed.length ? ` Fant ikke god plass til ${missed.slice(0, 4).join(', ')}${missed.length > 4 ? ' og flere' : ''}. De kan du sette ut selv.` : '';
+        ui.furn = null; ui.note = '';
+        ui.info = added ? `Satte ut ${added} møbler. Dra dem dit du vil ha dem.${rest}` : (rest.trim() || 'Alt på lista som kan settes ut, står der allerede.');
+        ctx.commit();
+      },
+      clearfurn() { const s = ctx.state(); s.furn = []; ui.furn = null; ui.info = ''; ctx.commit(); },
       addfurn(v) {
-        const s = ctx.state(), r = sel();
+        const s = ctx.state(), r = sel() || s.rooms.find((x) => x.id === selFurn()?.room);
         if (!r?.poly || !ITEMS[v]) return;
         const inst = instances(s).find((i) => i.room.id === r.id && i.itemId === v);
         const have = s.furn.filter((f) => f.room === r.id && f.item === v);

@@ -270,3 +270,13 @@ test('antall, egen størrelse og hva som er viktigst', async () => {
   const total = d.reduce((a, r) => a + r.m2, 0);
   assert.ok(Math.abs(total - 42) <= 4, String(total));
 });
+
+test('fem steg, og «har fra før» lest med enkle regler', async () => {
+  const { parseOwned } = await import('../js/logic.js');
+  const s = newState();
+  for (const [given, want] of [[4, 4], [3, 3], [7, 0], [-1, 0], ['2', 0]]) assert.equal(normalize(JSON.parse(JSON.stringify({ ...s, step: given }))).step, want);
+  assert.deepEqual(parseOwned('Jeg har seng og sofa fra før. Trenger en lenestol. Vil ikke ha rundt bord.'), { have: ['sofa', 'seng'], need: ['lenestol'] });
+  assert.deepEqual(parseOwned('Har tv-benk og sofabord.'), { have: ['sofabord', 'tvbenk'], need: [] });
+  assert.deepEqual(parseOwned('Jeg har ikke sofa. Sofaen bør være grønn.'), { have: [], need: [] });
+  assert.deepEqual(parseOwned(''), { have: [], need: [] });
+});
