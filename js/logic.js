@@ -9,7 +9,7 @@ const FINN_FURNITURE = '0.78'; // Møbler og interiør
 
 export function newState() {
   return {
-    v: 1, step: 0, area: '', home: 'toroms', style: null, sub: null, prio: null, level: 'vanlig', total: null,
+    v: 1, step: 0, area: '', home: 'toroms', style: null, sub: null, prio: null, level: 'vanlig', total: null, diy: false,
     rooms: roomsFromHome('toroms'), drawn: false, floors: ['1. etasje'], furn: [], openings: [], life: [], lifeText: '', autoWish: {}, items: {}, custom: [], seq: 100,
   };
 }
@@ -324,6 +324,15 @@ export function decorLinks(state, mode = 'all') {
   });
 }
 
+// Et fritt søk på Finn i området til brukeren. furniture = bare i «Møbler og interiør».
+export function wordUrl(state, q, furniture = false) {
+  const p = new URLSearchParams({ q });
+  if (furniture) p.set('category', FINN_FURNITURE);
+  for (const [k, v] of areaParams(state)) p.append(k, v);
+  p.set('sort', 'PUBLISHED_DESC');
+  return `${FINN}?${p.toString()}`;
+}
+
 // Hvor bred tingen kan være. Best når møbelet er satt ut på tegningen, ellers ut fra veggmålet til rommet.
 const WALL_ITEMS = ['sofa', 'sovesofa', 'tvbenk', 'garderobe', 'skrivebord', 'bokhylle', 'kommode', 'seng'];
 export function wallNote(inst, state) {
@@ -500,6 +509,7 @@ export function normalize(s) {
   out.level = LEVELS.some((x) => x.id === s.level) ? s.level : 'vanlig';
   out.prio = PRIOS.some((x) => x[0] === s.prio) ? s.prio : null;
   out.total = n(s.total, 1e7);
+  out.diy = s.diy === true; // «Jeg vil gjerne fikse litt selv»
   out.seq = n(s.seq, 1e6) || 100;
   const pt = (q) => Array.isArray(q) && q.length === 2 && q.every((v) => Number.isFinite(v) && v >= -500 && v <= 3000);
   const nFloors = Array.isArray(s.floors) ? Math.min(5, Math.max(1, s.floors.length)) : 1;

@@ -1,8 +1,8 @@
 import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LEVELS, GROUPS, PRIOS } from './data.js';
 import {
   newState, roomsFromHome, roomLabel, roomM2, sizeFromM2, sizeRange, instances, defaultMax, maxOf,
-  parseLife, parseOwned, wishOf, searchText, finnUrl, altLinks, inCategory, variantsOf, ikeaUrl, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
-  newHint, layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
+  parseLife, parseOwned, wishOf, searchText, finnUrl, altLinks, inCategory, variantsOf, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
+  layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
   prioOf, kwOf, comfortFor, footprint, withDrawing, placedWall,
 } from './logic.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
@@ -13,6 +13,7 @@ import { areaField, areaActions, bindArea } from './area.js';
 import { areaPhrase } from './areastate.js';
 import { feedbackView, feedbackAfterRender, bindFeedback } from './feedback.js';
 import { funn, initFunn, funnTouch, setCheck, hideFind, currentFinds, checkPanel, findsBlock, osloDay } from './funn.js';
+import { loadAdvice, rowVerdict, verdictLine, newSlot, newBlock, buysNew, listNote, styleAdviceBlock, tricksPanel, adviceActions } from './radview.js';
 
 const KEY = 'brukthjem.v2'; // v2: starter med blanke ark etter at tegningen ble lagt om
 const app = document.getElementById('app');
@@ -184,6 +185,7 @@ function styleDetail(s) {
         <button class="btn small ${on ? 'ghost' : ''}" data-act="style" data-v="${s.id}" data-i="${i}">${on ? 'Dette er retningen din' : `Velg ${esc(p.name.toLowerCase())}`}</button>
         <a class="credit" href="${esc(p.url)}" target="_blank" rel="noopener">Foto: ${esc(p.by)}, Unsplash</a></figcaption></figure>`; }).join('')}
   </div>
+  ${styleAdviceBlock(state, s.id)}
   <div class="row"><button class="btn ghost" data-act="style" data-v="${s.id}">${mine && state.sub === null ? 'Du har valgt hele stilen' : `Velg hele stilen ${esc(s.name.toLowerCase())}`}</button>
     <button class="link" data-act="styleopen" data-v="">Se de andre stilene</button></div>`;
 }
@@ -307,6 +309,7 @@ function itemRow(inst, sum, finds) {
         <span class="item-name">${esc(inst.item.name)}</span>
         ${inst.v.label && inst.st === 'need' ? `<span class="item-size">${esc(inst.v.label)}</span>` : ''}
         ${inst.saved.wish && inst.st === 'need' ? `<span class="item-cmt">«${esc(inst.saved.wish)}»</span>` : ''}
+        ${rowVerdict(inst)}
       </button>
       <span class="tag tag-${inst.st}">${esc(tag)}</span>
     </div>
@@ -321,7 +324,7 @@ function itemBody(inst, sum) {
   const w = wishOf(inst, state);
   const max = maxOf(inst, state);
   const area = areaPhrase(state); // «i Oslo», «rundt Ski (15 km)» eller «i hele Norge»
-  const hint = newHint(inst, state, sum);
+  const slot = newSlot(inst), fresh = newBlock(inst, state, sum), buyNew = buysNew(inst); // nytt eller brukt, se radview.js
   const words = styleWords(inst, state);
   const kw = kwOf(inst, state);
   const picks = inst.saved.picks || {};
@@ -333,9 +336,11 @@ function itemBody(inst, sum) {
   const alts = altLinks(inst, state), broad = inCategory(inst);
   return `
   <div class="item-body">
+    ${verdictLine(inst)}
+    ${slot === 'top' ? `${fresh}<span class="q-label">Eller let etter brukt</span>` : ''}
     ${[wallNote(inst, state), ...tipsFor(inst, state)].filter(Boolean).map((t) => `<p class="tip">${esc(t)}</p>`).join('')}
     <div class="row">
-      <a class="btn" href="${esc(finnUrl(inst, state, 'all'))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Søk på Finn</a>
+      <a class="btn${buyNew ? ' ghost' : ''}" href="${esc(finnUrl(inst, state, 'all'))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Søk på Finn</a>
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'today'))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Lagt ut i dag</a>
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'free'))}" target="_blank" rel="noopener">Gis bort</a>
     </div>
@@ -346,6 +351,7 @@ function itemBody(inst, sum) {
       ${alts.length ? `<span class="q-label">Andre ord folk bruker</span>
       <div class="chips">${alts.map((a) => `<a class="chip mini" href="${esc(a.url)}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">${esc(a.word)}</a>`).join('')}</div>` : ''}
     </div>` : ''}
+    ${slot === 'mid' ? fresh : ''}
     ${prio === 'pris' ? '<p class="tip">Pris er viktigst: sjekk «Gis bort» først.</p>' : ''}
     ${comfort ? `<p class="tip">Komfort er viktigst: ${esc(comfort.tip)}</p>` : ''}
 
@@ -380,11 +386,7 @@ function itemBody(inst, sum) {
         ? (inst.item.custom ? '' : `<button class="link" data-act="maxreset" data-v="${k}">Bruk anslaget, ${kr(defaultMax(inst, state))}</button>`)
         : `<button class="link" data-act="nomax" data-v="${k}">Ingen prisgrense</button>`}</div>
     </div>
-    ${inst.item.custom ? '' : `<div class="new ${hint === 'finish' ? 'hot' : ''}">
-      <p>${hint === 'finish' ? 'Du har nesten alt. Det kan lønne seg å kjøpe ny og bli ferdig.' : 'Finner du ingenting brukt?'}
-      Ny koster fra ca. ${kr(inst.v.n)}${hint === 'fits' ? ', og det er innenfor maksprisen din' : ''}.</p>
-      <a class="link" href="${esc(ikeaUrl(inst, state))}" target="_blank" rel="noopener">Se nye hos IKEA</a>
-    </div>`}
+    ${slot === 'end' ? fresh : ''}
     <div class="done">
       <div class="field"><label for="paid-${k}">Fant du en? Skriv prisen</label><input id="paid-${k}" inputmode="numeric" placeholder="kr"></div>
       <button class="btn small" data-act="bought" data-v="${k}">Merk som kjøpt</button>
@@ -420,6 +422,7 @@ function viewList() {
   <h1>Finn tingene</h1>
   <p class="lead">${sum.need === 0 ? 'Ingenting igjen å finne.' : `${sum.need} ting å finne.`}${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Trykk på en ting for å søke på Finn.
     <button class="link" data-act="step" data-v="2">Endre hva som er med</button></p>
+  ${listNote(need)}
   ${style
     ? `<div class="mystyle"><img src="${Number.isInteger(state.sub) ? photo(style.id, state.sub + 1) : photo(style.id, 1, true)}" alt="" width="480" height="360"><p><strong>${style.name}</strong>${subName() ? `<br>${esc(subName())}` : ''}<br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
     : `<p class="hint">Du har ikke valgt stil ennå. <button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
@@ -436,6 +439,7 @@ function viewList() {
     <p>Bilder, veggpynt og småting${style && style.id !== 'fri' ? ` i stilen ${style.name.toLowerCase()}` : ''}. Verdt en titt når du likevel er inne på Finn.</p>
     <div class="chips">${decorLinks(state).map((d) => `<a class="chip mini" href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.label)}</a>`).join('')}</div>
   </section>
+  ${tricksPanel(state, ui)}
   <section class="panel">
     <h2>Ta med deg lista</h2>
     <p>${funn.on ? 'Lista lagres i denne nettleseren, og hos Claude så lenge daglig sjekk er på.' : 'Lista lagres bare i denne nettleseren.'}${canShare ? ' Med en lenke kan du åpne den på en annen enhet eller sende den til noen.' : ''}</p>
@@ -472,10 +476,11 @@ function render() {
   const sig = (el) => ['act', 'v', 'q', 'i', 'w', 'st', 's'].map((k) => el.dataset[k] ?? '').join('|');
   const fsig = !fid && active?.dataset?.act ? sig(active) : '';
   const views = [viewHome, viewStyle, viewThings, viewPlace, viewList];
+  if (state.step === 1 || state.step === LAST) loadAdvice(editorCtx); // råd om nytt og brukt, og triks
   ui.furnish = state.step === 3; // på «Plasser» kan bare møbler flyttes
   if (ui.furnish) ui.tool = 'move';
   app.innerHTML = `${header()}<main>${sharedBanner()}${views[state.step]()}</main>${footerNav()}
-    <footer class="foot">${feedbackView(state, fbEnv())}<p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no eller IKEA. Prisene er anslag fra november 2026. ${funn.on ? 'Lista lagres i nettleseren din, og hos Claude så lenge daglig sjekk er på.' : ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
+    <footer class="foot">${feedbackView(state, fbEnv())}<p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no, IKEA eller de andre butikkene det lenkes til. Prisene er anslag fra november 2026. ${funn.on ? 'Lista lagres i nettleseren din, og hos Claude så lenge daglig sjekk er på.' : ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
   if (wantFocus) { document.getElementById(wantFocus)?.focus(); wantFocus = ''; }
   else if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
   else if (fsig) [...app.querySelectorAll('[data-act]')].find((el) => sig(el) === fsig)?.focus({ preventScroll: true });
@@ -717,6 +722,9 @@ Object.assign(actions, ar.actions);
 Object.assign(changes, ar.changes);
 bindArea(app, editorCtx);
 bindFeedback(app, { state: () => state, later, env: fbEnv });
+const adv = adviceActions(editorCtx); // nytt eller brukt, og triks
+Object.assign(actions, adv.actions);
+Object.assign(changes, adv.changes);
 
 app.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.dataset?.enter) return;
