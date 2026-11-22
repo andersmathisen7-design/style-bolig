@@ -218,7 +218,8 @@ a.chip { text-decoration: none; color: var(--ink); }
 .tool:last-child { border-right: 0; }
 .tool.on { background: var(--teal); color: #fff; }
 .tool-hint { margin: 8px 0; min-height: 2.6em; }
-.draw { display: block; width: 100%; aspect-ratio: 1; margin: 0 0 8px; border: var(--wall) solid var(--ink); background: var(--surface); touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
+.sheet { touch-action: none; -webkit-touch-callout: none; margin: 0 0 8px; }
+.draw { display: block; width: 100%; aspect-ratio: 1; margin: 0; border: var(--wall) solid var(--ink); background: var(--surface); touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
 .draw.tool-move { cursor: default; }
 .draw.tool-door, .draw.tool-window { cursor: pointer; }
 .g-thin { stroke: var(--grid); }

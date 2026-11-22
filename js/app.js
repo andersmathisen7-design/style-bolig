@@ -5,7 +5,7 @@ import {
   newHint, layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
 } from './logic.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
-import { drawView, roomPanel, bindEditor, editorActions, isDragging } from './editor.js';
+import { drawView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
 
 const KEY = 'brukthjem.v1';
 const app = document.getElementById('app');
@@ -16,7 +16,7 @@ const SIZE_NAME = { S: 'Lite', M: 'Middels', L: 'Stort' };
 let state = load();
 const ui = {
   open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, style: null,
-  tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: 1500, furn: null, note: '',
+  tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: sheetFor(state, window.innerWidth < 600 ? 1000 : 1500), furn: null, note: '',
 };
 
 function load() {
@@ -24,8 +24,18 @@ function load() {
   try { saved = JSON.parse(localStorage.getItem(KEY)); } catch { /* tomt eller utilgjengelig */ }
   return normalize(saved) || newState();
 }
-function save() {
+// Angre: hver gang noe endres, tas det vare på hvordan det var. Hvilket steg man står på, teller ikke som en endring.
+const undoStack = [];
+let lastJson = null;
+const snapshot = () => JSON.stringify({ ...state, step: 0 });
+function persist() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* lagring er bare en bekvemmelighet */ }
+}
+function save() {
+  const now = snapshot();
+  if (lastJson !== null && now !== lastJson) { undoStack.push(lastJson); if (undoStack.length > 50) undoStack.shift(); }
+  lastJson = now;
+  persist();
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -61,7 +71,7 @@ function viewHome() {
     <button class="tab ${ui.tab === 'pick' ? 'on' : ''}" data-act="tab" data-v="pick" aria-pressed="${ui.tab === 'pick'}">Velg bolig</button>
     <button class="tab ${ui.tab === 'draw' ? 'on' : ''}" data-act="tab" data-v="draw" aria-pressed="${ui.tab === 'draw'}">Tegn selv</button>
   </div>
-  ${ui.tab === 'draw' ? drawView(state, ui) : pickView()}
+  ${ui.tab === 'draw' ? drawView(state, ui, undoStack.length > 0) : pickView()}
   ${sel ? (sel.poly ? roomPanel(state, ui, sel) : roomEditor(sel)) : ''}
   ${ui.tab === 'pick' ? `<div class="field">
     <label for="addroom">Mangler det et rom?</label>
@@ -392,6 +402,17 @@ const actions = {
   },
   step(v) { state.step = Math.min(3, Math.max(0, Number(v))); ui.round = false; ui.room = null; ui.style = null; commit(); window.scrollTo(0, 0); },
   home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; state.drawn = false; state.furn = []; state.floors = ['1. etasje']; ui.room = null; ui.furn = null; ui.floor = 0; ui.msg = null; commit(); },
+  undo() {
+    const json = undoStack.pop();
+    const prev = json && normalize(JSON.parse(json));
+    if (!prev) return;
+    prev.step = state.step;
+    state = prev; lastJson = json;
+    if (!state.rooms.some((r) => r.id === ui.room)) ui.room = null;
+    if (!state.furn.some((f) => f.id === ui.furn)) ui.furn = null;
+    ui.floor = Math.min(ui.floor, state.floors.length - 1); ui.note = '';
+    persist(); later();
+  },
   tab(v) { ui.tab = v === 'draw' ? 'draw' : 'pick'; ui.room = null; ui.furn = null; ui.note = ''; later(); },
   room(v) { ui.room = ui.room === v ? null : v; ui.furn = null; later(); },
   size(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r) { r.size = v; r.m2 = null; commit(); } },
@@ -511,5 +532,6 @@ if (hash) {
   if (shared && !hasOwn) { state = shared; history.replaceState(null, '', location.pathname); save(); }
   else if (shared) ui.shared = shared;
 }
+lastJson = snapshot();
 render();
 initAI().then((ok) => { if (ok) later(); });

@@ -3,7 +3,7 @@
 import { ROOMS, ITEMS } from './data.js';
 import { roomLabel, sizeFromM2, footprint } from './logic.js';
 import {
-  straighten, areaM2, edges, letter, setEdgeLength, nearestEdge, labelPoint, pointInPoly, moved, opening, wallFor,
+  straighten, alignTo, fitSheet, canonical, areaM2, edges, letter, setEdgeLength, nearestEdge, labelPoint, pointInPoly, moved, opening, wallFor,
 } from './plan.js';
 
 export const SHEETS = [1000, 1500, 2500];
@@ -78,7 +78,13 @@ function roomSvg(state, ui, r, k) {
     ${furn}${marks}</g>`;
 }
 
-export function drawView(state, ui) {
+// Minste ark som rommer alt som er tegnet.
+export function sheetFor(state, fallback) {
+  const far = Math.max(0, ...state.rooms.filter((r) => r.poly).flatMap((r) => r.poly.flat()));
+  return far ? (SHEETS.find((s) => s >= far) || SHEETS[SHEETS.length - 1]) : fallback;
+}
+
+export function drawView(state, ui, canUndo) {
   const S = ui.sheet, k = S / 1000;
   const rooms = state.rooms.filter((r) => r.poly && (r.floor || 0) === ui.floor);
   const all = state.rooms.filter((r) => r.poly);
@@ -92,7 +98,7 @@ export function drawView(state, ui) {
     ${TOOLS.map(([id, name]) => `<button class="tool ${ui.tool === id ? 'on' : ''}" data-act="tool" data-v="${id}" aria-pressed="${ui.tool === id}">${name}</button>`).join('')}
   </div>
   <p class="hint tool-hint">${HINTS[ui.tool]}</p>
-  <svg class="draw tool-${ui.tool}" id="draw" viewBox="0 0 ${S} ${S}" role="img" aria-label="Plantegning av ${esc(state.floors[ui.floor])}">
+  <div class="sheet"><svg class="draw tool-${ui.tool}" id="draw" viewBox="0 0 ${S} ${S}" role="img" aria-label="Plantegning av ${esc(state.floors[ui.floor])}">
     <defs>
       <pattern id="g50" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" class="g-thin" stroke-width="${1.2 * k}"/></pattern>
       <pattern id="g100" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0H0V100" fill="none" class="g-bold" stroke-width="${1.6 * k}"/></pattern>
@@ -101,7 +107,9 @@ export function drawView(state, ui) {
     ${sorted.map((r) => roomSvg(state, ui, r, k)).join('')}
     ${rooms.length ? '' : `<text class="empty" x="${S / 2}" y="${S / 2}" font-size="${36 * k}">Tegn rundt det første rommet her</text>`}
     <polyline id="ink" fill="none" stroke-width="${5 * k}" points=""/>
-  </svg>
+  </svg></div>
+  <div class="row"><button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
+    ${ui.room && rooms.some((r) => r.id === ui.room) ? '<button class="link danger" data-act="delroom">Fjern valgt rom</button>' : ''}</div>
   ${ui.note ? `<p class="status bad" role="status">${esc(ui.note)}</p>` : ''}
   <div class="sheetrow"><span class="plan-sum">${all.length ? `Omtrent ${all.reduce((s, r) => s + r.m2, 0)} m² i ${all.length} rom.` : (state.drawn ? '' : 'Det første rommet du tegner, erstatter rommene fra «Velg bolig».')} Store ruter er 1 meter.</span>
     <span class="chips" role="group" aria-label="Arkstørrelse">${SHEETS.map((s) => `<button class="chip mini ${S === s ? 'on' : ''}" data-act="sheet" data-v="${s}" aria-pressed="${S === s}">${s / 100} m</button>`).join('')}</span></div>
@@ -166,6 +174,10 @@ export function bindEditor(app, ctx) {
   };
   const floorRooms = () => ctx.state().rooms.filter((r) => r.poly && (r.floor || 0) === ui.floor);
 
+  // Hindrer at siden ruller eller zoomer mens man tegner. Noen nettlesere overser touch-action på SVG.
+  const hold = (e) => { if (e.target.closest?.('#draw')) e.preventDefault(); };
+  for (const type of ['touchstart', 'touchmove', 'gesturestart']) app.addEventListener(type, hold, { passive: false });
+
   app.addEventListener('pointerdown', (e) => {
     const svg = e.target.closest?.('#draw');
     if (!svg || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
@@ -218,8 +230,10 @@ export function bindEditor(app, ctx) {
     if (cancelled) { ctx.render(); return; }
 
     if (d.tool === 'draw') {
-      const poly = d.far ? straighten(d.pts) : null;
+      const tol = clamp(14 * (d.slop / 8), 25, 90); // en finger treffer omtrent innenfor 14 piksler
+      let poly = d.far ? straighten(d.pts, tol) : null;
       if (poly) {
+        poly = canonical(fitSheet(alignTo(poly, floorRooms().map((r) => r.poly), tol), ui.sheet));
         const id = 'r' + (state.seq = (state.seq || 100) + 1);
         const base = state.drawn ? state.rooms : [];
         if (!state.drawn) { state.items = {}; state.custom = []; state.furn = []; state.home = ''; state.drawn = true; }
@@ -234,8 +248,10 @@ export function bindEditor(app, ctx) {
         ui.furn = d.furn.id; ui.room = null;
       } else if (d.room) {
         if (d.far && (d.delta[0] || d.delta[1])) {
-          d.room.poly = moved(d.room.poly, d.delta[0], d.delta[1]);
-          for (const f of state.furn) if (f.room === d.room.id) { f.x += d.delta[0]; f.y += d.delta[1]; }
+          const from = d.room.poly[0];
+          d.room.poly = fitSheet(moved(d.room.poly, d.delta[0], d.delta[1]), ui.sheet);
+          const dx = d.room.poly[0][0] - from[0], dy = d.room.poly[0][1] - from[1];
+          for (const f of state.furn) if (f.room === d.room.id) { f.x += dx; f.y += dy; }
         }
         ui.room = d.room.id; ui.furn = null;
       } else { ui.room = null; ui.furn = null; }
