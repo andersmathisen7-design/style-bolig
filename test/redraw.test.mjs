@@ -33,3 +33,13 @@ test('en tegning laget av appen huskes som det etter lagring', () => {
   assert.equal(normalize(JSON.parse(JSON.stringify(s))).auto, true);
   assert.equal(normalize(JSON.parse(JSON.stringify({ ...s, auto: undefined }))).auto, undefined);
 });
+
+test('en strek på tomt ark gjør arket til boligen, så streken kan dele den', async () => {
+  const { sheetOutline } = await import('../js/editor.js');
+  // loddrett strek fra kant til kant: hele arket
+  assert.deepEqual(sheetOutline([[480, 0], [480, 1000]], 1000), [[50, 50], [950, 50], [950, 950], [50, 950]]);
+  // vannrett strek fra 2 til 8 meter: boligen er så bred som streken, og hele arket på tvers
+  assert.deepEqual(sheetOutline([[200, 500], [800, 500]], 1000), [[200, 50], [800, 50], [800, 950], [200, 950]]);
+  // for kort strek: hele arket
+  assert.deepEqual(sheetOutline([[450, 500], [550, 500]], 1500), [[80, 80], [1420, 80], [1420, 1420], [80, 1420]]);
+});

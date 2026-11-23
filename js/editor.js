@@ -59,7 +59,7 @@ const refHost = (rooms, o, prefer) => { const hs = hostsOf(rooms, o); return hs.
 // Neste steg i tegningen. Gir [steg, tekst]; steg 0 betyr at alt det viktigste er gjort.
 function guide(state, ui, rooms) {
   const left = rooms.filter((r) => r.guess).length;
-  if (!rooms.length) return [1, 'Tegn en runde rundt hele boligen. Den trenger ikke være firkantet.'];
+  if (!rooms.length) return [1, 'Dra en strek tvers over arket for å dele det i to rom, eller tegn en runde rundt boligen.'];
   if (rooms.length === 1) return [2, 'Dra en rett strek tvers over boligen for å dele den i rom.'];
   if (left) return [3, `Trykk på hvert rom og velg hva det er. ${left === 1 ? 'Ett rom' : `${left} rom`} igjen.`];
   if (!(state.openings || []).some((o) => o.floor === ui.floor)) return [4, 'Velg «Dør» eller «Vindu» og trykk på veggen der den står.'];
@@ -273,11 +273,11 @@ export function drawView(state, ui, canUndo) {
     ${TOOLS.map(([id, name]) => `<button class="tool ${ui.tool === id ? 'on' : ''}" data-act="tool" data-v="${id}" aria-pressed="${ui.tool === id}">${name}</button>`).join('')}
   </div>
   <p class="guide" role="status">${step ? `<b>Steg ${step} av 4</b>` : '<b>Ferdig?</b>'} ${text}</p>
+  ${ui.note ? `<p class="status bad" role="status">${esc(ui.note)}</p>` : ''}${ui.info ? `<p class="status" role="status">${esc(ui.info)}</p>` : ''}
   <div class="row undo-row"><button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
     ${rooms.length ? '<button class="btn ghost small" data-act="redraw">Tegn på nytt</button>' : ''}</div>
   ${sheetSvg(state, ui, rooms, 'Tegn omrisset av boligen her')}
   ${planBar(state, ui, rooms)}
-  ${ui.note ? `<p class="status bad" role="status">${esc(ui.note)}</p>` : ''}
   <div class="sheetrow"><span class="plan-sum">${all.length ? `Omtrent ${all.reduce((s, r) => s + r.m2, 0)} m² i ${all.length} rom.` : (state.drawn ? '' : 'Det du tegner, erstatter rommene fra «Velg bolig».')} Store ruter er 1 meter.</span>
     <span class="chips" role="group" aria-label="Arkstørrelse">${SHEETS.map((s) => `<button class="chip mini ${S === s ? 'on' : ''}" data-act="sheet" data-v="${s}" aria-pressed="${S === s}">${s / 100} m</button>`).join('')}</span></div>
   ${rooms.length ? `<div class="chips" role="group" aria-label="Rom på denne etasjen">${rooms.map((r) => `<button class="chip mini ${ui.room === r.id ? 'on' : ''}" data-act="room" data-v="${r.id}" aria-pressed="${ui.room === r.id}">${esc(roomLabel(state.rooms, r))}</button>`).join('')}</div>` : ''}
@@ -383,6 +383,17 @@ export function furnishView(state, ui, canUndo) {
   ${rooms.length ? `<div class="chips" role="group" aria-label="Rom på denne etasjen">${rooms.map((r) => `<button class="chip mini ${cur?.id === r.id ? 'on' : ''}" data-act="room" data-v="${r.id}" aria-pressed="${cur?.id === r.id}">${esc(roomLabel(state.rooms, r))}</button>`).join('')}</div>` : ''}
   ${furnPanel(state, ui)}
   ${cur ? placePanel(state, ui, cur) : ''}`;
+}
+
+// Omrisset når man deler et tomt ark: hele arket på tvers av streken, og så langt streken går langs den.
+export function sheetOutline(line, sheet) {
+  const pad = Math.round(sheet * 0.05 / 10) * 10, lo = pad, hi = sheet - pad;
+  const xs = line.map((p) => p[0]), ys = line.map((p) => p[1]);
+  const span = (a, b) => { const p = clamp(Math.round(a / 10) * 10, lo, hi), q = clamp(Math.round(b / 10) * 10, lo, hi); return q - p >= 200 ? [p, q] : [lo, hi]; };
+  const tall = Math.max(...ys) - Math.min(...ys) >= Math.max(...xs) - Math.min(...xs);
+  const [x0, x1] = tall ? [lo, hi] : span(Math.min(...xs), Math.max(...xs));
+  const [y0, y1] = tall ? span(Math.min(...ys), Math.max(...ys)) : [lo, hi];
+  return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
 }
 
 // ---------- Hendelser ----------
@@ -515,9 +526,14 @@ export function bindEditor(app, ctx) {
   // Deler rommene streken går gjennom. En rett strek deler alle rom den krysser, langs samme linje, så veggen
   // blir sammenhengende. I hvert rom beholder den største delen navn, type og valg på lista.
   const splitWith = (state, raw, tol) => {
-    const rooms = floorRooms();
-    let line = rooms.length ? straightenLine(raw, tol) : null;
-    if (!line) { ui.note = rooms.length ? 'Dra streken tvers over et rom, fra vegg til vegg.' : 'Tegn først en runde rundt hele boligen.'; return; }
+    let rooms = floorRooms();
+    let line = straightenLine(raw, tol);
+    if (!line) { ui.note = 'Dra streken tvers over et rom, fra vegg til vegg.'; return; }
+    if (!rooms.length) { // tomt ark: arket blir boligen, og streken deler den
+      addPoly(state, sheetOutline(line, ui.sheet));
+      ui.info = 'Boligen er satt til størrelsen på arket. Trykk på en vegg for å sette riktig mål, eller trykk «Tegn på nytt» og tegn en runde rundt den.';
+      rooms = floorRooms();
+    }
     // Legg streken på linje med hjørner som ligger like ved, for eksempel knekken i et vinkelrom.
     const corners = rooms.flatMap((r) => r.poly);
     const near = (v, k2) => { let best = v, dmin = tol * 0.6; for (const q of corners) if (Math.abs(q[k2] - v) < dmin) { dmin = Math.abs(q[k2] - v); best = q[k2]; } return best; };
@@ -558,6 +574,9 @@ export function bindEditor(app, ctx) {
     if (overlaps(others)) {
       ui.note = 'Det ligger et rom der fra før. Dra en rett strek tvers over et rom for å dele det, eller trykk «Tegn på nytt».'; return;
     }
+    addPoly(state, poly);
+  };
+  const addPoly = (state, poly) => {
     const id = 'r' + (state.seq = (state.seq || 100) + 1);
     const base = state.drawn ? state.rooms : [];
     if (!state.drawn) { state.items = {}; state.custom = []; state.furn = []; state.openings = []; state.home = ''; state.drawn = true; }
