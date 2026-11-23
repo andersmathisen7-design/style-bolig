@@ -2,7 +2,7 @@
 // brukeren åpner enten en ferdig utfylt sak på GitHub, eller kopierer teksten og limer den inn et sted.
 import { instances } from './logic.js';
 
-export const VERSION = '2026-11-23c';
+export const VERSION = '2026-11-23d';
 export const REPO = 'andersmathisen7-design/style-bolig';
 // Skru på når repoet over er åpent og har «Issues» slått på. Til da vises bare «Kopier teksten»,
 // slik at ingen sendes til en side som ikke finnes.
