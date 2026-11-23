@@ -465,7 +465,7 @@ function shareUrl() {
 
 // «Plasser» trenger en tegning. Finnes det ingen, lages den av rommene fra «Velg bolig».
 function ensureDrawing() {
-  if (!state.drawn && state.rooms.length) { state.rooms = withDrawing(state.rooms); state.drawn = true; }
+  if (!state.drawn && state.rooms.length) { state.rooms = withDrawing(state.rooms); state.drawn = true; state.auto = true; } // laget av appen: et omriss på «Bolig» erstatter det
   ui.sheet = sheetFor(state, ui.sheet);
   if (!state.rooms.some((r) => r.poly && (r.floor || 0) === ui.floor)) ui.floor = 0;
 }

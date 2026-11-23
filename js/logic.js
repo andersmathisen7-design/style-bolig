@@ -529,6 +529,7 @@ export function normalize(s) {
     return { ...room, poly, doors, fixed: [...new Set(fixed)], floor: Number.isInteger(r.floor) && r.floor >= 0 && r.floor < nFloors ? r.floor : 0, ...(r.guess === true ? { guess: true } : {}) };
   });
   out.drawn = out.rooms.some((r) => r.poly);
+  if (out.drawn && s.auto === true) out.auto = true; // tegningen er laget av appen, ikke tegnet av brukeren
   // Dører og vinduer hører til veggen, ikke rommet. Eldre tegninger hadde dem lagret i hvert rom og gjøres om her.
   out.openings = Array.isArray(s.openings) && (s.openings.length || !out.rooms.some((r) => r.doors?.length))
     ? s.openings.filter((o) => o && /^o\d{1,6}$/.test(o.id) && Number.isInteger(o.floor) && o.floor >= 0 && o.floor < nFloors && o.w >= 40 && o.w <= 300 && pt([o.x, o.y]))

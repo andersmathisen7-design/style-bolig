@@ -42,6 +42,17 @@ function guessType(rooms, m2) {
 }
 
 const onFloor = (state, floor) => state.rooms.filter((r) => r.poly && (r.floor || 0) === floor);
+
+// Tar bort alt som er tegnet på én etasje: rom, møbler, dører og vinduer. Rommene på de andre etasjene står.
+export function clearFloor(state, floor) {
+  const gone = new Set(onFloor(state, floor).map((r) => r.id));
+  state.rooms = state.rooms.filter((r) => !gone.has(r.id));
+  state.furn = (state.furn || []).filter((f) => !gone.has(f.room));
+  state.custom = (state.custom || []).filter((c) => !gone.has(c.room));
+  state.openings = (state.openings || []).filter((o) => o.floor !== floor);
+  state.drawn = state.rooms.some((r) => r.poly);
+  delete state.auto;
+}
 // Veggen en dør eller et vindu måles langs: helst en vegg i det valgte rommet.
 const refHost = (rooms, o, prefer) => { const hs = hostsOf(rooms, o); return hs.find((h) => h.id === prefer) || hs[0] || null; };
 
@@ -262,7 +273,8 @@ export function drawView(state, ui, canUndo) {
     ${TOOLS.map(([id, name]) => `<button class="tool ${ui.tool === id ? 'on' : ''}" data-act="tool" data-v="${id}" aria-pressed="${ui.tool === id}">${name}</button>`).join('')}
   </div>
   <p class="guide" role="status">${step ? `<b>Steg ${step} av 4</b>` : '<b>Ferdig?</b>'} ${text}</p>
-  <div class="row undo-row"><button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button></div>
+  <div class="row undo-row"><button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
+    ${rooms.length ? '<button class="btn ghost small" data-act="redraw">Tegn på nytt</button>' : ''}</div>
   ${sheetSvg(state, ui, rooms, 'Tegn omrisset av boligen her')}
   ${planBar(state, ui, rooms)}
   ${ui.note ? `<p class="status bad" role="status">${esc(ui.note)}</p>` : ''}
@@ -519,6 +531,7 @@ export function bindEditor(app, ctx) {
       if (parts) cuts = [{ room, parts: parts.map(canonical), inside: 1 }];
     }
     if (!cuts.length) { ui.note = 'Streken delte ikke noe rom. Dra den tvers over, fra vegg til vegg.'; return; }
+    delete state.auto; // man har begynt å tegne videre på rommene appen laget
     let chosen = null, most = -1;
     for (const c of cuts) {
       const [A, B] = c.parts, big = area(A) >= area(B) ? A : B, small = big === A ? B : A;
@@ -538,10 +551,12 @@ export function bindEditor(app, ctx) {
   const addRoom = (state, raw, tol) => {
     let poly = straighten(raw, tol);
     if (!poly) { ui.note = 'Det ble for lite til å være et rom. Tegn en større runde, minst én meter hver vei.'; return; }
-    const others = state.drawn ? floorRooms().map((r) => r.poly) : [];
+    let others = state.drawn ? floorRooms().map((r) => r.poly) : [];
+    const overlaps = (polys) => coverage([...polys, poly]).overlap - coverage(polys).overlap > area(poly) * 0.3;
+    if (overlaps(others) && state.auto) { clearFloor(state, ui.floor); others = state.drawn ? floorRooms().map((r) => r.poly) : []; } // rommene appen laget selv, byttes ut med omrisset
     poly = canonical(fitSheet(alignTo(poly, others, tol), ui.sheet));
-    if (coverage([...others, poly]).overlap - coverage(others).overlap > area(poly) * 0.3) {
-      ui.note = 'Det ligger et rom der fra før. Dra en rett strek tvers over rommet for å dele det.'; return;
+    if (overlaps(others)) {
+      ui.note = 'Det ligger et rom der fra før. Dra en rett strek tvers over et rom for å dele det, eller trykk «Tegn på nytt».'; return;
     }
     const id = 'r' + (state.seq = (state.seq || 100) + 1);
     const base = state.drawn ? state.rooms : [];
@@ -595,7 +610,7 @@ export function bindEditor(app, ctx) {
       if (d.plan) { applyPlan(state, ui.floor, d.plan, keepInside); settle(state, ui); } else ui.note = d.msg || '';
       select(room?.id ?? null, d.shape?.kind === 'wall' && room?.poly.length === n ? d.shape.i : null);
     } else if (!d.far) tap(state, d);
-    else if (d.tool === 'move') { select(); ui.note = 'Nå er «Flytt» valgt. Trykk «Tegn og del» over tegningen for å tegne.'; }
+    else if (d.tool !== 'draw') { select(); ui.note = `Nå er «${TOOLS.find((t) => t[0] === d.tool)?.[1]}» valgt. Trykk «Tegn og del» over tegningen for å tegne.`; }
     ctx.save(); ctx.render();
   };
   window.addEventListener('pointerup', (e) => { if (drag && e.pointerId === drag.id) finish(false); });
@@ -641,6 +656,8 @@ export function editorActions(ctx) {
   return {
     actions: {
       tool(v) { if (HINTS[v]) { ui.tool = v; ui.note = ''; ctx.later(); } },
+      // Begynn på nytt på denne etasjen. «Angre» henter tegningen tilbake.
+      redraw() { clearFloor(ctx.state(), ui.floor); ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.tool = 'draw'; ui.note = ''; ctx.commit(); },
       sheet(v) { if (SHEETS.includes(Number(v))) { ui.sheet = Number(v); ctx.later(); } },
       floor(v) { ui.floor = clamp(Number(v) || 0, 0, ctx.state().floors.length - 1); ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ctx.later(); },
       addfloor() { const s = ctx.state(); if (s.floors.length < 5) { s.floors = [...s.floors, `${s.floors.length + 1}. etasje`]; ui.floor = s.floors.length - 1; ui.room = null; ui.furn = null; ctx.commit(); } },
