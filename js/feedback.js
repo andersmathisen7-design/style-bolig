@@ -2,11 +2,11 @@
 // brukeren åpner enten en ferdig utfylt sak på GitHub, eller kopierer teksten og limer den inn et sted.
 import { instances } from './logic.js';
 
-export const VERSION = '2026-11-22';
+export const VERSION = '2026-11-23';
 export const REPO = 'andersmathisen7-design/style-bolig';
 // Skru på når repoet over er åpent og har «Issues» slått på. Til da vises bare «Kopier teksten»,
 // slik at ingen sendes til en side som ikke finnes.
-export const ISSUES = false;
+export const ISSUES = true;
 export const MAX_TEXT = 1000;  // tegn per felt
 export const MAX_URL = 6000;   // lengre lenker enn dette kan bli avvist
 
