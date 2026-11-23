@@ -123,11 +123,10 @@ const TRUNC = {
 };
 
 export function feedbackView(state, env = {}) {
-  const opener = (kind) => `<button class="btn ghost small" id="fb-open-${kind}" data-fb="open" data-k="${kind}" aria-expanded="${fb.open === kind}" aria-controls="fb-form">${KINDS[kind].open}</button>`;
+  const opener = (kind) => `<button class="link" id="fb-open-${kind}" data-fb="open" data-k="${kind}" aria-expanded="${fb.open === kind}" aria-controls="fb-form">${KINDS[kind].open}</button>`;
   return `
   <section class="fb" aria-labelledby="fb-h">
-    <h2 id="fb-h">Forslag og feil</h2>
-    <p class="hint">Savner du noe, eller er det noe som ikke virker? Si fra her.</p>
+    <h2 id="fb-h" class="vh">Forslag og feil</h2>
     <div class="row">${opener('forslag')}${opener('feil')}</div>
     ${fb.open ? form(state, env) : ''}
   </section>`;

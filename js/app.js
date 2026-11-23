@@ -6,7 +6,7 @@ import {
   prioOf, kwOf, comfortFor, footprint, withDrawing, placedWall,
 } from './logic.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
-import { drawView, furnishView, roomPanel, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
+import { drawView, furnishView, bindEditor, editorActions, isDragging, sheetFor } from './editor.js';
 import { syncDoors } from './walls.js';
 import { syncFurniture } from './arrange.js';
 import { areaField, areaActions, bindArea } from './area.js';
@@ -27,6 +27,9 @@ const ui = {
   open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, style: null,
   tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: sheetFor(state, window.innerWidth < 600 ? 1000 : 1500), furn: null, wall: null, opening: null, note: '', info: '', write: false, furnish: false,
   cmt: null, // tingen på «Ting» som har kommentarfeltet åpent
+  more: null, // rommet på «Ting» som viser alt som kan legges til
+  tune: false, // «Tilpass søket» er åpent på «Finn»
+  full: false, // tegningen fyller skjermen
 };
 let wantFocus = ''; // feltet som skal få fokus etter neste tegning av siden
 
@@ -86,16 +89,14 @@ function viewHome() {
   const sel = state.rooms.find((r) => r.id === ui.room);
   return `
   <h1>Hva skal innredes?</h1>
-  <p class="lead">Si hva du har og hva du liker, så får du en liste med ferdige søk på Finn. Start med boligen: velg en som ligner, eller tegn den selv.</p>
   <div class="tabs" role="group" aria-label="Hvordan vil du sette opp boligen?">
     <button class="tab ${ui.tab === 'pick' ? 'on' : ''}" data-act="tab" data-v="pick" aria-pressed="${ui.tab === 'pick'}">Velg bolig</button>
     <button class="tab ${ui.tab === 'draw' ? 'on' : ''}" data-act="tab" data-v="draw" aria-pressed="${ui.tab === 'draw'}">Tegn selv</button>
   </div>
   ${ui.tab === 'draw' ? drawView(state, ui, undoStack.length > 0) : pickView()}
-  ${sel ? (sel.poly ? roomPanel(state, ui, sel) : roomEditor(sel)) : ''}
+  ${sel && !sel.poly ? roomEditor(sel) : ''}
   ${ui.tab === 'pick' ? `<div class="field">
-    <label for="addroom">Mangler det et rom?</label>
-    <select id="addroom" data-ch="addroom"><option value="">Legg til rom</option>
+    <select id="addroom" data-ch="addroom" aria-label="Legg til rom"><option value="">+ Legg til rom</option>
       ${Object.entries(ROOMS).map(([id, r]) => `<option value="${id}">${r.name}</option>`).join('')}</select>
   </div>` : ''}
   ${areaField(state)}`;
@@ -114,7 +115,7 @@ function pickView() {
         <span class="room-name">${esc(roomLabel(state.rooms, r))}</span><span class="room-m2">${roomM2(r)} m²</span></button>`;
     }).join('')}
   </div>
-  <p class="plan-sum">Omtrent ${totalM2(state.rooms)} m² fordelt på ${state.rooms.length} rom. Trykk på et rom for å endre størrelsen. Tegningen viser størrelser, ikke hvordan rommene ligger.</p>
+  <p class="plan-sum">${totalM2(state.rooms)} m² · ${state.rooms.length} rom. Trykk på et rom for å endre.</p>
   ${uploadPanel()}`;
 }
 
@@ -128,9 +129,7 @@ function uploadPanel() {
   if (!ai.images) return '';
   return `
   <section class="panel">
-    <h2>Har du en plantegning?</h2>
-    <p>Last opp et bilde, så leser Claude av rom og kvadratmeter. Et skjermbilde fra boligannonsen holder.</p>
-    <label class="btn ghost small filebtn ${ui.busy ? 'off' : ''}">Velg bilde av plantegning
+    <label class="btn ghost small filebtn ${ui.busy ? 'off' : ''}">Last opp plantegning
       <input class="vh" type="file" id="planfile" accept="${esc(ai.types)}" data-ch="planfile" ${ui.busy ? 'disabled' : ''}></label>
     ${status('plan')}
   </section>`;
@@ -144,10 +143,9 @@ function roomEditor(r) {
       ${['S', 'M', 'L'].map((s) => `<button class="chip ${r.size === s && !r.m2 ? 'on' : ''}" data-act="size" data-v="${s}">${SIZE_NAME[s]}<small>${sizeRange(r.type, s)}</small></button>`).join('')}
     </div>
     <div class="pair">
-      <div class="field"><label for="m2">Eller skriv inn m²</label><input id="m2" inputmode="decimal" data-ch="m2" value="${r.m2 ?? ''}" placeholder="f.eks. 18"></div>
+      <div class="field"><label for="m2">m²</label><input id="m2" inputmode="decimal" data-ch="m2" value="${r.m2 ?? ''}" placeholder="valgfritt"></div>
       <div class="field"><label for="wall">Lengste ledige vegg, cm</label><input id="wall" inputmode="numeric" data-ch="wall" value="${r.wall ?? ''}" placeholder="valgfritt"></div>
     </div>
-    <p class="hint">Veggmålet brukes til å regne ut hvor bred sofa, benk eller skap du har plass til.</p>
     <button class="link danger" data-act="delroom">Fjern rommet</button>
   </section>`;
 }
@@ -161,7 +159,6 @@ function viewStyle() {
   if (open) return styleDetail(open);
   return `
   <h1>Hvilken stil liker du?</h1>
-  <p class="lead">Trykk på en stil for å se retningene innenfor den og velge den som ligner mest på deg.</p>
   <div class="styles">
     ${STYLES.map((s) => `<button class="style ${state.style === s.id ? 'on' : ''}" data-act="styleopen" data-v="${s.id}">
       <img src="${photo(s.id, state.style === s.id && Number.isInteger(state.sub) ? state.sub + 1 : 1, !(state.style === s.id && state.sub))}" alt="" width="480" height="360" loading="lazy">
@@ -175,19 +172,18 @@ function styleDetail(s) {
   return `
   <button class="link back" data-act="styleopen" data-v="">Alle stiler</button>
   <h1>${s.name}</h1>
-  <p class="lead">${s.desc} Velg retningen som passer best, eller ta hele stilen.</p>
+  <p class="lead">${s.desc}</p>
   <ul class="traits">${s.traits.map((t) => `<li>${t}</li>`).join('')}</ul>
   <div class="gallery">
     ${s.photos.map((p, i) => { const on = mine && state.sub === i; const words = [...new Set([...p.wood, ...p.soft])]; return `<figure class="${on ? 'on' : ''}">
       <img src="${photo(s.id, i + 1)}" alt="${esc(p.alt)}" width="900" height="675" ${i ? 'loading="lazy"' : ''}>
       <figcaption><h2>${esc(p.name)}${on ? '<span class="picked">Valgt</span>' : ''}</h2>
-        <p>${esc(p.alt)}. Vi søker gjerne etter ${esc(words.join(', '))}.</p>
-        <button class="btn small ${on ? 'ghost' : ''}" data-act="style" data-v="${s.id}" data-i="${i}">${on ? 'Dette er retningen din' : `Velg ${esc(p.name.toLowerCase())}`}</button>
+        <p>${esc(words.join(', '))}</p>
+        <button class="btn small ${on ? 'ghost' : ''}" data-act="style" data-v="${s.id}" data-i="${i}">${on ? 'Valgt' : 'Velg'}</button>
         <a class="credit" href="${esc(p.url)}" target="_blank" rel="noopener">Foto: ${esc(p.by)}, Unsplash</a></figcaption></figure>`; }).join('')}
   </div>
   ${styleAdviceBlock(state, s.id)}
-  <div class="row"><button class="btn ghost" data-act="style" data-v="${s.id}">${mine && state.sub === null ? 'Du har valgt hele stilen' : `Velg hele stilen ${esc(s.name.toLowerCase())}`}</button>
-    <button class="link" data-act="styleopen" data-v="">Se de andre stilene</button></div>`;
+  <div class="row"><button class="btn ghost" data-act="style" data-v="${s.id}">${mine && state.sub === null ? 'Hele stilen er valgt' : 'Velg hele stilen'}</button></div>`;
 }
 
 // Variantene av en ting som knapper med korte navn: «3-seter, ca. 200–230 cm bred» blir «3-seter».
@@ -197,16 +193,15 @@ function variantChips(inst) {
 
 const CMT_HELP = 'f.eks. ikke rundt, gjerne eik, maks 180 cm';
 
+const writeLink = () => `<button class="link" data-act="write" aria-expanded="${ui.write}">${ui.write ? 'Skjul' : 'Skriv det heller'}</button>`;
 // Valgfri hjelp på «Ting»: skriv med egne ord, så huker vi av.
 function writeHelp() {
   const got = Object.entries(state.autoWish);
   const all = instances(state);
   return `
   <div class="write">
-    <button class="link" data-act="write" aria-expanded="${ui.write}">${ui.write ? 'Skjul skrivefeltet' : 'Vil du heller skrive det?'}</button>
     ${ui.write ? `<div class="field">
-      <label for="life">Beskriv hva du har og hva du vil ha, så huker vi av for deg</label>
-      <textarea id="life" rows="3" data-ch="life" placeholder="F.eks. «Jeg har seng og sofa fra før. Vil ikke ha rundt bord, og gjerne en grønn lenestol.»">${esc(state.lifeText)}</textarea>
+      <textarea id="life" rows="3" data-ch="life" aria-label="Beskriv hva du har og hva du vil ha" placeholder="F.eks. «Jeg har seng og sofa fra før. Vil ikke ha rundt bord, og gjerne en grønn lenestol.»">${esc(state.lifeText)}</textarea>
       <button class="btn small" data-act="read" ${ui.busy ? 'disabled' : ''}>Les teksten</button>
       ${status('life')}
     </div>
@@ -217,9 +212,7 @@ function writeHelp() {
         const parts = [w.search.length ? `søker etter ${w.search.join(', ')}` : '', w.avoid.length ? `unngår ${w.avoid.join(', ')}` : '', w.notes.length ? `ser etter ${w.notes.join(', ')}` : ''].filter(Boolean);
         return `<li><strong>${esc(ITEMS[itemId].name)}:</strong> ${esc(parts.join('. '))}. <button class="link" data-act="dropWish" data-v="${itemId}">Fjern</button></li>`;
       }).join('')}</ul>` : ''}
-    <p class="hint">${ai.ready
-      ? 'Claude leser teksten når du trykker på knappen. Det bruker litt av Claude-kvoten din.'
-      : 'Teksten leses av enkle regler i nettleseren din, ikke av en AI. Ord vi ikke kjenner igjen, hopper vi over.'}</p>` : ''}
+    ${ai.ready ? '<p class="hint">Bruker litt av Claude-kvoten din.</p>' : ''}` : ''}
   </div>`;
 }
 
@@ -231,12 +224,12 @@ function thingRow(inst) {
       <button class="check ${inst.st === 'bought' ? 'done' : ''}" data-act="want" data-v="${k}" aria-pressed="${inst.st !== 'have'}" aria-label="${esc(inst.item.name)} er med på lista"></button>
       <span class="item-main"><span class="item-name">${esc(inst.item.name)}</span>
         ${inst.st === 'bought' ? '<span class="item-size">Kjøpt</span>' : inst.st === 'have' ? '<span class="item-size">Ikke med</span>' : ''}</span>
+      ${on && !inst.saved.wish && ui.cmt !== k ? `<button class="cmtbtn" data-act="cmt" data-v="${k}" aria-label="Skriv en kommentar til ${esc(inst.item.name)}" title="Kommentar"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>` : '<span></span>'}
       ${on ? `<div class="stepper mini" role="group" aria-label="Antall ${esc(inst.item.name)}"><button data-act="qty" data-v="${k}" data-d="-1" aria-label="Færre" ${inst.qty <= 1 ? 'disabled' : ''}>−</button><span aria-live="polite">${inst.qty}</span><button data-act="qty" data-v="${k}" data-d="1" aria-label="Flere">+</button></div>` : ''}
     </div>
     ${on && inst.item.size ? `<div class="chips thing-size" role="group" aria-label="${esc(inst.item.pick || 'Størrelse')} på ${esc(inst.item.name)}">${variantChips(inst)}</div>` : ''}
-    ${!on ? '' : inst.saved.wish || ui.cmt === k
-      ? `<div class="field thing-cmt"><label for="cmt-${k}">Kommentar</label><input id="cmt-${k}" data-ch="wish" data-v="${k}" maxlength="300" value="${esc(inst.saved.wish || '')}" placeholder="${CMT_HELP}"></div>`
-      : `<button class="link thing-cmt-link" data-act="cmt" data-v="${k}" aria-label="Skriv en kommentar til ${esc(inst.item.name)}">Kommentar</button>`}
+    ${on && (inst.saved.wish || ui.cmt === k)
+      ? `<div class="field thing-cmt"><input id="cmt-${k}" data-ch="wish" data-v="${k}" maxlength="300" value="${esc(inst.saved.wish || '')}" aria-label="Kommentar til ${esc(inst.item.name)}" placeholder="Kommentar, ${CMT_HELP}"></div>` : ''}
   </li>`;
 }
 
@@ -245,13 +238,13 @@ function viewThings() {
   const n = all.filter((i) => i.st === 'need').length;
   return `
   <h1>Hva vil du ha?</h1>
-  <p class="lead">Haken betyr at tingen er med. Vi har huket av det de fleste trenger, så fjern haken på det du har fra før. Velg antall og type der det passer. Under «Kommentar» kan du skrive hva du ser etter, så tar vi det med i søket.</p>
-  <div class="row bulk"><button class="link" data-act="noneon">Fjern alle haker</button><button class="link" data-act="usualon">Huk av det vanlige</button></div>
-  <div class="q"><span class="q-label">Hva er viktigst når du velger?</span>
+  <p class="lead">Fjern haken på det du har fra før.</p>
+  <div class="row bulk"><button class="link" data-act="noneon">Fjern alle</button><button class="link" data-act="usualon">Det vanlige</button>${writeLink()}</div>
+  <div class="q"><span class="q-label">Viktigst</span>
     <div class="chips" role="group" aria-label="Viktigst">
       ${PRIOS.map(([id, name]) => `<button class="chip ${state.prio === id ? 'on' : ''}" data-act="prio" data-v="${id}" aria-pressed="${state.prio === id}">${name}</button>`).join('')}
     </div>
-    <p class="hint">${state.prio ? esc(PRIOS.find((x) => x[0] === state.prio)[2]) + ' Du kan velge noe annet for enkeltting senere.' : 'Valgfritt. Du kan også velge dette for hver enkelt ting senere.'}</p></div>
+    </div>
   ${writeHelp()}
   ${state.rooms.map((room) => {
     const mine = all.filter((i) => i.room.id === room.id);
@@ -260,23 +253,24 @@ function viewThings() {
     return `<section class="roomlist">
       <h2>${esc(roomLabel(state.rooms, room))}<small>${roomM2(room)} m²${state.floors.length > 1 && room.poly ? `, ${esc(state.floors[room.floor || 0])}` : ''}</small></h2>
       <ul class="items">${on.map(thingRow).join('')}</ul>
-      ${off.length ? `<div class="more">${GROUPS.map(([gid, gname]) => {
+      ${off.length && ui.more !== room.id ? `<button class="link morebtn" data-act="more" data-v="${room.id}">+ Legg til mer</button>` : ''}
+      ${off.length && ui.more === room.id ? `<div class="more">${GROUPS.map(([gid, gname]) => {
         const g = off.filter((i) => (i.item.group || 'mobler') === gid);
         return g.length ? `<span class="q-label">${gname}</span><div class="chips">${g.map((i) => `<button class="chip mini add" data-act="status" data-v="${i.key}" data-st="need">+ ${esc(i.item.name)}</button>`).join('')}</div>` : '';
-      }).join('')}</div>` : ''}
-      <div class="own"><div class="field"><label for="own-${room.id}">Noe annet? Beskriv hva du ser etter</label>
-        <input id="own-${room.id}" data-enter="own" data-v="${room.id}" maxlength="60" placeholder="f.eks. grønn fløyelspuff"></div>
-        <button class="btn ghost small" data-act="own" data-v="${room.id}">Legg til</button></div>
+      }).join('')}
+      <div class="own"><div class="field">
+        <input id="own-${room.id}" data-enter="own" data-v="${room.id}" maxlength="60" aria-label="Noe annet? Beskriv hva du ser etter" placeholder="Noe annet, f.eks. grønn fløyelspuff"></div>
+        <button class="btn ghost small" data-act="own" data-v="${room.id}">Legg til</button></div></div>` : ''}
     </section>`;
   }).join('')}
-  <p class="plan-sum">${n} ting er med på lista.</p>`;
+  <p class="plan-sum">${n} ting er med.</p>`;
 }
 
 // ----- steg 4: Plasser -----
 function viewPlace() {
   return `
   <h1>Hvor skal tingene stå?</h1>
-  <p class="lead">Sett ut det viktigste omtrent der det skal stå. Da vet vi hvilken vegg sofaen har og hvor bred den kan være. Steget er valgfritt, så du kan gå rett videre.</p>
+  <p class="lead">Valgfritt. Møbler inntil en vegg får riktig maksbredde i søket.</p>
   ${furnishView(state, ui, undoStack.length > 0)}`;
 }
 
@@ -288,10 +282,10 @@ function budgetPanel(sum) {
       ${LEVELS.map((l, i) => `<button class="level ${state.level === l.id ? 'on' : ''}" data-act="level" data-v="${l.id}">
         <span class="level-name">${l.name}</span><span class="level-sum">ca. ${kr([sum.low, sum.mid, sum.high][i])}</span><span class="level-hint">${l.hint}</span></button>`).join('')}
     </div>
-    <p class="hint">Summene gjelder det som står igjen på lista. Alt nytt i rimeligste variant: ca. ${kr(sum.newSum)}.</p>
+    <p class="hint">Alt nytt: ca. ${kr(sum.newSum)}.</p>
     <div class="field">
-      <label for="total">Totalbudsjett, hvis du har et</label>
-      <input id="total" inputmode="numeric" data-ch="total" value="${state.total ?? ''}" placeholder="valgfritt, i kroner">
+      <label for="total">Totalbudsjett, kr</label>
+      <input id="total" inputmode="numeric" data-ch="total" value="${state.total ?? ''}" placeholder="valgfritt">
     </div>
     ${state.total ? `<p class="budget-line">Brukt ${kr(sum.paid)} av ${kr(state.total)}. Igjen: <strong>${kr(sum.left)}</strong>.</p>` : (sum.paid ? `<p class="budget-line">Brukt så langt: <strong>${kr(sum.paid)}</strong>.</p>` : '')}
     ${sum.over > 0 ? `<div class="warn"><p>Makspriser på lista er til sammen ${kr(sum.over)} mer enn du har igjen.</p><button class="btn small" data-act="fit">Senk makspriser så det går opp</button></div>` : ''}
@@ -344,33 +338,28 @@ function itemBody(inst, sum) {
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'today'))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Lagt ut i dag</a>
       <a class="btn ghost" href="${esc(finnUrl(inst, state, 'free'))}" target="_blank" rel="noopener">Gis bort</a>
     </div>
-    <p class="hint">Søker etter «${esc(searchText(inst, state))}» ${esc(area)}${max ? `, inntil ${kr(max)}${inst.qty > 1 ? ' per stk' : ''}` : ''}.${inst.qty > 1 ? ` Du skal ha ${inst.qty}. Like møbler selges ofte samlet, så prøv også å legge til «par» eller «2 stk».` : ''}</p>
-    ${broad || alts.length ? `<div class="wider">
-      ${broad ? `<a class="btn ghost small" href="${esc(finnUrl(inst, state, 'all', { broad: true }))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Søk bredere</a>
-      <p class="hint">«Søk på Finn» ser bare i «Møbler og interiør». «Søk bredere»${alts.length ? ' og ordene under' : ''} ser i alle kategorier, i tilfelle annonsen er lagt feil.</p>` : ''}
-      ${alts.length ? `<span class="q-label">Andre ord folk bruker</span>
-      <div class="chips">${alts.map((a) => `<a class="chip mini" href="${esc(a.url)}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">${esc(a.word)}</a>`).join('')}</div>` : ''}
-    </div>` : ''}
+    <p class="hint">«${esc(searchText(inst, state))}» ${esc(area)}${max ? `, inntil ${kr(max)}${inst.qty > 1 ? ' per stk' : ''}` : ''}.</p>
+    ${broad || alts.length ? `<div class="chips" role="group" aria-label="Søk bredere, i alle kategorier">
+      ${broad ? `<a class="chip mini" href="${esc(finnUrl(inst, state, 'all', { broad: true }))}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">Alle kategorier</a>` : ''}
+      ${alts.map((a) => `<a class="chip mini" href="${esc(a.url)}" target="_blank" rel="noopener" data-act="seen" data-v="${k}">${esc(a.word)}</a>`).join('')}</div>` : ''}
+    ${notes.length ? `<p class="look">Se etter selv: ${esc(notes.join(', '))}.</p>` : ''}
     ${slot === 'mid' ? fresh : ''}
-    ${prio === 'pris' ? '<p class="tip">Pris er viktigst: sjekk «Gis bort» først.</p>' : ''}
-    ${comfort ? `<p class="tip">Komfort er viktigst: ${esc(comfort.tip)}</p>` : ''}
-
+    ${comfort ? `<p class="tip">${esc(comfort.tip)}</p>` : ''}
+    <button class="link" data-act="tune" aria-expanded="${ui.tune}">${ui.tune ? 'Skjul' : 'Tilpass søket'}</button>
+    ${ui.tune ? `
     <div class="twocol">
       <div class="q"><span class="q-label">Antall</span>
         <div class="stepper"><button data-act="qty" data-v="${k}" data-d="-1" aria-label="Færre" ${inst.qty <= 1 ? 'disabled' : ''}>−</button><span aria-live="polite">${inst.qty}</span><button data-act="qty" data-v="${k}" data-d="1" aria-label="Flere">+</button></div></div>
       <div class="field"><label for="maxw-${k}">Maks bredde, cm</label><input id="maxw-${k}" inputmode="numeric" data-ch="maxw" data-v="${k}" value="${inst.saved.maxw ?? ''}" placeholder="valgfritt"></div>
     </div>
     ${inst.item.size ? `<div class="q"><span class="q-label">${esc(inst.item.pick || 'Størrelse')}</span><div class="chips">${variantChips(inst)}</div>
-      <p class="hint">${esc(inst.v.label)}.${inst.saved.size ? '' : ' Foreslått ut fra størrelsen på rommet.'}</p></div>` : ''}
+</div>` : ''}
     ${canPlace ? `<div class="q"><span class="q-label">Plassering</span>
-      <p class="hint">${pw ? `Står mot vegg ${pw.letter} på tegningen.` : isPlaced ? 'Står fritt i rommet på tegningen.' : 'Ikke satt ut ennå. Sett den ut på tegningen, så regner vi ut hvor stor den kan være.'}</p>
-      <button class="btn ghost small" data-act="place" data-v="${k}">${isPlaced ? 'Flytt på tegningen' : 'Bestem hvor den skal stå'}</button></div>` : ''}
+      <button class="btn ghost small" data-act="place" data-v="${k}">${pw ? `Mot vegg ${pw.letter}. Flytt` : isPlaced ? 'Flytt på tegningen' : 'Sett ut på tegningen'}</button></div>` : ''}
     <div class="q"><span class="q-label">Viktigst for denne</span><div class="chips">
       ${PRIOS.map(([id, name]) => `<button class="chip mini ${prio === id ? 'on' : ''}" data-act="iprio" data-v="${k}" data-p="${id}" aria-pressed="${prio === id}">${name}</button>`).join('')}</div></div>
     ${comfort && comfort.words.length ? `<div class="q"><span class="q-label">Søkeord for komfort</span><div class="chips">
       ${comfort.words.map((x) => `<button class="chip mini ${kw.includes(x) ? 'on' : ''}" data-act="kw" data-v="${k}" data-w="${esc(x)}" aria-pressed="${kw.includes(x)}">${esc(x)}</button>`).join('')}</div></div>` : ''}
-    ${notes.length ? `<p class="look">Se etter selv i annonsen: ${esc(notes.join(', '))}.</p>` : ''}
-
     ${words.length ? `<div class="q"><span class="q-label">Søkeord i stilen din</span><div class="chips">
       ${words.map((x) => `<button class="chip mini ${kw.includes(x) ? 'on' : ''}" data-act="kw" data-v="${k}" data-w="${esc(x)}" aria-pressed="${kw.includes(x)}">${esc(x)}</button>`).join('')}</div></div>` : ''}
     ${(inst.item.ask || []).map((qid) => `<div class="q"><span class="q-label">${QUESTIONS[qid].label}</span><div class="chips">
@@ -378,17 +367,16 @@ function itemBody(inst, sum) {
     <div class="field">
       <label for="wish-${k}">Kommentar</label>
       <input id="wish-${k}" data-ch="wish" data-v="${k}" maxlength="300" value="${esc(inst.saved.wish || '')}" placeholder="${CMT_HELP}">
-      <p class="hint">Ord vi kan søke på, legges i søket. Resten står under «Se etter selv».</p>
-    </div>
+    </div>` : ''}
     <div class="pair">
       <div class="field"><label for="max-${k}">Makspris, kr</label><input id="max-${k}" inputmode="numeric" data-ch="max" data-v="${k}" value="${max ?? ''}" placeholder="ingen grense"></div>
       <div class="field end">${max === null
-        ? (inst.item.custom ? '' : `<button class="link" data-act="maxreset" data-v="${k}">Bruk anslaget, ${kr(defaultMax(inst, state))}</button>`)
+        ? (inst.item.custom ? '' : `<button class="link" data-act="maxreset" data-v="${k}">Anslag: ${kr(defaultMax(inst, state))}</button>`)
         : `<button class="link" data-act="nomax" data-v="${k}">Ingen prisgrense</button>`}</div>
     </div>
     ${slot === 'end' ? fresh : ''}
     <div class="done">
-      <div class="field"><label for="paid-${k}">Fant du en? Skriv prisen</label><input id="paid-${k}" inputmode="numeric" placeholder="kr"></div>
+      <div class="field"><label for="paid-${k}">Kjøpt? Pris</label><input id="paid-${k}" inputmode="numeric" placeholder="kr"></div>
       <button class="btn small" data-act="bought" data-v="${k}">Merk som kjøpt</button>
       <button class="link" data-act="status" data-v="${k}" data-st="${!inst.item.custom && ROOMS[inst.room.type].ess.includes(inst.itemId) ? 'have' : 'off'}">Ta bort fra lista</button>
     </div>
@@ -399,10 +387,10 @@ function viewRound(need) {
   return `
   <section class="panel">
     <h2>Dagens runde</h2>
-    <p>Én rask titt om dagen holder. Hver lenke viser det som er lagt ut i dag, i alle kategorier. Vil du ha varsel, trykk «Lagre søk» inne på Finn.</p>
+    <p class="hint">Lagt ut i dag. For varsel: «Lagre søk» inne på Finn.</p>
     <ul class="round">
       ${need.map((i) => `<li><a href="${esc(finnUrl(i, state, 'today', { broad: true }))}" target="_blank" rel="noopener" data-act="seen" data-v="${i.key}">${esc(i.item.name)}<small>${esc(roomLabel(state.rooms, i.room))}</small></a>
-        <span class="seen ${i.saved.seen === today() ? 'yes' : ''}">${i.saved.seen === today() ? 'sett i dag' : 'ikke sett'}</span></li>`).join('')}
+        <span class="seen ${i.saved.seen === today() ? 'yes' : ''}">${i.saved.seen === today() ? 'sett' : ''}</span></li>`).join('')}
     </ul>
     <h2>Pynt lagt ut i dag</h2>
     <div class="chips">${decorLinks(state, 'today').map((d) => `<a class="chip mini" href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.label)}</a>`).join('')}</div>
@@ -420,29 +408,25 @@ function viewList() {
   const finds = currentFinds(need.map((i) => i.key)); // null når daglig sjekk er av eller ikke finnes her
   return `
   <h1>Finn tingene</h1>
-  <p class="lead">${sum.need === 0 ? 'Ingenting igjen å finne.' : `${sum.need} ting å finne.`}${sum.bought ? ` ${sum.bought} er kjøpt.` : ''} Trykk på en ting for å søke på Finn.
-    <button class="link" data-act="step" data-v="2">Endre hva som er med</button></p>
+  <p class="lead">${sum.need === 0 ? 'Ingenting igjen å finne.' : `${sum.need} ting å finne.`}${sum.bought ? ` ${sum.bought} kjøpt.` : ''}</p>
   ${listNote(need)}
   ${style
     ? `<div class="mystyle"><img src="${Number.isInteger(state.sub) ? photo(style.id, state.sub + 1) : photo(style.id, 1, true)}" alt="" width="480" height="360"><p><strong>${style.name}</strong>${subName() ? `<br>${esc(subName())}` : ''}<br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
-    : `<p class="hint">Du har ikke valgt stil ennå. <button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
+    : `<p class="hint"><button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
   ${budgetPanel(sum)}
-  ${need.length ? `<button class="btn wide" data-act="round">Dagens runde: se hva som er nytt på Finn</button>` : ''}
+  ${need.length ? `<button class="btn wide" data-act="round">Dagens runde</button>` : ''}
   ${need.length || funn.on ? checkPanel(funn, finds, osloDay()) : ''}
-  ${rooms.length ? '' : `<section class="panel"><p>Lista er tom. Gå til «Ting» og huk av det du vil ha.</p><button class="btn small" data-act="step" data-v="2">Velg ting</button></section>`}
+  ${rooms.length ? '' : `<section class="panel"><p>Lista er tom.</p><button class="btn small" data-act="step" data-v="2">Velg ting</button></section>`}
   ${rooms.map(({ room, mine }) => `<section class="roomlist">
       <h2>${esc(roomLabel(state.rooms, room))}<small>${roomM2(room)} m²${state.floors.length > 1 && room.poly ? `, ${esc(state.floors[room.floor || 0])}` : ''}</small></h2>
       <ul class="items">${mine.map((i) => itemRow(i, sum, finds)).join('')}</ul>
     </section>`).join('')}
   <section class="roomlist decor">
-    <h2>Pynt som passer stilen</h2>
-    <p>Bilder, veggpynt og småting${style && style.id !== 'fri' ? ` i stilen ${style.name.toLowerCase()}` : ''}. Verdt en titt når du likevel er inne på Finn.</p>
+    <h2>Pynt</h2>
     <div class="chips">${decorLinks(state).map((d) => `<a class="chip mini" href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.label)}</a>`).join('')}</div>
   </section>
   ${tricksPanel(state, ui)}
   <section class="panel">
-    <h2>Ta med deg lista</h2>
-    <p>${funn.on ? 'Lista lagres i denne nettleseren, og hos Claude så lenge daglig sjekk er på.' : 'Lista lagres bare i denne nettleseren.'}${canShare ? ' Med en lenke kan du åpne den på en annen enhet eller sende den til noen.' : ''}</p>
     <div class="row">${canShare ? '<button class="btn ghost small" data-act="share">Kopier lenke til lista</button>' : ''}${ui.sure
       ? `<span class="sure">Slette hele lista?</span><button class="btn small" data-act="reset">Ja, slett</button><button class="link" data-act="unsure">Avbryt</button>`
       : `<button class="link danger" data-act="sure">Start på nytt</button>`}</div>
@@ -478,9 +462,11 @@ function render() {
   const views = [viewHome, viewStyle, viewThings, viewPlace, viewList];
   if (state.step === 1 || state.step === LAST) loadAdvice(editorCtx); // råd om nytt og brukt, og triks
   ui.furnish = state.step === 3; // på «Plasser» kan bare møbler flyttes
+  if (!(state.step === 3 || (state.step === 0 && ui.tab === 'draw'))) ui.full = false; // fullskjerm finnes bare der det er en tegning
+  document.documentElement.classList.toggle('lock', ui.full);
   if (ui.furnish) ui.tool = 'move';
   app.innerHTML = `${header()}<main>${sharedBanner()}${views[state.step]()}</main>${footerNav()}
-    <footer class="foot">${feedbackView(state, fbEnv())}<p>Brukthjem er et uavhengig hjelpemiddel og er ikke tilknyttet FINN.no, IKEA eller de andre butikkene det lenkes til. Prisene er anslag fra november 2026. ${funn.on ? 'Lista lagres i nettleseren din, og hos Claude så lenge daglig sjekk er på.' : ai.ready ? 'Lista lagres bare i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Ingenting sendes fra nettleseren din.'}</p></footer>`;
+    <footer class="foot">${feedbackView(state, fbEnv())}<p>Ikke tilknyttet FINN.no eller butikkene. Prisene er anslag. ${funn.on ? 'Lista lagres i nettleseren din, og hos Claude så lenge daglig sjekk er på.' : ai.ready ? 'Lista lagres i nettleseren din. Tekst og bilder sendes til Claude bare når du ber om det.' : 'Lista lagres bare i nettleseren din.'}</p></footer>`;
   if (wantFocus) { document.getElementById(wantFocus)?.focus(); wantFocus = ''; }
   else if (fid) document.getElementById(fid)?.focus({ preventScroll: true });
   else if (fsig) [...app.querySelectorAll('[data-act]')].find((el) => sig(el) === fsig)?.focus({ preventScroll: true });
@@ -558,12 +544,14 @@ const actions = {
   },
   step(v) {
     state.step = Math.min(LAST, Math.max(0, Number(v) || 0));
-    ui.round = false; ui.room = null; ui.furn = null; ui.style = null; ui.open = null; ui.note = ''; ui.info = '';
+    ui.round = false; ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.style = null; ui.open = null; ui.note = ''; ui.info = ''; ui.full = false;
     if (state.step === 3) ensureDrawing();
     if (state.step === 0) ui.tool = 'draw'; // tilbake på «Bolig» starter man alltid med «Tegn rom»
     commit(); window.scrollTo(0, 0);
   },
   write() { ui.write = !ui.write; later(); },
+  more(v) { ui.more = ui.more === v ? null : v; later(); },
+  tune() { ui.tune = !ui.tune; later(); },
   home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; state.drawn = false; state.furn = []; state.openings = []; state.floors = ['1. etasje']; ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.floor = 0; ui.msg = null; commit(); },
   undo() {
     const json = undoStack.pop();
@@ -725,6 +713,12 @@ bindFeedback(app, { state: () => state, later, env: fbEnv });
 const adv = adviceActions(editorCtx); // nytt eller brukt, og triks
 Object.assign(actions, adv.actions);
 Object.assign(changes, adv.changes);
+
+// Fullskjerm lukkes med Escape, og når nettleseren selv går ut av fullskjerm.
+const closeFull = () => { if (ui.full) { ui.full = false; later(); } };
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFull(); });
+let wasFull = false;
+document.addEventListener('fullscreenchange', () => { if (wasFull && !document.fullscreenElement) closeFull(); wasFull = !!document.fullscreenElement; });
 
 app.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.dataset?.enter) return;

@@ -1,6 +1,5 @@
 // Råd på skjermen: dom per ting (brukt eller nytt), nye alternativer som passer stilen, stilens blanding av
 // brukt og nytt, og triks. Dataene lastes først når et steg som viser dem åpnes.
-import { STYLES } from './data.js';
 import { kr, ikeaUrl, newHint, instances, wordUrl } from './logic.js';
 import { verdictOf, newPicks, styleAdvice, tricksFor, dateText, costText } from './rad.js';
 
@@ -63,17 +62,14 @@ export function newBlock(inst, state, sum) {
     ${picks.off ? '<p class="hint">Ingen av disse er laget for stilen din, men de gjør jobben og synes lite.</p>' : ''}
     <ul class="newlist">${picks.list.map((p) => `<li>${link(p.url, p.name)}<span class="newprice">${kr(p.price)}</span>
       <small>${esc(p.store)}${p.note ? `. ${esc(p.note)}` : ''}${p.unsure ? ' Prisen er ikke sjekket.' : ''}</small></li>`).join('')}</ul>
-    <p class="hint">Priser sett ${dateText(data.nytt.asOf)}. De kan ha endret seg${inst.item.size ? ', og målene kan være andre enn dem du har valgt' : ''}.</p>
+    <p class="hint">Priser sett ${dateText(data.nytt.asOf)}.</p>
     ${link(ikeaUrl(inst, state), 'Søk etter flere hos IKEA', 'link')}
   </div>`;
 }
 
 // Én setning øverst på lista når noe bør kjøpes nytt.
-export function listNote(need) {
-  const n = need.filter(buysNew).length;
-  if (!n) return '';
-  return `<p class="hint buynote">${n === 1 ? 'Én ting lønner det seg å kjøpe ny. Den er merket «Kjøp nytt».' : `${n} ting lønner det seg å kjøpe nye. De er merket «Kjøp nytt».`}</p>`;
-}
+// Ting som bør kjøpes nye, er merket på hver rad. Lista trenger ingen egen setning om det.
+export const listNote = () => '';
 
 // ---------- Per stil ----------
 
@@ -117,18 +113,15 @@ export function tricksPanel(state, ui) {
   const need = instances(state).filter((i) => i.st === 'need');
   const list = tricksFor(data.triks, state, need);
   const shown = ui.tricksAll ? list : list.slice(0, SHOWN);
-  const styled = state.style && state.style !== 'fri' && STYLES.some((s) => s.id === state.style);
   return `<section class="roomlist tricks">
-    <h2>Triks som løfter rommet</h2>
-    <p>Små grep som gjør mye, valgt for ${styled ? 'stilen din og ' : ''}rommene du har.</p>
-    <label class="ar-check" for="diy"><input type="checkbox" id="diy" data-ch="diy" ${state.diy ? 'checked' : ''}><span>Jeg vil gjerne fikse litt selv</span></label>
-    <p class="hint">${state.diy ? 'Viser først ideer der du maler, skrur eller snekrer litt.' : 'Viser bare grep du klarer uten verktøy.'}</p>
+    <h2>Triks</h2>
+    <label class="ar-check" for="diy"><input type="checkbox" id="diy" data-ch="diy" ${state.diy ? 'checked' : ''}><span>Vis også ting jeg må fikse selv</span></label>
     ${list.length ? `<ul class="tricklist">${shown.map((t) => { const open = ui.trick === t.id; return `<li class="trick${open ? ' open' : ''}">
       <button class="trick-main" data-act="trick" data-v="${esc(t.id)}" aria-expanded="${open}">
         <span class="trick-title">${esc(t.title)}</span>
         <span class="trick-meta">${esc(costText(t.cost, kr))}${t.diy ? `, ${esc(t.diy.level)}, ${esc(t.diy.time)}` : ', uten verktøy'}</span>
       </button>
-      ${open ? trickBody(t, state) : ''}</li>`; }).join('')}</ul>` : '<p class="hint">Vi har ingen slike grep for denne stilen ennå. Huk av over for å se ideer du kan gjøre selv.</p>'}
+      ${open ? trickBody(t, state) : ''}</li>`; }).join('')}</ul>` : '<p class="hint">Ingen triks uten verktøy for denne stilen ennå.</p>'}
     ${list.length > SHOWN ? `<button class="link" data-act="moretricks">${ui.tricksAll ? 'Vis færre' : `Vis ${list.length - SHOWN} til`}</button>` : ''}
   </section>`;
 }

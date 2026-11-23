@@ -130,8 +130,7 @@ export function areaField(state) {
   <div class="ar-field">
     <span class="q-label">Hvor vil du lete?</span>
     <p class="ar-now">${esc(areaLabel(state))}${n ? `<small>${esc(nearFylker(state))}</small>` : ''}</p>
-    ${n && n.geo !== false ? `<p class="hint">Finn får alltid ${n.fylker.length > 1 ? 'fylkene' : 'fylket'} over. Sirkelen sendes også, men vi har ikke fått bekreftet at Finn bruker den. Ligger treffene langt unna, er det ${n.fylker.length > 1 ? 'fylkene' : 'fylket'} som gjelder.</p>` : ''}
-    <div class="row"><button class="btn ghost ar-open" data-act="areaopen">${n ? 'Endre på kartet' : 'Velg på kartet'}</button>${all}</div>
+    <div class="row"><button class="btn ghost small ar-open" data-act="areaopen">${n ? 'Endre' : 'Velg på kartet'}</button>${all}</div>
   </div>`;
   }
   const many = n && n.fylker.length > 1;
@@ -142,7 +141,6 @@ export function areaField(state) {
     <div class="field"><label for="areaq">Søk etter by, tettsted eller bydel</label>
       <input id="areaq" type="search" autocomplete="off" autocapitalize="words" enterkeyhint="search" placeholder="f.eks. Ski" value="${esc(pick.q)}" data-enter="areahit" data-v="0"></div>
     <div id="areahits" class="ar-hits">${hitList()}</div>
-    <p class="hint">Eller trykk på kartet der du vil lete. Dra for å flytte kartet, knip for å zoome.</p>
     <div class="ar-wrap">${mapSvg(state)}
       <div class="ar-zoom"><button data-act="areazoom" data-v="in" aria-label="Zoom inn">+</button><button data-act="areazoom" data-v="out" aria-label="Zoom ut">−</button><button class="ar-whole" data-act="areazoom" data-v="all" aria-label="Vis hele Norge">Hele</button></div>
     </div>
@@ -151,10 +149,9 @@ export function areaField(state) {
     <div class="ar-kms" role="group" aria-label="Avstand">
       ${RADII.map((km) => { const on = (n ? n.km : pick.km) === km; return `<button class="ar-km ${on ? 'on' : ''}" data-act="arearad" data-v="${km}" aria-pressed="${on}">${km} km</button>`; }).join('')}
     </div>
-    <p class="ar-status" role="status">${n ? `${esc(areaLabel(state))}.` : 'Ingen sirkel ennå. Søk etter et sted eller trykk på kartet.'}</p>
-    ${n ? `<p class="hint">Finn får ${many ? 'fylkene' : 'fylket'} sirkelen ligger i: ${esc(nearFylker(state))}. Det virker alltid.</p>
-    <label class="ar-check"><input type="checkbox" data-ch="areageo" ${n.geo ? 'checked' : ''}><span>Prøv også å sende sirkelen til Finn</span></label>
-    <p class="hint">Vi har ikke fått bekreftet at Finn bruker sirkelen i disse søkene. Hvis treffene ligger langt unna, er det ${many ? 'fylkene' : 'fylket'} som gjelder.</p>` : ''}`
+    <p class="ar-status" role="status">${n ? `${esc(areaLabel(state))}.` : 'Søk etter et sted eller trykk på kartet.'}</p>
+    ${n ? `<label class="ar-check"><input type="checkbox" data-ch="areageo" ${n.geo ? 'checked' : ''}><span>Send sirkelen til Finn</span></label>
+    <p class="hint">Finn søker alltid i ${many ? 'fylkene' : 'fylket'}: ${esc(nearFylker(state))}. Det er usikkert om Finn bruker sirkelen.</p>` : ''}`
     : `<p class="ar-status ${pick.error ? 'bad' : ''}" role="status">${pick.error ? esc(pick.error) : 'Henter kartet …'}</p>`}
     <div class="field"><label for="areafy">Eller velg et helt fylke</label>
       <select id="areafy" data-ch="areafylke">${AREAS.map((a) => `<option value="${a.id}" ${!n && state.area === a.id ? 'selected' : ''}>${a.name}</option>`).join('')}</select></div>
