@@ -124,3 +124,14 @@ Stilbildene er hentet fra [Unsplash](https://unsplash.com) under Unsplash-lisens
 ## Skrift
 
 Bricolage Grotesque, lisensiert under SIL Open Font License 1.1.
+
+## Publisering
+
+Nettsiden ligger på GitHub Pages: https://andersmathisen7-design.github.io/style-bolig/
+
+Pages viser grenen `gh-pages`. Etter en endring på `main`:
+
+```
+git push origin main
+git push origin main:gh-pages
+```
