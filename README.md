@@ -129,7 +129,7 @@ Bricolage Grotesque, lisensiert under SIL Open Font License 1.1.
 
 Nettsiden ligger på GitHub Pages: https://andersmathisen7-design.github.io/style-bolig/
 
-Pages viser grenen `gh-pages`. Etter en endring på `main`:
+Pages viser grenen `gh-pages`. Bytt først versjonen i `js/feedback.js` (`VERSION`) og i `index.html` (alle `?v=`), så telefoner henter den nye koden i stedet for en gammel lagret kopi. En test sjekker at de stemmer. Etter en endring på `main`:
 
 ```
 git push origin main

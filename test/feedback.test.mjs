@@ -9,7 +9,19 @@ const parse = (url) => { const u = new URL(url); return { path: u.pathname, titl
 
 test('repo og versjon er satt ett sted', () => {
   assert.equal(REPO, 'andersmathisen7-design/style-bolig');
-  assert.match(VERSION, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(VERSION, /^\d{4}-\d{2}-\d{2}[a-z]?$/);
+});
+
+// Telefonen kan holde på gammel kode. Alle filene hentes med versjonen i adressen, så en ny versjon alltid lastes.
+test('index.html henter alle skriptene med samme versjon som appen', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const map = JSON.parse(html.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1]).imports;
+  for (const f of readdirSync(new URL('../js/', import.meta.url)).filter((x) => x.endsWith('.js'))) {
+    assert.equal(map[`./js/${f}`], `./js/${f}?v=${VERSION}`, f);
+  }
+  assert.ok(html.includes(`js/app.js?v=${VERSION}`));
+  assert.ok(html.includes(`css/style.css?v=${VERSION}`));
 });
 
 test('forslag: tittel, tekst og merkelapp', () => {

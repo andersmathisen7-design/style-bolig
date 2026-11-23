@@ -8,10 +8,36 @@
   <meta name="theme-color" content="#EDF0F2">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231B2430'/%3E%3Cpath d='M7 25V13l9-7 9 7v12h-6v-7h-6v7z' fill='%23FFDCEB'/%3E%3C/svg%3E">
   <link rel="preload" href="fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=2026-11-23c">
 </head>
 <body>
   <div id="app"><noscript>Brukthjem trenger JavaScript for å virke.</noscript></div>
-  <script type="module" src="js/app.js"></script>
+  <!-- Versjonen i adressene gjør at telefonen henter ny kode etter en oppdatering. Bytt den ved hver utgivelse. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "./js/ai.js": "./js/ai.js?v=2026-11-23c",
+      "./js/app.js": "./js/app.js?v=2026-11-23c",
+      "./js/area.js": "./js/area.js?v=2026-11-23c",
+      "./js/areastate.js": "./js/areastate.js?v=2026-11-23c",
+      "./js/arrange.js": "./js/arrange.js?v=2026-11-23c",
+      "./js/data.js": "./js/data.js?v=2026-11-23c",
+      "./js/editor.js": "./js/editor.js?v=2026-11-23c",
+      "./js/feedback.js": "./js/feedback.js?v=2026-11-23c",
+      "./js/funn.js": "./js/funn.js?v=2026-11-23c",
+      "./js/geo.js": "./js/geo.js?v=2026-11-23c",
+      "./js/logic.js": "./js/logic.js?v=2026-11-23c",
+      "./js/nytt.js": "./js/nytt.js?v=2026-11-23c",
+      "./js/plan.js": "./js/plan.js?v=2026-11-23c",
+      "./js/rad.js": "./js/rad.js?v=2026-11-23c",
+      "./js/radview.js": "./js/radview.js?v=2026-11-23c",
+      "./js/triks.js": "./js/triks.js?v=2026-11-23c",
+      "./js/walls.js": "./js/walls.js?v=2026-11-23c",
+      "./geo/norge.js": "./geo/norge.js?v=2026-11-23c",
+      "./geo/steder.js": "./geo/steder.js?v=2026-11-23c"
+    }
+  }
+  </script>
+  <script type="module" src="js/app.js?v=2026-11-23c"></script>
 </body>
 </html>

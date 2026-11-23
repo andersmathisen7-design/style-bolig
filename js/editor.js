@@ -474,8 +474,11 @@ export function bindEditor(app, ctx) {
     d.svg.classList.add(d.group ? 'moving' : 'shaping');
   };
 
-  window.addEventListener('pointermove', (e) => {
-    if (!drag || e.pointerId !== drag.id) return;
+  window.addEventListener('pointermove', (e) => { if (drag && e.pointerId === drag.id && !drag.viaTouch) moved(e); });
+  // Har nettleseren tatt over pekeren midt i en strek, følges fingeren videre med berøringene.
+  window.addEventListener('touchmove', (e) => { if (drag?.viaTouch && e.touches.length) moved(e.touches[0]); }, { passive: true });
+
+  const moved = (e) => {
     drag.t = performance.now();
     const p = toCm(e, drag.svg);
     if (Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) > drag.slop) drag.far = true;
@@ -496,7 +499,7 @@ export function bindEditor(app, ctx) {
       drag.el.classList.add('sliding');
     } else if (drag.shape) preview(planEdit(floorRooms(), { ...drag.shape, dx: p[0] - drag.start[0], dy: p[1] - drag.start[1] }));
     else if (drag.group) preview(planEdit(floorRooms(), { kind: 'move', room: drag.group, dx: p[0] - drag.start[0], dy: p[1] - drag.start[1] }));
-  });
+  };
 
   // Deler rommene streken går gjennom. En rett strek deler alle rom den krysser, langs samme linje, så veggen
   // blir sammenhengende. I hvert rom beholder den største delen navn, type og valg på lista.
@@ -582,13 +585,15 @@ export function bindEditor(app, ctx) {
     else select(hit.room.id, hit.kind === 'wall' ? hit.i : null);
   };
 
+  // Avbrutt betyr at nettleseren tok over berøringen (iPhone gjør det for eksempel når den tror man ruller eller
+  // sveiper). En strek som alt er tegnet, brukes likevel: fingeren ble løftet, og streken skal ikke forsvinne.
   const finish = (cancelled) => {
     if (!drag) return;
     const d = drag;
     drag = null;
     const state = ctx.state();
     ui.note = ''; ui.info = '';
-    if (cancelled) { ctx.render(); return; }
+    if (cancelled && !(d.pts && d.far)) { ctx.render(); return; }
 
     if (ui.furnish) {
       if (d.furn) { if (d.far) { d.furn.x = d.pos[0]; d.furn.y = d.pos[1]; } ui.furn = d.furn.id; ui.room = null; }
@@ -608,7 +613,11 @@ export function bindEditor(app, ctx) {
     ctx.save(); ctx.render();
   };
   window.addEventListener('pointerup', (e) => { if (drag && e.pointerId === drag.id) finish(false); });
-  window.addEventListener('pointercancel', (e) => { if (drag && e.pointerId === drag.id) finish(true); });
+  window.addEventListener('pointercancel', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (drag.pts && e.pointerType === 'touch') drag.viaTouch = true; // streken fortsetter til fingeren løftes
+    else finish(true);
+  });
   // Sikkerhetsnett: noen ganger kommer aldri «slipp» fram, for eksempel når fingeren løftes utenfor siden.
   const lifted = (e) => { if (drag && !(e.touches && e.touches.length)) setTimeout(() => finish(false), 60); };
   window.addEventListener('touchend', lifted);
