@@ -6,17 +6,23 @@ import {
   straighten, straightenLine, isLine, splitPoly, alignTo, fitSheet, canonical,
   area, areaM2, edges, letter, nearestEdge, labelPoint, pointInPoly, wallFor,
 } from './plan.js';
-import { planEdit, planLength, applyPlan, splitAlong, hostsOf, placeOn, syncDoors, coverage, neighbourAt } from './walls.js';
+import { planEdit, planLength, applyPlan, splitAlong, hostsOf, placeOn, syncDoors, coverage } from './walls.js';
 import { arrangeRoom, armOf, localNotch, localOpen, flipped, turned, keepInside } from './arrange.js';
 
 export const SHEETS = [1000, 1500, 2500];
-const TOOLS = [['draw', 'Tegn og del'], ['move', 'Flytt'], ['door', 'Dør'], ['window', 'Vindu']];
-const HINTS = {
-  draw: 'Trykk på et rom eller en vegg for å endre.',
-  move: 'Dra i en vegg, et hjørne eller hele boligen.',
-  door: 'Trykk på en vegg for å sette inn en dør.',
-  window: 'Trykk på en vegg for å sette inn et vindu.',
+const TOOLS = [['draw', 'Tegn'], ['move', 'Flytt']];
+// Hjelpen bak spørsmålstegnet. Ellers står det ingen forklaring på skjermen.
+const HELP = {
+  draw: ['Tegn en runde rundt boligen.', 'Dra en strek tvers over for å dele i rom.', 'Trykk på et rom for å velge hva det er.', 'Trykk på en vegg for mål, dør og vindu.', '«Flytt»: dra i vegger, hjørner eller hele boligen.'],
+  furnish: ['Trykk på et rom for å sette ut møbler.', 'Dra et møbel for å flytte det.', 'Trykk på et møbel for å snu eller fjerne det.'],
 };
+const ICON = {
+  undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3',
+  trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  full: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  close: 'M6 6l12 12M18 6L6 18',
+};
+const ib = (act, icon, label, more = '') => `<button class="ibtn" data-act="${act}" aria-label="${label}" title="${label}" ${more}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="${ICON[icon]}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
 const WIDTHS = { door: [70, 80, 90], window: [60, 100, 120, 150, 200] }; // vanlige bredder, i cm
 const KIND = { door: 'Dør', window: 'Vindu' };
 
@@ -55,16 +61,6 @@ export function clearFloor(state, floor) {
 }
 // Veggen en dør eller et vindu måles langs: helst en vegg i det valgte rommet.
 const refHost = (rooms, o, prefer) => { const hs = hostsOf(rooms, o); return hs.find((h) => h.id === prefer) || hs[0] || null; };
-
-// Neste steg i tegningen. Gir [steg, tekst]; steg 0 betyr at alt det viktigste er gjort.
-function guide(state, ui, rooms) {
-  const left = rooms.filter((r) => r.guess).length;
-  if (!rooms.length) return [1, 'Tegn en runde rundt boligen.'];
-  if (rooms.length === 1) return [2, 'Dra en strek tvers over for å dele i rom.'];
-  if (left) return [3, `Trykk på et rom og velg hva det er. ${left} igjen.`];
-  if (!(state.openings || []).some((o) => o.floor === ui.floor)) return [4, 'Sett inn dører og vinduer.'];
-  return [0, 'Trykk på en vegg for å sette mål.'];
-}
 
 // ---------- Visning ----------
 
@@ -191,7 +187,7 @@ export function sheetFor(state, fallback) {
 }
 
 // Selve arket med rutenett, rom, dører, vinduer og møbler.
-function sheetSvg(state, ui, rooms, emptyText) {
+function sheetSvg(state, ui, rooms, emptyText, over = '') {
   const S = ui.sheet, k = S / 1000;
   const sorted = [...rooms].sort((a, b) => (a.id === ui.room) - (b.id === ui.room));
   return `
@@ -200,13 +196,22 @@ function sheetSvg(state, ui, rooms, emptyText) {
       <pattern id="g50" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" class="g-thin" stroke-width="${1.2 * k}"/></pattern>
       <pattern id="g100" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0H0V100" fill="none" class="g-bold" stroke-width="${1.6 * k}"/></pattern>
     </defs>
-    <rect width="${S}" height="${S}" fill="url(#g50)"/><rect width="${S}" height="${S}" fill="url(#g100)"/>
+    <rect x="${-2 * S}" y="${-2 * S}" width="${5 * S}" height="${5 * S}" fill="url(#g50)"/><rect x="${-2 * S}" y="${-2 * S}" width="${5 * S}" height="${5 * S}" fill="url(#g100)"/>
     ${sorted.map((r) => roomSvg(state, ui, r, k)).join('')}
     <g class="ops">${opsSvg(state, ui, rooms, k)}</g>
     ${rooms.length ? '' : `<text class="empty" x="${S / 2}" y="${S / 2}" font-size="${36 * k}">${emptyText}</text>`}
     <polyline id="ink" fill="none" stroke-width="${5 * k}" points=""/>
-  </svg></div>`;
+  </svg>${over}</div>`;
 }
+
+// Det som legger seg oppå tegningen: en kort melding når noe ikke gikk, og hjelpen bak spørsmålstegnet.
+function overlay(ui, help) {
+  const msg = ui.note || ui.info;
+  return `${msg ? `<button class="toast ${ui.note ? 'bad' : ''}" data-act="dismiss" role="status">${esc(msg)}</button>` : ''}
+    ${ui.help ? `<button class="helpcard" data-act="help" aria-label="Lukk hjelpen"><ol>${help.map((t) => `<li>${t}</li>`).join('')}</ol></button>` : ''}`;
+}
+const tail = (ui) => `<button class="ibtn ${ui.help ? 'on' : ''}" data-act="help" aria-label="Hjelp" aria-pressed="${!!ui.help}">?</button>
+  ${ui.full ? ib('full', 'close', 'Lukk fullskjerm', 'data-on') : ib('full', 'full', 'Fullskjerm')}`;
 
 // Linja rett under tegningen: det som er valgt, og det man kan gjøre med det. Den har alltid samme høyde, så
 // ingenting hopper, og den fester seg over «Neste»-knappen så den kan nås mens man ser på tegningen.
@@ -215,52 +220,39 @@ function planBar(state, ui, rooms) {
   const r = rooms.find((x) => x.id === ui.room);
   if (o) {
     const h = refHost(rooms, o, ui.room);
-    const where = h ? `vegg ${letter(h.e)} i ${roomLabel(state.rooms, rooms[h.ri]).toLowerCase()}` : '';
-    return `<div class="planbar on" role="group" aria-label="${KIND[o.kind]} i ${esc(where)}">
+    return `<div class="planbar on" role="group" aria-label="${KIND[o.kind]}">
       <div class="barrow">
         <span class="seg" role="group" aria-label="Dør eller vindu">${['door', 'window'].map((kd) => `<button class="segbtn ${o.kind === kd ? 'on' : ''}" data-act="opkind" data-v="${kd}" aria-pressed="${o.kind === kd}">${KIND[kd]}</button>`).join('')}</span>
         <label class="barfield">Bredde, cm<input id="opw" inputmode="numeric" data-ch="opw" value="${o.w}"></label>
-        <label class="barfield">Fra hjørnet, cm<input id="opd" inputmode="numeric" data-ch="opd" value="${h ? Math.max(0, Math.round(h.s - o.w / 2)) : ''}"></label>
+        <label class="barfield">Fra hjørnet<input id="opd" inputmode="numeric" data-ch="opd" value="${h ? Math.max(0, Math.round(h.s - o.w / 2)) : ''}"></label>
       </div>
       <div class="barrow">
-        <span class="barscroll" role="group" aria-label="Vanlige bredder">${WIDTHS[o.kind].map((w) => `<button class="barchip ${o.w === w ? 'on' : ''}" data-act="opwset" data-v="${w}" aria-pressed="${o.w === w}">${w} cm</button>`).join('')}</span>
-        <button class="barbtn danger" data-act="delop">Ta bort</button>
+        <span class="barscroll" role="group" aria-label="Vanlige bredder">${WIDTHS[o.kind].map((w) => `<button class="barchip ${o.w === w ? 'on' : ''}" data-act="opwset" data-v="${w}" aria-pressed="${o.w === w}">${w}</button>`).join('')}</span>
+        <button class="barbtn danger" data-act="delop">Fjern</button>
       </div></div>`;
   }
   if (r && Number.isInteger(ui.wall) && ui.wall < r.poly.length) {
-    const e = edges(r.poly)[ui.wall], other = neighbourAt(rooms, r.id, ui.wall);
-    const set = (r.fixed || []).includes(ui.wall);
+    const e = edges(r.poly)[ui.wall];
     return `<div class="planbar on" role="group" aria-label="Vegg ${letter(ui.wall)} i ${esc(roomLabel(state.rooms, r).toLowerCase())}">
       <div class="barrow">
-        <span class="planbar-name">Vegg ${letter(ui.wall)}<small>${esc(roomLabel(state.rooms, r))}${other ? ` og ${esc(roomLabel(state.rooms, other).toLowerCase())}` : ''}</small></span>
-        <button class="barbtn light" data-act="addop" data-v="door">+ Dør</button>
-        <button class="barbtn light" data-act="addop" data-v="window">+ Vindu</button>
-      </div>
-      <div class="barrow">
-        <button class="barbtn" data-act="wallnudge" data-v="-10" aria-label="10 cm kortere">− 10</button>
-        <label class="barfield wide">Lengde, cm${set ? ' <span class="setmark">satt</span>' : ''}<input id="walllen" inputmode="numeric" data-ch="walllen" value="${Math.round(e.len)}"></label>
-        <button class="barbtn" data-act="wallnudge" data-v="10" aria-label="10 cm lengre">+ 10</button>
+        <button class="barbtn light" data-act="wallnudge" data-v="-10" aria-label="10 cm kortere">−</button>
+        <label class="barfield">Vegg ${letter(ui.wall)}, cm<input id="walllen" inputmode="numeric" data-ch="walllen" value="${Math.round(e.len)}"></label>
+        <button class="barbtn light" data-act="wallnudge" data-v="10" aria-label="10 cm lengre">+</button>
+        <button class="barbtn" data-act="addop" data-v="door">+ Dør</button>
+        <button class="barbtn" data-act="addop" data-v="window">+ Vindu</button>
       </div></div>`;
   }
   if (r) {
     return `<div class="planbar on" role="group" aria-label="Valgt rom">
-      <div class="barrow">
-        <span class="planbar-name">${r.guess ? 'Hva slags rom er dette?' : esc(roomLabel(state.rooms, r))}<small>${r.m2} m²</small></span>
-        <button class="barbtn danger" data-act="delroom">Fjern rommet</button>
-      </div>
       <div class="barrow"><span class="barscroll" role="group" aria-label="Hva slags rom er det?">
         ${Object.entries(ROOMS).map(([id, t]) => `<button class="barchip ${r.type === id && !r.guess ? 'on' : ''}" data-act="rtype" data-v="${id}" aria-pressed="${r.type === id && !r.guess}">${t.name}</button>`).join('')}
-      </span></div></div>`;
+      </span><button class="barbtn danger" data-act="delroom">Fjern</button></div></div>`;
   }
-  return ui.tool === 'draw' && !ui.full ? '' : `<div class="planbar"><span class="furnbar-hint">${HINTS[ui.tool]}</span></div>`;
+  return '';
 }
 
-// Det som står over tegningen: én linje som sier hva som er neste, eller hva som nettopp gikk galt.
-const noteLine = (ui, fallback) => (ui.note ? `<p class="guide bad" role="status">${esc(ui.note)}</p>`
-  : ui.info ? `<p class="guide" role="status">${esc(ui.info)}</p>` : fallback);
-const fullBtn = (ui) => `<button class="btn ${ui.full ? '' : 'ghost'} small fullbtn" data-act="full" aria-pressed="${!!ui.full}">${ui.full ? 'Lukk' : 'Fullskjerm'}</button>`;
-
-export function drawView(state, ui, canUndo) {
+// «Bolig»: bare tegningen. start = det som vises under et tomt ark (ferdige boliger å begynne med).
+export function drawView(state, ui, canUndo, start = '') {
   const S = ui.sheet;
   const rooms = onFloor(state, ui.floor);
   const all = state.rooms.filter((r) => r.poly);
@@ -268,37 +260,35 @@ export function drawView(state, ui, canUndo) {
   const sel = rooms.find((r) => r.id === ui.room);
   if (!sel || !(ui.wall >= 0 && ui.wall < sel.poly.length)) ui.wall = null;
   if (!(state.openings || []).some((o) => o.id === ui.opening && o.floor === ui.floor)) ui.opening = null;
-  const [step, text] = guide(state, ui, rooms);
   return `
   <div class="stage ${ui.full ? 'full' : ''}">
-  <div class="tools" role="group" aria-label="Verktøy">
-    ${TOOLS.map(([id, name]) => `<button class="tool ${ui.tool === id ? 'on' : ''}" data-act="tool" data-v="${id}" aria-pressed="${ui.tool === id}">${name}</button>`).join('')}
+  <div class="toolbar">
+    <span class="seg" role="group" aria-label="Verktøy">${TOOLS.map(([id, name]) => `<button class="segbtn ${ui.tool === id ? 'on' : ''}" data-act="tool" data-v="${id}" aria-pressed="${ui.tool === id}">${name}</button>`).join('')}</span>
+    <span class="grow"></span>
+    ${ib('undo', 'undo', 'Angre', canUndo ? '' : 'disabled')}
+    ${rooms.length ? ib('redraw', 'trash', 'Tegn på nytt') : ''}
+    ${tail(ui)}
   </div>
-  <div class="row undo-row"><button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
-    ${rooms.length ? '<button class="btn ghost small" data-act="redraw">Tegn på nytt</button>' : ''}${fullBtn(ui)}</div>
-  ${noteLine(ui, `<p class="guide" role="status">${step ? `<b>${step}/4</b> ` : ''}${text}</p>`)}
-  ${sheetSvg(state, ui, rooms, 'Tegn her')}
+  ${sheetSvg(state, ui, rooms, 'Tegn rundt boligen', overlay(ui, HELP.draw))}
   ${planBar(state, ui, rooms)}
   </div>
-  <div class="sheetrow"><span class="plan-sum">${all.length ? `${all.reduce((s, r) => s + r.m2, 0)} m² · ${all.length} rom` : ''}</span>
-    <span class="chips" role="group" aria-label="Arkstørrelse">${SHEETS.map((s) => `<button class="chip mini ${S === s ? 'on' : ''}" data-act="sheet" data-v="${s}" aria-pressed="${S === s}" aria-label="Ark på ${s / 100} meter">${s / 100} m</button>`).join('')}</span></div>
-  <div class="floors" role="group" aria-label="Etasje">
-    ${state.floors.length > 1 ? state.floors.map((f, i) => `<button class="chip mini ${ui.floor === i ? 'on' : ''}" data-act="floor" data-v="${i}" aria-pressed="${ui.floor === i}">${esc(f)}</button>`).join('') : ''}
-    ${state.floors.length < 5 ? '<button class="chip mini add" data-act="addfloor">+ Etasje</button>' : ''}
-    ${state.drawn ? '' : '<button class="chip mini add" data-act="usepreset">Bruk rommene fra «Velg bolig»</button>'}
-    ${state.floors.length > 1 && !rooms.length ? '<button class="link danger" data-act="delfloor">Fjern etasjen</button>' : ''}
-  </div>`;
+  ${all.length ? '' : start}
+  <div class="sheetrow">
+    <span class="floors" role="group" aria-label="Etasje">
+      ${state.floors.length > 1 ? state.floors.map((f, i) => `<button class="chip mini ${ui.floor === i ? 'on' : ''}" data-act="floor" data-v="${i}" aria-pressed="${ui.floor === i}">${esc(f)}</button>`).join('') : ''}
+      ${state.floors.length > 1 && !rooms.length ? '<button class="chip mini add" data-act="delfloor">Fjern etasjen</button>' : state.floors.length < 5 && all.length ? '<button class="chip mini add" data-act="addfloor">+ Etasje</button>' : ''}
+    </span>
+    <span class="chips" role="group" aria-label="Arkstørrelse">${SHEETS.map((s) => `<button class="chip mini ${S === s ? 'on' : ''}" data-act="sheet" data-v="${s}" aria-pressed="${S === s}" aria-label="Ark på ${s / 100} meter">${s / 100} m</button>`).join('')}</span></div>`;
 }
 
-// Knappene for det valgte møbelet, rett under tegningen. Linja har alltid samme høyde, så ingenting hopper når
-// man velger noe. Havner den under skjermkanten, fester den seg over «Neste»-knappen, så den alltid kan nås mens
-// man ser på tegningen.
+// Knappene for det valgte møbelet, rett under tegningen. Havner linja under skjermkanten, fester den seg over
+// «Neste»-knappen, så den alltid kan nås mens man ser på tegningen.
 function furnBar(state, ui) {
   const f = (state.furn || []).find((x) => x.id === ui.furn);
   if (!f) {
     const r = state.rooms.find((x) => x.id === ui.room && x.poly);
     const list = r ? placeable(state, r) : [];
-    if (!r) return '<div class="furnbar"><span class="furnbar-hint">Trykk på et rom for å sette ut møbler.</span></div>';
+    if (!r) return '';
     if (!list.length) return `<div class="furnbar"><span class="furnbar-hint">Ingenting å sette ut i ${esc(roomLabel(state.rooms, r).toLowerCase())}.</span><button class="link" data-act="step" data-v="2">Velg ting</button></div>`;
     return `<div class="furnbar on" role="group" aria-label="Sett ut i ${esc(roomLabel(state.rooms, r).toLowerCase())}"><span class="barscroll">
       ${list.map((x) => `<button class="barchip ${x.count ? 'on' : ''}" data-act="addfurn" data-v="${x.id}">${x.count >= x.qty ? '' : '+ '}${esc(x.name)}${x.qty > 1 ? ` ${x.count}/${x.qty}` : ''}</button>`).join('')}</span></div>`;
@@ -308,7 +298,7 @@ function furnBar(state, ui) {
     <span class="furnbar-name">${esc(name)}</span>
     <button class="barbtn" data-act="rotfurn">Snu</button>
     ${f.corner ? '<button class="barbtn" data-act="flipfurn">Snu hjørnet</button>' : f.u ? '<button class="barbtn" data-act="flipfurn">Snu åpningen</button>' : ''}
-    <button class="barbtn danger" data-act="delfurn">Ta bort</button>
+    <button class="barbtn danger" data-act="delfurn">Fjern</button>
   </div>`;
 }
 
@@ -339,24 +329,22 @@ function placeable(state, r) {
 
 // Steget «Plasser»: samme tegning, men bare for å sette ut og flytte møbler.
 export function furnishView(state, ui, canUndo) {
-  const S = ui.sheet;
   const rooms = state.rooms.filter((r) => r.poly && (r.floor || 0) === ui.floor);
   const out = (state.furn || []).length;
   return `
   <div class="stage ${ui.full ? 'full' : ''}">
-  ${state.floors.length > 1 ? `<div class="floors" role="group" aria-label="Etasje">
-    ${state.floors.map((f, i) => `<button class="chip mini ${ui.floor === i ? 'on' : ''}" data-act="floor" data-v="${i}" aria-pressed="${ui.floor === i}">${esc(f)}</button>`).join('')}</div>` : ''}
-  <div class="row undo-row">
-    <button class="btn small" data-act="arrange">Sett ut alt</button>
-    <button class="btn ghost small" data-act="undo" ${canUndo ? '' : 'disabled'}>Angre</button>
-    ${fullBtn(ui)}
+  <div class="toolbar">
+    <button class="barbtn" data-act="arrange">Sett ut alt</button>
+    <span class="grow"></span>
+    ${ib('undo', 'undo', 'Angre', canUndo ? '' : 'disabled')}
+    ${out ? ib('clearfurn', 'trash', 'Fjern alle møblene') : ''}
+    ${tail(ui)}
   </div>
-  ${noteLine(ui, '')}
-  ${sheetSvg(state, ui, rooms, 'Ingen rom på denne etasjen')}
+  ${sheetSvg(state, ui, rooms, 'Ingen rom her', overlay(ui, HELP.furnish))}
   ${furnBar(state, ui)}
   </div>
-  <div class="sheetrow"><span class="plan-sum">${out ? `${out} satt ut · <button class="link danger" data-act="clearfurn">Ta bort alle</button>` : ''}</span>
-    <span class="chips" role="group" aria-label="Arkstørrelse">${SHEETS.map((s) => `<button class="chip mini ${S === s ? 'on' : ''}" data-act="sheet" data-v="${s}" aria-pressed="${S === s}" aria-label="Ark på ${s / 100} meter">${s / 100} m</button>`).join('')}</span></div>
+  ${state.floors.length > 1 ? `<div class="floors" role="group" aria-label="Etasje">
+    ${state.floors.map((f, i) => `<button class="chip mini ${ui.floor === i ? 'on' : ''}" data-act="floor" data-v="${i}" aria-pressed="${ui.floor === i}">${esc(f)}</button>`).join('')}</div>` : ''}
   ${furnPanel(state, ui)}`;
 }
 
@@ -381,7 +369,8 @@ export function bindEditor(app, ctx) {
   const { ui } = ctx;
   const toCm = (e, svg) => {
     const b = svg.getBoundingClientRect();
-    return [((e.clientX - b.left) / b.width) * ui.sheet, ((e.clientY - b.top) / b.height) * ui.sheet];
+    // Rutenettet fortsetter utenfor arket i fullskjerm. Et trykk der regnes som et trykk på kanten av arket.
+    return [clamp(((e.clientX - b.left) / b.width) * ui.sheet, 0, ui.sheet), clamp(((e.clientY - b.top) / b.height) * ui.sheet, 0, ui.sheet)];
   };
   const floorRooms = () => onFloor(ctx.state(), ui.floor);
   const select = (room = null, wall = null, op = null) => { ui.room = room; ui.wall = wall; ui.opening = op; ui.furn = null; };
@@ -509,7 +498,6 @@ export function bindEditor(app, ctx) {
     if (!line) { ui.note = 'Dra streken tvers over et rom, fra vegg til vegg.'; return; }
     if (!rooms.length) { // tomt ark: arket blir boligen, og streken deler den
       addPoly(state, sheetOutline(line, ui.sheet));
-      ui.info = 'Arket ble boligen. Trykk på en vegg for å sette mål.';
       rooms = floorRooms();
     }
     // Legg streken på linje med hjørner som ligger like ved, for eksempel knekken i et vinkelrom.
@@ -609,7 +597,7 @@ export function bindEditor(app, ctx) {
       if (d.plan) { applyPlan(state, ui.floor, d.plan, keepInside); settle(state, ui); } else ui.note = d.msg || '';
       select(room?.id ?? null, d.shape?.kind === 'wall' && room?.poly.length === n ? d.shape.i : null);
     } else if (!d.far) tap(state, d);
-    else if (d.tool !== 'draw') { select(); ui.note = 'Velg «Tegn og del» for å tegne.'; }
+    else if (d.tool !== 'draw') { select(); ui.note = 'Velg «Tegn» for å tegne.'; }
     ctx.save(); ctx.render();
   };
   window.addEventListener('pointerup', (e) => { if (drag && e.pointerId === drag.id) finish(false); });
@@ -660,7 +648,7 @@ export function editorActions(ctx) {
     actions: {
       // Fullskjerm: tegningen fyller skjermen, med verktøyene over og valgene under.
       full() {
-        ui.full = !ui.full;
+        ui.full = !ui.full; ui.help = false;
         const root = document.documentElement;
         try {
           if (ui.full && window.matchMedia('(pointer: coarse)').matches) root.requestFullscreen?.({ navigationUI: 'hide' })?.catch(() => {});
@@ -668,7 +656,9 @@ export function editorActions(ctx) {
         } catch { /* uten ekte fullskjerm dekker tegningen fortsatt hele siden */ }
         ctx.later();
       },
-      tool(v) { if (HINTS[v]) { ui.tool = v; ui.note = ''; ctx.later(); } },
+      help() { ui.help = !ui.help; ctx.later(); },
+      dismiss() { ui.note = ''; ui.info = ''; ctx.later(); },
+      tool(v) { if (TOOLS.some((t) => t[0] === v)) { ui.tool = v; ui.note = ''; ctx.later(); } },
       // Begynn på nytt på denne etasjen. «Angre» henter tegningen tilbake.
       redraw() { clearFloor(ctx.state(), ui.floor); ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.tool = 'draw'; ui.note = ''; ctx.commit(); },
       sheet(v) { if (SHEETS.includes(Number(v))) { ui.sheet = Number(v); ctx.later(); } },
@@ -716,7 +706,7 @@ export function editorActions(ctx) {
         }
         const rest = missed.length ? ` Fant ikke plass til ${missed.slice(0, 4).join(', ')}${missed.length > 4 ? ' og flere' : ''}.` : '';
         ui.furn = null; ui.note = '';
-        ui.info = added ? `Satte ut ${added}. Dra dem dit du vil.${rest}` : (rest.trim() || 'Alt står der allerede.');
+        ui.info = rest.trim() || (added ? '' : 'Alt står der allerede.');
         ctx.commit();
       },
       clearfurn() { const s = ctx.state(); s.furn = []; ui.furn = null; ui.info = ''; ctx.commit(); },

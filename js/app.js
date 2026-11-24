@@ -1,8 +1,8 @@
 import { AREAS, STYLES, QUESTIONS, ITEMS, ROOMS, HOMES, LEVELS, GROUPS, PRIOS } from './data.js';
 import {
-  newState, roomsFromHome, roomLabel, roomM2, sizeFromM2, sizeRange, instances, defaultMax, maxOf,
+  newState, roomsFromHome, roomLabel, roomM2, sizeFromM2, instances, defaultMax, maxOf,
   parseLife, parseOwned, wishOf, searchText, finnUrl, altLinks, inCategory, variantsOf, wallNote, tipsFor, styleWords, summary, fitBudget, decorLinks,
-  layoutPlan, totalM2, encodeState, decodeState, normalize, pruneItems, kr,
+  encodeState, decodeState, normalize, pruneItems, kr,
   prioOf, kwOf, comfortFor, footprint, withDrawing, placedWall,
 } from './logic.js';
 import { ai, initAI, readPlan, readLife } from './ai.js';
@@ -20,12 +20,11 @@ const app = document.getElementById('app');
 const STEPS = ['Bolig', 'Stil', 'Ting', 'Plasser', 'Finn'];
 const LAST = STEPS.length - 1;
 const canShare = !window.__noShare; // forhåndsvisninger uten egen adresse kan ikke dele lenker
-const SIZE_NAME = { S: 'Lite', M: 'Middels', L: 'Stort' };
 
 let state = load();
 const ui = {
   open: null, room: null, round: false, shared: null, copied: '', sure: false, busy: '', msg: null, style: null,
-  tab: state.drawn ? 'draw' : 'pick', tool: 'draw', floor: 0, sheet: sheetFor(state, window.innerWidth < 600 ? 1000 : 1500), furn: null, wall: null, opening: null, note: '', info: '', write: false, furnish: false,
+  tab: 'draw', tool: 'draw', help: false, floor: 0, sheet: sheetFor(state, window.innerWidth < 600 ? 1000 : 1500), furn: null, wall: null, opening: null, note: '', info: '', write: false, furnish: false,
   cmt: null, // tingen på «Ting» som har kommentarfeltet åpent
   more: null, // rommet på «Ting» som viser alt som kan legges til
   tune: false, // «Tilpass søket» er åpent på «Finn»
@@ -85,69 +84,25 @@ function sharedBanner() {
   </div>`;
 }
 
+// «Bolig» er bare tegningen. Under et tomt ark ligger ferdige boliger å begynne med.
 function viewHome() {
-  const sel = state.rooms.find((r) => r.id === ui.room);
   return `
-  <h1>Hva skal innredes?</h1>
-  <div class="tabs" role="group" aria-label="Hvordan vil du sette opp boligen?">
-    <button class="tab ${ui.tab === 'pick' ? 'on' : ''}" data-act="tab" data-v="pick" aria-pressed="${ui.tab === 'pick'}">Velg bolig</button>
-    <button class="tab ${ui.tab === 'draw' ? 'on' : ''}" data-act="tab" data-v="draw" aria-pressed="${ui.tab === 'draw'}">Tegn selv</button>
-  </div>
-  ${ui.tab === 'draw' ? drawView(state, ui, undoStack.length > 0) : pickView()}
-  ${sel && !sel.poly ? roomEditor(sel) : ''}
-  ${ui.tab === 'pick' ? `<div class="field">
-    <select id="addroom" data-ch="addroom" aria-label="Legg til rom"><option value="">+ Legg til rom</option>
-      ${Object.entries(ROOMS).map(([id, r]) => `<option value="${id}">${r.name}</option>`).join('')}</select>
-  </div>` : ''}
-  ${areaField(state)}`;
+  <h1>Tegn boligen</h1>
+  ${drawView(state, ui, undoStack.length > 0, startRow())}`;
 }
 
-function pickView() {
-  const plan = layoutPlan(state.rooms);
-  return `
-  <div class="chips" role="group" aria-label="Boligtype">
-    ${HOMES.map((h) => `<button class="chip ${state.home === h.id ? 'on' : ''}" data-act="home" data-v="${h.id}">${h.name}<small>${h.hint}</small></button>`).join('')}
-  </div>
-  <div class="plan" style="aspect-ratio:${state.rooms.length > 5 ? '1/1' : '4/3'}">
-    ${plan.map((p) => {
-      const r = state.rooms.find((x) => x.id === p.id);
-      return `<button class="room ${ui.room === r.id ? 'on' : ''}" data-act="room" data-v="${r.id}" style="left:${p.x}%;top:${p.y}%;width:${p.w}%;height:${p.h}%">
-        <span class="room-name">${esc(roomLabel(state.rooms, r))}</span><span class="room-m2">${roomM2(r)} m²</span></button>`;
-    }).join('')}
-  </div>
-  <p class="plan-sum">${totalM2(state.rooms)} m² · ${state.rooms.length} rom. Trykk på et rom for å endre.</p>
-  ${uploadPanel()}`;
+function startRow() {
+  return `<div class="chips start" role="group" aria-label="Eller begynn med en ferdig bolig">
+    ${HOMES.map((h) => `<button class="chip mini add" data-act="home" data-v="${h.id}">${h.name}</button>`).join('')}
+    ${ai.images ? `<label class="chip mini add filebtn ${ui.busy ? 'off' : ''}">Last opp plantegning
+      <input class="vh" type="file" id="planfile" accept="${esc(ai.types)}" data-ch="planfile" ${ui.busy ? 'disabled' : ''}></label>` : ''}
+  </div>${status('plan')}`;
 }
 
 function status(where) {
-  if (ui.busy === where) return `<p class="status" role="status">${where === 'plan' ? 'Claude leser tegningen. Det tar gjerne et halvt minutt.' : 'Claude leser teksten.'}</p>`;
+  if (ui.busy === where) return `<p class="status" role="status">${where === 'plan' ? 'Claude leser tegningen …' : 'Claude leser teksten …'}</p>`;
   if (ui.msg?.where === where) return `<p class="status ${ui.msg.bad ? 'bad' : ''}" role="status">${esc(ui.msg.text)}</p>`;
   return '';
-}
-
-function uploadPanel() {
-  if (!ai.images) return '';
-  return `
-  <section class="panel">
-    <label class="btn ghost small filebtn ${ui.busy ? 'off' : ''}">Last opp plantegning
-      <input class="vh" type="file" id="planfile" accept="${esc(ai.types)}" data-ch="planfile" ${ui.busy ? 'disabled' : ''}></label>
-    ${status('plan')}
-  </section>`;
-}
-
-function roomEditor(r) {
-  return `
-  <section class="panel" aria-label="Endre rom">
-    <h2>${esc(roomLabel(state.rooms, r))}</h2>
-    <div class="chips" role="group" aria-label="Størrelse">
-      ${['S', 'M', 'L'].map((s) => `<button class="chip ${r.size === s && !r.m2 ? 'on' : ''}" data-act="size" data-v="${s}">${SIZE_NAME[s]}<small>${sizeRange(r.type, s)}</small></button>`).join('')}
-    </div>
-    <div class="pair">
-      <div class="field"><label for="m2">m²</label><input id="m2" inputmode="decimal" data-ch="m2" value="${r.m2 ?? ''}" placeholder="valgfritt"></div>
-      <div class="field"><label for="wall">Lengste ledige vegg, cm</label><input id="wall" inputmode="numeric" data-ch="wall" value="${r.wall ?? ''}" placeholder="valgfritt"></div>
-    </div>
-    <button class="link danger" data-act="delroom">Fjern rommet</button>
-  </section>`;
 }
 
 const photo = (id, n, small) => `photos/${id}-${n}${small ? 's' : ''}.webp`;
@@ -270,7 +225,6 @@ function viewThings() {
 function viewPlace() {
   return `
   <h1>Hvor skal tingene stå?</h1>
-  <p class="lead">Valgfritt. Møbler inntil en vegg får riktig maksbredde i søket.</p>
   ${furnishView(state, ui, undoStack.length > 0)}`;
 }
 
@@ -413,6 +367,7 @@ function viewList() {
   ${style
     ? `<div class="mystyle"><img src="${Number.isInteger(state.sub) ? photo(style.id, state.sub + 1) : photo(style.id, 1, true)}" alt="" width="480" height="360"><p><strong>${style.name}</strong>${subName() ? `<br>${esc(subName())}` : ''}<br><button class="link" data-act="step" data-v="1">Bytt stil</button></p></div>`
     : `<p class="hint"><button class="link" data-act="step" data-v="1">Velg stil</button></p>`}
+  ${areaField(state)}
   ${budgetPanel(sum)}
   ${need.length ? `<button class="btn wide" data-act="round">Dagens runde</button>` : ''}
   ${need.length || funn.on ? checkPanel(funn, finds, osloDay()) : ''}
@@ -544,7 +499,7 @@ const actions = {
   },
   step(v) {
     state.step = Math.min(LAST, Math.max(0, Number(v) || 0));
-    ui.round = false; ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.style = null; ui.open = null; ui.note = ''; ui.info = ''; ui.full = false;
+    ui.round = false; ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.style = null; ui.open = null; ui.note = ''; ui.info = ''; ui.full = false; ui.help = false;
     if (state.step === 3) ensureDrawing();
     if (state.step === 0) ui.tool = 'draw'; // tilbake på «Bolig» starter man alltid med «Tegn rom»
     commit(); window.scrollTo(0, 0);
@@ -552,7 +507,7 @@ const actions = {
   write() { ui.write = !ui.write; later(); },
   more(v) { ui.more = ui.more === v ? null : v; later(); },
   tune() { ui.tune = !ui.tune; later(); },
-  home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = rooms; state.drawn = false; state.furn = []; state.openings = []; state.floors = ['1. etasje']; ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.floor = 0; ui.msg = null; commit(); },
+  home(v) { const rooms = roomsFromHome(v); state.items = pruneItems(state.items, state.rooms, rooms); state.custom = state.custom.filter((c) => rooms.some((r) => r.id === c.room)); state.home = v; state.rooms = withDrawing(rooms); state.drawn = true; state.auto = true; state.furn = []; state.openings = []; state.floors = ['1. etasje']; ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.floor = 0; ui.msg = null; ui.sheet = sheetFor(state, ui.sheet); commit(); },
   undo() {
     const json = undoStack.pop();
     const prev = json && normalize(JSON.parse(json));
@@ -564,9 +519,7 @@ const actions = {
     ui.floor = Math.min(ui.floor, state.floors.length - 1); ui.note = '';
     persist(); later();
   },
-  tab(v) { ui.tab = v === 'draw' ? 'draw' : 'pick'; ui.tool = 'draw'; ui.room = null; ui.wall = null; ui.opening = null; ui.furn = null; ui.note = ''; later(); },
   room(v) { ui.room = ui.room === v ? null : v; ui.wall = null; ui.opening = null; ui.furn = null; later(); },
-  size(v) { const r = state.rooms.find((x) => x.id === ui.room); if (r) { r.size = v; r.m2 = null; commit(); } },
   delroom() { state.rooms = state.rooms.filter((r) => r.id !== ui.room); state.furn = state.furn.filter((f) => f.room !== ui.room); state.drawn = state.rooms.some((r) => r.poly); state.custom = state.custom.filter((c) => c.room !== ui.room); syncDoors(state); ui.room = null; ui.wall = null; ui.opening = null; commit(); },
   style(v, el) { state.style = v; state.sub = el?.dataset.i !== undefined ? Number(el.dataset.i) : null; ui.style = null; commit(); window.scrollTo(0, 0); },
   styleopen(v) { ui.style = v || null; later(); window.scrollTo(0, 0); },
@@ -616,7 +569,6 @@ const actions = {
   isize(v, el) { const i = instByKey(v); if (!i) return; const it = { ...state.items[v] }; if (i.saved.size === el.dataset.s) delete it.size; else it.size = el.dataset.s; state.items[v] = it; commit(); },
   iprio(v, el) { const i = instByKey(v); if (!i) return; const it = { ...state.items[v] }; if (i.saved.prio === el.dataset.p) delete it.prio; else it.prio = el.dataset.p; state.items[v] = it; commit(); },
   prio(v) { state.prio = state.prio === v ? null : v; commit(); },
-  usepreset() { if (!state.drawn) { state.rooms = withDrawing(state.rooms); state.openings = []; state.drawn = true; ui.sheet = sheetFor(state, ui.sheet); commit(); } },
   // Fra «Finn» og rett til «Plasser», med møbelet satt ut og valgt.
   place(v) {
     const i = instByKey(v);
@@ -648,8 +600,8 @@ const actions = {
   },
   sure() { ui.sure = true; later(); },
   unsure() { ui.sure = false; later(); },
-  reset() { state = newState(); ui.open = ui.room = null; ui.sure = false; ui.copied = ''; ui.tab = 'pick'; ui.floor = 0; ui.furn = null; ui.info = ''; ui.write = false; commit(); window.scrollTo(0, 0); },
-  useShared() { state = ui.shared; ui.tab = state.drawn ? 'draw' : 'pick'; ui.shared = null; history.replaceState(null, '', location.pathname); commit(); },
+  reset() { state = newState(); ui.open = ui.room = null; ui.sure = false; ui.copied = ''; ui.tab = 'draw'; ui.floor = 0; ui.furn = null; ui.info = ''; ui.write = false; commit(); window.scrollTo(0, 0); },
+  useShared() { state = ui.shared; ui.shared = null; history.replaceState(null, '', location.pathname); commit(); },
   dropShared() { ui.shared = null; history.replaceState(null, '', location.pathname); later(); },
 };
 
@@ -662,7 +614,8 @@ async function loadPlan(file) {
       const id = 'r' + (state.seq = (state.seq || 100) + 1);
       return { id, type: x.type, size: x.m2 ? sizeFromM2(x.type, x.m2) : 'M', m2: x.m2, wall: null };
     });
-    state.home = ''; state.custom = []; state.drawn = false; state.furn = []; state.openings = []; state.floors = ['1. etasje']; ui.floor = 0; ui.furn = null; ui.room = null;
+    state.rooms = withDrawing(state.rooms); state.drawn = true; state.auto = true; ui.sheet = sheetFor(state, ui.sheet);
+    state.home = ''; state.custom = []; state.furn = []; state.openings = []; state.floors = ['1. etasje']; ui.floor = 0; ui.furn = null; ui.room = null;
     ui.msg = { where: 'plan', text: `Fant ${r.rooms.length} rom. Tallene er lest eller anslått fra tegningen, så se over dem. ${r.note}`.trim() };
   } catch (e) {
     if (e.message) ui.msg = { where: 'plan', bad: true, text: e.message };
@@ -673,14 +626,6 @@ async function loadPlan(file) {
 const changes = {
   planfile(el) { loadPlan(el.files?.[0]); },
   area(el) { state.area = el.value; },
-  addroom(el) {
-    if (!ROOMS[el.value]) return;
-    const id = 'r' + (state.seq = (state.seq || 100) + 1);
-    state.rooms.push({ id, type: el.value, size: 'M', m2: null, wall: null });
-    ui.room = id;
-  },
-  m2(el) { const r = state.rooms.find((x) => x.id === ui.room); const n = num(el.value); if (r) { r.m2 = n && n <= 200 ? n : null; if (r.m2) r.size = sizeFromM2(r.type, r.m2); } },
-  wall(el) { const r = state.rooms.find((x) => x.id === ui.room); const n = num(el.value); if (r) r.wall = n && n <= 2000 ? n : null; },
   life(el) {
     state.lifeText = el.value.slice(0, 2000);
     const p = parseLife(state.lifeText);

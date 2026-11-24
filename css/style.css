@@ -82,15 +82,6 @@ textarea { resize: vertical; line-height: 1.4; }
 .banner { background: var(--amber-soft); border: 2px solid var(--amber); border-radius: 6px; padding: 12px; margin-top: 16px; }
 .banner .row { margin: 0; }
 
-/* Plantegning */
-.plan { position: relative; width: 100%; margin: 6px 0 8px; border: var(--wall) solid var(--ink);
-  background-color: var(--surface);
-  background-image: repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 16px), repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 16px); }
-.room { position: absolute; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 0; padding: 6px 8px; overflow: hidden;
-  background: rgba(255, 255, 255, 0.55); border: 0; box-shadow: 0 0 0 calc(var(--wall) / 2) var(--ink); text-align: left; }
-.room.on { background: var(--teal-soft); box-shadow: 0 0 0 calc(var(--wall) / 2) var(--ink), inset 0 0 0 3px var(--teal); }
-.room-name { font-weight: 700; font-size: 0.8125rem; line-height: 1.1; overflow-wrap: anywhere; }
-.room-m2 { font-size: 0.75rem; color: var(--muted); }
 .plan-sum { font-size: 0.875rem; color: var(--muted); }
 
 /* Stiler */
@@ -230,7 +221,7 @@ textarea { resize: vertical; line-height: 1.4; }
   .level { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .room, .chip, .level, .style { transition: background-color 120ms ease; }
+  .chip, .level, .style { transition: background-color 120ms ease; }
 }
 
 .sure { font-weight: 700; }
@@ -250,20 +241,12 @@ a.chip { text-decoration: none; color: var(--ink); }
 .panel h2:not(:first-child) { margin-top: 18px; }
 
 /* Velg bolig eller tegn selv */
-.tabs { display: grid; grid-template-columns: 1fr 1fr; border: var(--wall) solid var(--ink); border-radius: 999px; overflow: hidden; margin: 4px 0 14px; }
-.tab { min-height: 44px; border: 0; background: var(--surface); font-weight: 700; }
-.tab.on { background: var(--ink); color: #fff; }
 
-/* Plantegning */
 .floors { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
-.tools { display: grid; grid-template-columns: repeat(4, 1fr); border: var(--wall) solid var(--ink); border-radius: 8px; overflow: hidden; }
-.tool { min-height: 44px; padding: 6px 4px; border: 0; border-right: 1px solid var(--line); background: var(--surface); font-weight: 700; font-size: 0.875rem; line-height: 1.15; }
-.tool:last-child { border-right: 0; }
-.tool.on { background: var(--teal); color: #fff; }
-.sheet { touch-action: none; -webkit-touch-callout: none; margin: 0 0 8px; }
-.draw { display: block; width: 100%; aspect-ratio: 1; margin: 0; border: var(--wall) solid var(--ink); background: var(--surface); touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
+/* Arket er bare et rutenett å tegne på. Kanten er svak, så den ikke ser ut som en yttervegg. */
+.sheet { position: relative; overflow: hidden; touch-action: none; -webkit-touch-callout: none; margin: 0 0 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.draw { display: block; width: 100%; aspect-ratio: 1; margin: 0; overflow: visible; touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
 .draw.tool-move { cursor: default; }
-.draw.tool-door, .draw.tool-window { cursor: pointer; }
 .g-thin { stroke: var(--grid); }
 .g-bold { stroke: var(--line); }
 .proom { fill: rgba(255, 255, 255, 0.86); stroke: var(--ink); stroke-linejoin: miter; }
@@ -297,14 +280,10 @@ rect.win { fill: #DCEEFA; }
 .empty { text-anchor: middle; fill: var(--muted); font-weight: 600; }
 .sheetrow { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .sheetrow .chips { flex: none; flex-wrap: nowrap; margin: 0 0 12px; }
-.walls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
 
-.undo-row { margin-bottom: 8px; min-height: 40px; }
 
 .wlen { opacity: 0.75; }
 .wlen.set { opacity: 1; fill: var(--ink); }
-.setmark { margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--teal); color: #fff; font-size: 0.6875rem; font-weight: 700; }
-.walls input::placeholder { color: var(--muted); opacity: 0.8; }
 
 .gallery figure.on img { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal); }
 .gallery figcaption h2 { margin: 10px 0 4px; font-size: 1.125rem; }
@@ -344,9 +323,8 @@ rect.win { fill: #DCEEFA; }
 .furn.on .seam { stroke: #fff; }
 
 /* Knapper for valgt møbel, rett under tegningen. Fester seg over «Neste»-knappen når den ellers ville vært utenfor skjermen. */
-.sheet:has(+ .furnbar) { margin-bottom: 0; }
-.furnbar { display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 6px 10px; margin: 0 0 8px; background: var(--surface); border: var(--wall) solid var(--ink); border-top: 0; }
-.furnbar.on { position: sticky; bottom: calc(73px + env(safe-area-inset-bottom)); z-index: 4; box-shadow: 0 calc(-1 * var(--wall)) 0 var(--ink); }
+.furnbar { display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 6px 10px; margin: 0 0 8px; background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; }
+.furnbar.on { position: sticky; bottom: calc(73px + env(safe-area-inset-bottom)); z-index: 4; }
 .furnbar-hint { font-size: 0.875rem; color: var(--muted); }
 .furnbar-name { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
 .barbtn { flex: none; min-height: 44px; min-width: 52px; padding: 8px 12px; border: 2px solid var(--ink); border-radius: 999px; background: var(--ink); color: #fff; font-weight: 700; font-size: 0.9375rem; line-height: 1.1; }
@@ -401,14 +379,9 @@ rect.win { fill: #DCEEFA; }
 .ar-check input { flex: none; width: 24px; height: 24px; min-height: 0; padding: 0; accent-color: var(--teal); }
 @media (min-width: 560px) { .ar-kms { grid-template-columns: repeat(6, 1fr); } }
 /* Tegningen på «Bolig»: neste steg over tegningen, og det som er valgt i en linje rett under den. */
-.guide { margin: 8px 0; min-height: 2.7em; font-size: 0.9375rem; line-height: 1.35; }
-.guide b { display: inline-block; margin-right: 4px; padding: 1px 8px; border-radius: 999px; background: var(--teal); color: #fff; font-size: 0.8125rem; white-space: nowrap; }
-.sheet:has(+ .planbar) { margin-bottom: 0; }
-.planbar { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-height: 128px; padding: 6px 10px; margin: 0 0 8px; background: var(--surface); border: var(--wall) solid var(--ink); border-top: 0; }
-.planbar.on { position: sticky; bottom: calc(73px + env(safe-area-inset-bottom)); z-index: 4; box-shadow: 0 calc(-1 * var(--wall)) 0 var(--ink); }
+.planbar { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-height: 128px; padding: 6px 10px; margin: 0 0 8px; background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; }
+.planbar.on { position: sticky; bottom: calc(73px + env(safe-area-inset-bottom)); z-index: 4; }
 .barrow { display: flex; align-items: flex-end; gap: 8px; min-width: 0; }
-.planbar-name { flex: 1 1 0; min-width: 0; align-self: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
-.planbar-name small { display: block; overflow: hidden; text-overflow: ellipsis; font-weight: 400; font-size: 0.8125rem; color: var(--muted); }
 .barbtn.light { background: var(--surface); color: var(--ink); }
 .barfield { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; font-size: 0.75rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .barfield input { width: 100%; min-height: 44px; margin-top: 2px; padding: 6px 8px; border: 2px solid var(--ink); border-radius: 8px; background: #fff; color: var(--ink); font-size: 1rem; font-weight: 700; text-align: center; }
@@ -460,12 +433,7 @@ rect.win { fill: #DCEEFA; }
 .funn-act .funn-no { color: var(--muted); }
 
 /* Ryddigere flater: færre rammer, mindre tekst. */
-.guide.bad { color: var(--amber); font-weight: 600; }
-.guide { min-height: 0; margin: 0 0 8px; }
-.undo-row { flex-wrap: nowrap; }
-.fullbtn { margin-left: auto; }
 .planbar { min-height: 0; padding: 8px 10px; }
-.planbar:not(.on), .furnbar:not(.on) { min-height: 44px; }
 .furnbar .barscroll { align-items: center; }
 .sheetrow { align-items: center; margin-top: 8px; }
 .sheetrow .plan-sum { margin: 0; }
@@ -485,20 +453,37 @@ rect.win { fill: #DCEEFA; }
 /* Fullskjerm for tegningen: verktøy øverst, tegningen i midten, valgene nederst. Ingenting ruller. */
 html.lock, html.lock body { overflow: hidden; overscroll-behavior: none; }
 .stage.full { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: var(--paper);
-  padding: calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left)); }
+  background: var(--surface); }
+.stage.full .toolbar { margin: 0; padding: calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 8px calc(8px + env(safe-area-inset-left)); background: var(--paper); border-bottom: 1px solid var(--line); }
 .stage.full > * { flex: none; }
-.stage.full .tools { margin-bottom: 8px; }
-.stage.full .undo-row { margin-bottom: 6px; }
-.stage.full .guide { margin-bottom: 6px; font-size: 0.875rem; }
-.stage.full .sheet { flex: 1 1 0; min-height: 0; margin: 0; display: grid; place-items: center; container-type: size; }
+.stage.full .sheet { flex: 1 1 0; min-height: 0; margin: 0; display: grid; place-items: center; container-type: size; border: 0; border-radius: 0; }
 .stage.full .draw { width: 100%; max-height: 100%; }
 @supports (width: 1cqw) { .stage.full .draw { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); } }
-.stage.full .planbar, .stage.full .furnbar { position: static; margin: 8px 0 0; border-top: var(--wall) solid var(--ink); box-shadow: none; }
+.stage.full .planbar, .stage.full .furnbar { position: static; margin: 0 8px calc(8px + env(safe-area-inset-bottom)); }
 /* Liggende telefon: tegningen til høyre i full høyde, verktøy og valg til venstre. */
 @media (orientation: landscape) and (max-height: 560px) {
-  .stage.full { --side: calc(100vh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-right: calc(var(--side) + 18px + env(safe-area-inset-right)); }
-  @supports (height: 1dvh) { .stage.full { --side: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); } }
-  .stage.full .sheet { position: absolute; top: calc(8px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); width: var(--side); height: var(--side); flex: none; }
+  .stage.full { --side: 100vh; padding-right: var(--side); background: var(--paper); }
+  @supports (height: 1dvh) { .stage.full { --side: 100dvh; } }
+  .stage.full .sheet { position: absolute; top: 0; right: 0; width: var(--side); height: var(--side); flex: none; border-left: 1px solid var(--line); }
+  .stage.full .toolbar { border-bottom: 0; flex-wrap: wrap; }
   .stage.full .planbar, .stage.full .furnbar { margin-top: auto; }
-  .stage.full .undo-row { flex-wrap: wrap; }
 }
+
+/* Verktøylinja over tegningen: to verktøy, og ikonknapper for angre, tøm, hjelp og fullskjerm. */
+.toolbar { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.toolbar .grow { flex: 1 1 0; }
+.ibtn { flex: none; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 2px solid var(--ink); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: 1.25rem; font-weight: 800; line-height: 1; }
+.ibtn:disabled { opacity: 0.3; }
+.ibtn.on, .ibtn[data-on] { background: var(--ink); color: #fff; }
+.toolbar .segbtn { min-height: 42px; min-width: 62px; }
+.toolbar .segbtn.on { background: var(--teal); }
+/* Meldinger og hjelp ligger oppå tegningen og tar ingen plass. Et trykk lukker dem. */
+.toast { position: absolute; left: 8px; right: 8px; top: 8px; padding: 10px 12px; border: 0; border-radius: 8px; background: var(--teal-soft); color: var(--ink); font-size: 0.9375rem; font-weight: 600; text-align: left; }
+.toast.bad { background: var(--amber-soft); color: var(--amber); }
+.helpcard { position: absolute; top: 8px; right: 8px; max-width: min(300px, calc(100% - 16px)); padding: 12px 14px; border: 2px solid var(--ink); border-radius: 10px; background: var(--surface); text-align: left; font-size: 0.9375rem; line-height: 1.35; }
+.helpcard ol { margin: 0; padding-left: 20px; }
+.helpcard li + li { margin-top: 6px; }
+.start { margin: 0 0 8px; }
+.start .filebtn { cursor: pointer; }
+.sheetrow .floors { margin: 0; }
+.barfield { white-space: nowrap; }
